@@ -4,7 +4,9 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Mic, Square, Loader2, Trash2, Edit2, Check, X, Sparkles, Keyboard, RefreshCw, AlertTriangle } from "lucide-react";
+import { Mic, Square, Loader2, Trash2, Edit2, Check, X, Sparkles, Keyboard, RefreshCw, AlertTriangle, ToggleRight, ToggleLeft } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useNetworkStatus } from "@/hooks/use-network-status";
 import { supabase } from "@/integrations/supabase/client";
@@ -61,7 +63,7 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
   const { toast } = useToast();
   const { isOnline } = useNetworkStatus();
 
-  const [step, setStep] = useState<"record" | "analyzing" | "saving" | "manual">("record");
+  const [step, setStep] = useState<"record" | "analyzing" | "saving" | "validate" | "manual">("record");
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [manualText, setManualText] = useState("");
@@ -72,6 +74,7 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [isSupported, setIsSupported] = useState(true);
+  const [autoSaveMode, setAutoSaveMode] = useState(true); // true = auto-enregistrement
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -375,18 +378,28 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
           return;
         }
 
-        // 4) Demande du user: pas de correction/validation → on enregistre automatiquement
-        setStep("saving");
-        setIsSubmitting(true);
-        try {
-          const stockItems: NewStockItem[] = voiceItems.map(({ tempId, isEditing, ...it }) => it);
-          await onComplete(stockItems);
+        // 4) Mode auto-enregistrement OU validation
+        if (autoSaveMode) {
+          // Enregistrement automatique
+          setStep("saving");
+          setIsSubmitting(true);
+          try {
+            const stockItems: NewStockItem[] = voiceItems.map(({ tempId, isEditing, ...it }) => it);
+            await onComplete(stockItems);
+            toast({
+              title: "Stock ajouté",
+              description: `${stockItems.length} produit${stockItems.length > 1 ? "s" : ""} enregistré${stockItems.length > 1 ? "s" : ""}.`,
+            });
+          } finally {
+            setIsSubmitting(false);
+          }
+        } else {
+          // Mode validation: afficher les items pour vérification/édition
+          setStep("validate");
           toast({
-            title: "Stock ajouté",
-            description: `${stockItems.length} produit${stockItems.length > 1 ? "s" : ""} enregistré${stockItems.length > 1 ? "s" : ""}.`,
+            title: "Analyse terminée",
+            description: `${voiceItems.length} produit${voiceItems.length > 1 ? "s" : ""} à valider.`,
           });
-        } finally {
-          setIsSubmitting(false);
         }
       } catch (error) {
         console.error("Error analyzing voice:", error);
@@ -420,7 +433,7 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
         setStep("record");
       }
     },
-    [toast, retryCount, isOnline, onComplete]
+    [toast, retryCount, isOnline, onComplete, autoSaveMode]
   );
 
   const handleManualSubmit = async () => {
@@ -543,6 +556,23 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
           <p className="text-sm text-muted-foreground">
             Parlez naturellement : "J'ai 50 savons Lux à 500 francs..."
           </p>
+        </div>
+
+        {/* Toggle mode auto/validation */}
+        <div className="flex items-center justify-between px-3 py-2 border rounded-lg bg-muted/30">
+          <Label htmlFor="auto-save-toggle" className="text-sm flex items-center gap-2 cursor-pointer">
+            {autoSaveMode ? (
+              <ToggleRight className="h-4 w-4 text-primary" />
+            ) : (
+              <ToggleLeft className="h-4 w-4 text-muted-foreground" />
+            )}
+            {autoSaveMode ? "Enregistrement automatique" : "Valider avant enregistrement"}
+          </Label>
+          <Switch
+            id="auto-save-toggle"
+            checked={autoSaveMode}
+            onCheckedChange={setAutoSaveMode}
+          />
         </div>
 
         {/* Browser not supported warning */}
@@ -680,7 +710,81 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
     );
   }
 
-  // (On ne montre plus l'étape de validation : l'ajout est automatique)
+  // Validation step (mode validation activé)
+  if (step === "validate") {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">Vérifier le stock</h3>
+          <Badge variant="secondary" className="gap-1">
+            <Sparkles className="h-3 w-3" />
+            {items.length} produit{items.length > 1 ? "s" : ""}
+          </Badge>
+        </div>
+
+        {suggestions.length > 0 && (
+          <Card className="p-3 bg-accent/10 border-accent/20">
+            <p className="text-sm text-accent-foreground">💡 {suggestions[0]}</p>
+          </Card>
+        )}
+
+        {/* Items list */}
+        <div className="space-y-3 max-h-[400px] overflow-y-auto">
+          {items.map((item) => (
+            <VoiceStockItemCard
+              key={item.tempId}
+              item={item}
+              onUpdate={(updates) => updateItem(item.tempId, updates)}
+              onDelete={() => deleteItem(item.tempId)}
+              formatMoney={formatMoney}
+            />
+          ))}
+        </div>
+
+        {items.length === 0 && (
+          <div className="text-center py-8 text-muted-foreground">
+            <p>Aucun produit à valider</p>
+            <Button variant="link" onClick={() => setStep("record")}>
+              Recommencer la dictée
+            </Button>
+          </div>
+        )}
+
+        {/* Retry button */}
+        {transcript && (
+          <Button
+            variant="outline"
+            onClick={() => analyzeTranscript(transcript)}
+            className="w-full gap-2"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Ré-analyser la dictée
+          </Button>
+        )}
+
+        {/* Actions */}
+        <div className="flex gap-3 pt-4">
+          <Button variant="outline" onClick={onCancel} className="flex-1">
+            Annuler
+          </Button>
+          <Button
+            onClick={handleComplete}
+            disabled={items.length === 0 || isSubmitting}
+            className="flex-1 gap-2"
+          >
+            {isSubmitting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4" />
+            )}
+            Ajouter au stock
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Écran final après enregistrement auto
   return (
     <div className="space-y-4">
       <div className="text-center space-y-2">
