@@ -22,6 +22,8 @@ import { useProfile } from "@/hooks/use-profile";
 import { useSales } from "@/hooks/use-sales";
 import { useDebts } from "@/hooks/use-debts";
 import { useStock } from "@/hooks/use-stock";
+import { useThemeStyle } from "@/hooks/use-theme";
+import ModernDashboard from "@/components/dashboard/ModernDashboard";
 
 const Dashboard = () => {
   const { loading: authLoading } = useRequireAuth();
@@ -34,6 +36,7 @@ const Dashboard = () => {
   const { sales, loading: salesLoading, getTodayStats } = useSales();
   const { totalDebts, clientsWithDebts, loading: debtsLoading } = useDebts();
   const { items: stockItems, loading: stockLoading, getTotalValue } = useStock();
+  const { isModern } = useThemeStyle();
 
   // Note: RequireProfile guard handles incomplete profile redirect globally
 
@@ -41,6 +44,7 @@ const Dashboard = () => {
   const shopName = profile?.shop_name || "Ma Boutique";
   const stockTotalValue = getTotalValue();
   const stockItemsCount = stockItems.length;
+  const recentSales = sales.slice(0, 5);
 
   const isLoading = authLoading || profileLoading || salesLoading || debtsLoading || stockLoading;
 
@@ -52,8 +56,20 @@ const Dashboard = () => {
     );
   }
 
-  // Get recent sales (last 5)
-  const recentSales = sales.slice(0, 5);
+  // Render Modern Dashboard if theme is modern
+  if (isModern) {
+    return (
+      <ModernDashboard
+        profile={profile}
+        todayStats={todayStats}
+        totalDebts={totalDebts}
+        clientsWithDebts={clientsWithDebts}
+        stockTotalValue={stockTotalValue}
+        stockItemsCount={stockItemsCount}
+        recentSales={recentSales}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background pb-24">
