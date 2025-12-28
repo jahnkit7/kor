@@ -19,6 +19,7 @@ import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import Stock from "./pages/Stock";
 import EmployeeManagement from "./pages/EmployeeManagement";
+import AcceptInvite from "./pages/AcceptInvite";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +36,7 @@ const App = () => (
             {/* Public routes */}
             <Route path="/" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/invite" element={<AcceptInvite />} />
             <Route path="/profile-setup" element={<ProfileSetup />} />
 
             {/* Protected routes - require complete profile */}

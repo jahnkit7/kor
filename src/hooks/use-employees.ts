@@ -10,6 +10,7 @@ export interface EmployeeInvite {
   expires_at: string;
   created_at: string;
   owner_user_id: string;
+  invite_code: string;
 }
 
 interface EmployeesState {
@@ -110,7 +111,7 @@ export function useEmployees(): EmployeesState {
 
       const newInvite = data as EmployeeInvite;
       setInvites(prev => [newInvite, ...prev]);
-      return newInvite.id; // Retourne l'ID pour pouvoir générer le lien
+      return newInvite.invite_code; // Retourne le code pour pouvoir générer le lien
     } catch (error) {
       console.error("Error sending invite:", error);
       toast.error("Erreur lors de l'envoi de l'invitation");

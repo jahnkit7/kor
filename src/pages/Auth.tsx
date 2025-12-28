@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Phone, Lock, ChevronDown, Check } from "lucide-react";
 import { toast } from "sonner";
@@ -30,10 +30,14 @@ const generateSecurePassword = (pin: string, phone: string, countryPrefix: strin
 
 const Auth = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { signIn, signUp, isAuthenticated, loading, configured } = useAuth();
   
+  // Récupérer le code d'invitation s'il existe
+  const inviteCode = searchParams.get("invite");
+  
   const [step, setStep] = useState<"phone" | "pin">("phone");
-  const [isNewUser, setIsNewUser] = useState(false);
+  const [isNewUser, setIsNewUser] = useState(!!inviteCode); // Par défaut nouveau si invitation
   const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
   const [showCountryPicker, setShowCountryPicker] = useState(false);
   const [phone, setPhone] = useState("");
@@ -47,9 +51,14 @@ const Auth = () => {
 
   useEffect(() => {
     if (!loading && isAuthenticated) {
-      navigate("/dashboard");
+      // Si l'utilisateur vient d'une invitation, rediriger vers la page d'acceptation
+      if (inviteCode) {
+        navigate(`/invite?code=${inviteCode}`);
+      } else {
+        navigate("/dashboard");
+      }
     }
-  }, [isAuthenticated, loading, navigate]);
+  }, [isAuthenticated, loading, navigate, inviteCode]);
 
   const formatPhone = (value: string) => {
     // Remove non-digits
