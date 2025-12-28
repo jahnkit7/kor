@@ -10,7 +10,13 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { ArrowLeft, Plus, Package, Search, Mic, Loader2 } from "lucide-react";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import { ArrowLeft, Plus, Package, Search, Mic, Loader2, History } from "lucide-react";
 import { useStock, type NewStockItem } from "@/hooks/use-stock";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -18,6 +24,7 @@ import BottomNav from "@/components/BottomNav";
 import { StockEntryModes, type StockEntryMode } from "@/components/stock/StockEntryModes";
 import { ManualStockInput } from "@/components/stock/ManualStockInput";
 import { VoiceStockInput } from "@/components/stock/VoiceStockInput";
+import { VoiceEntriesHistory } from "@/components/stock/VoiceEntriesHistory";
 
 export default function Stock() {
   useRequireAuth();
@@ -28,7 +35,7 @@ export default function Stock() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
   const [entryMode, setEntryMode] = useState<StockEntryMode | null>(null);
-
+  const [activeTab, setActiveTab] = useState("stock");
   const filteredItems = items.filter((item) =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.model?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -112,56 +119,81 @@ export default function Stock() {
         </div>
       </header>
 
-      {/* Content */}
-      <main className="p-4 space-y-3">
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        ) : filteredItems.length === 0 ? (
-          <div className="text-center py-12 space-y-4">
-            <div className="h-16 w-16 mx-auto rounded-full bg-muted flex items-center justify-center">
-              <Package className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <div>
-              <p className="font-medium">Aucun produit en stock</p>
-              <p className="text-sm text-muted-foreground">
-                {searchQuery ? "Aucun résultat pour cette recherche" : "Ajoutez votre premier produit"}
-              </p>
-            </div>
-            {!searchQuery && (
-              <Button onClick={() => setIsAddSheetOpen(true)} className="gap-2">
-                <Plus className="h-4 w-4" />
-                Ajouter du stock
-              </Button>
-            )}
-          </div>
-        ) : (
-          filteredItems.map((item) => (
-            <Card key={item.id} className="p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-medium truncate">{item.name}</h3>
-                    {getSourceBadge(item.source)}
-                  </div>
-                  {item.model && (
-                    <p className="text-sm text-muted-foreground">{item.model}</p>
-                  )}
-                </div>
-                <div className="text-right shrink-0">
-                  <p className="text-2xl font-bold money-display">{item.quantity}</p>
-                  {item.unit_price > 0 && (
-                    <p className="text-sm text-primary font-medium">
-                      {formatMoney(item.unit_price)}
-                    </p>
-                  )}
-                </div>
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+        <div className="px-4 pb-2">
+          <TabsList className="w-full grid grid-cols-2">
+            <TabsTrigger value="stock" className="gap-2">
+              <Package className="h-4 w-4" />
+              Stock
+            </TabsTrigger>
+            <TabsTrigger value="history" className="gap-2">
+              <History className="h-4 w-4" />
+              Dictées
+            </TabsTrigger>
+          </TabsList>
+        </div>
+
+        {/* Stock Tab */}
+        <TabsContent value="stock" className="flex-1 m-0">
+          <main className="p-4 space-y-3">
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
-            </Card>
-          ))
-        )}
-      </main>
+            ) : filteredItems.length === 0 ? (
+              <div className="text-center py-12 space-y-4">
+                <div className="h-16 w-16 mx-auto rounded-full bg-muted flex items-center justify-center">
+                  <Package className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="font-medium">Aucun produit en stock</p>
+                  <p className="text-sm text-muted-foreground">
+                    {searchQuery ? "Aucun résultat pour cette recherche" : "Ajoutez votre premier produit"}
+                  </p>
+                </div>
+                {!searchQuery && (
+                  <Button onClick={() => setIsAddSheetOpen(true)} className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    Ajouter du stock
+                  </Button>
+                )}
+              </div>
+            ) : (
+              filteredItems.map((item) => (
+                <Card key={item.id} className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-medium truncate">{item.name}</h3>
+                        {getSourceBadge(item.source)}
+                      </div>
+                      {item.model && (
+                        <p className="text-sm text-muted-foreground">{item.model}</p>
+                      )}
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-2xl font-bold money-display">{item.quantity}</p>
+                      {item.unit_price > 0 && (
+                        <p className="text-sm text-primary font-medium">
+                          {formatMoney(item.unit_price)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              ))
+            )}
+          </main>
+        </TabsContent>
+
+        {/* History Tab */}
+        <TabsContent value="history" className="flex-1 m-0">
+          <main className="p-4">
+            <VoiceEntriesHistory onAddItems={handleAddItems} />
+          </main>
+        </TabsContent>
+      </Tabs>
 
       {/* Add Stock Sheet */}
       <Sheet open={isAddSheetOpen} onOpenChange={handleCloseSheet}>
