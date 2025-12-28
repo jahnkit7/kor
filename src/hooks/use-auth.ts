@@ -9,46 +9,49 @@ const isSupabaseConfigured = () => {
 };
 
 export function useAuth() {
+  const initiallyConfigured = isSupabaseConfigured();
+
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [configured, setConfigured] = useState(false);
+  const [configured, setConfigured] = useState(initiallyConfigured);
+  const [loading, setLoading] = useState(initiallyConfigured);
 
   useEffect(() => {
-    // Check if Supabase is configured
-    if (!isSupabaseConfigured()) {
-      console.warn("Supabase not configured yet - waiting for env vars");
+    // If env vars are present, proceed; otherwise mark as not configured.
+    if (!initiallyConfigured) {
+      console.warn("Backend not configured yet - missing env vars");
       setLoading(false);
       setConfigured(false);
       return;
     }
 
-    setConfigured(true);
-
     // Dynamically import supabase client only when configured
-    import("@/integrations/supabase/client").then(({ supabase }) => {
-      // Set up auth state listener FIRST
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(
-        (event, session) => {
+    import("@/integrations/supabase/client")
+      .then(({ supabase }) => {
+        // Set up auth state listener FIRST
+        const {
+          data: { subscription },
+        } = supabase.auth.onAuthStateChange((event, session) => {
           setSession(session);
           setUser(session?.user ?? null);
           setLoading(false);
-        }
-      );
+        });
 
-      // THEN check for existing session
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+        // THEN check for existing session
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          setSession(session);
+          setUser(session?.user ?? null);
+          setLoading(false);
+        });
+
+        return () => subscription.unsubscribe();
+      })
+      .catch((error) => {
+        console.error("Failed to load backend client:", error);
         setLoading(false);
+        setConfigured(false);
       });
-
-      return () => subscription.unsubscribe();
-    }).catch((error) => {
-      console.error("Failed to load Supabase client:", error);
-      setLoading(false);
-    });
-  }, []);
+  }, [initiallyConfigured]);
 
   const signUp = useCallback(async (email: string, password: string) => {
     if (!configured) return { data: null, error: new Error("Supabase not configured") };

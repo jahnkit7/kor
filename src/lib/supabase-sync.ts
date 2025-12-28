@@ -1,9 +1,13 @@
-import { supabase } from "@/integrations/supabase/client";
+import { getSupabaseClient } from "@/lib/supabase";
 import { getDB, getSyncQueue, removeSyncQueueItem } from "./db";
 import type { Client, Sale, Debt, Payment, SyncQueueItem } from "./db";
 
 // Sync a single item to the cloud
-async function syncItemToCloud(item: SyncQueueItem, userId: string): Promise<boolean> {
+async function syncItemToCloud(
+  supabase: Awaited<ReturnType<typeof getSupabaseClient>>,
+  item: SyncQueueItem,
+  userId: string
+): Promise<boolean> {
   try {
     const { table, type, data } = item;
     const record = data as Record<string, unknown>;
@@ -49,6 +53,7 @@ async function syncItemToCloud(item: SyncQueueItem, userId: string): Promise<boo
 
 // Process the entire sync queue
 export async function processSyncQueue(userId: string): Promise<{ success: number; failed: number }> {
+  const supabase = await getSupabaseClient();
   const queue = await getSyncQueue();
   let success = 0;
   let failed = 0;
@@ -57,7 +62,7 @@ export async function processSyncQueue(userId: string): Promise<{ success: numbe
   queue.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 
   for (const item of queue) {
-    const synced = await syncItemToCloud(item, userId);
+    const synced = await syncItemToCloud(supabase, item, userId);
     if (synced) {
       await removeSyncQueueItem(item.id);
       success++;
@@ -71,6 +76,7 @@ export async function processSyncQueue(userId: string): Promise<{ success: numbe
 
 // Fetch all data from cloud to local
 export async function pullFromCloud(userId: string): Promise<void> {
+  const supabase = await getSupabaseClient();
   const db = await getDB();
 
   // Fetch clients
