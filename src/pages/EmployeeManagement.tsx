@@ -44,15 +44,15 @@ const EmployeeManagement = () => {
     return `${phone.slice(0, 2)} ${phone.slice(2, 5)} ${phone.slice(5, 7)} ${phone.slice(7, 9)}`;
   };
 
-  const generateInviteLink = (inviteId: string) => {
+  const generateInviteLink = (inviteCode: string) => {
     const baseUrl = window.location.origin;
-    return `${baseUrl}/auth?invite=${inviteId}`;
+    return `${baseUrl}/invite?code=${inviteCode}`;
   };
 
-  const generateWhatsAppMessage = (inviteId: string) => {
+  const generateWhatsAppMessage = (inviteCode: string) => {
     const shopName = profile?.shop_name || "Ma Boutique";
     const ownerName = profile?.owner_name || "Le propriétaire";
-    const inviteLink = generateInviteLink(inviteId);
+    const inviteLink = generateInviteLink(inviteCode);
     
     return `👋 Bonjour !
 
@@ -66,8 +66,8 @@ ${inviteLink}
 À bientôt ! 🎉`;
   };
 
-  const openWhatsApp = (phoneNumber: string, inviteId: string) => {
-    const message = generateWhatsAppMessage(inviteId);
+  const openWhatsApp = (phoneNumber: string, inviteCode: string) => {
+    const message = generateWhatsAppMessage(inviteCode);
     const cleanPhone = phoneNumber.replace(/\D/g, "");
     const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, "_blank");
@@ -88,12 +88,12 @@ ${inviteLink}
     
     // Format le numéro complet avec l'indicatif pays
     const fullPhone = `${selectedCountry.dial_code.replace("+", "")}${phone}`;
-    const inviteId = await sendInvite(fullPhone);
+    const inviteCode = await sendInvite(fullPhone);
     
-    if (inviteId) {
-      // Ouvrir WhatsApp automatiquement avec l'ID de l'invite
+    if (inviteCode) {
+      // Ouvrir WhatsApp automatiquement avec le code de l'invite
       setTimeout(() => {
-        openWhatsApp(fullPhone, inviteId);
+        openWhatsApp(fullPhone, inviteCode);
       }, 300);
       
       setPhone("");
@@ -227,7 +227,7 @@ ${inviteLink}
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => openWhatsApp(invite.employee_phone, invite.id)}
+                          onClick={() => openWhatsApp(invite.employee_phone, invite.invite_code)}
                           className="text-success hover:text-success hover:bg-success/10"
                           title="Renvoyer via WhatsApp"
                         >

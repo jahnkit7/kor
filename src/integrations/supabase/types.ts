@@ -91,6 +91,7 @@ export type Database = {
           employee_phone: string
           expires_at: string
           id: string
+          invite_code: string | null
           owner_user_id: string
           status: string
         }
@@ -99,6 +100,7 @@ export type Database = {
           employee_phone: string
           expires_at?: string
           id?: string
+          invite_code?: string | null
           owner_user_id: string
           status?: string
         }
@@ -107,6 +109,7 @@ export type Database = {
           employee_phone?: string
           expires_at?: string
           id?: string
+          invite_code?: string | null
           owner_user_id?: string
           status?: string
         }
@@ -163,6 +166,7 @@ export type Database = {
           hide_amounts: boolean | null
           id: string
           language: string
+          linked_owner_id: string | null
           onboarding_completed: boolean | null
           owner_name: string | null
           phone: string | null
@@ -178,6 +182,7 @@ export type Database = {
           hide_amounts?: boolean | null
           id?: string
           language?: string
+          linked_owner_id?: string | null
           onboarding_completed?: boolean | null
           owner_name?: string | null
           phone?: string | null
@@ -193,6 +198,7 @@ export type Database = {
           hide_amounts?: boolean | null
           id?: string
           language?: string
+          linked_owner_id?: string | null
           onboarding_completed?: boolean | null
           owner_name?: string | null
           phone?: string | null
