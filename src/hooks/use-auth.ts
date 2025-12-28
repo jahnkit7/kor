@@ -28,6 +28,23 @@ export function useAuth() {
     // Dynamically import supabase client only when configured
     import("@/integrations/supabase/client")
       .then(({ supabase }) => {
+        const ensureProfile = async (userId: string) => {
+          try {
+            const { data: existing, error: existingError } = await supabase
+              .from("profiles")
+              .select("id")
+              .eq("user_id", userId)
+              .maybeSingle();
+
+            if (existingError) return;
+            if (!existing) {
+              await supabase.from("profiles").insert({ user_id: userId });
+            }
+          } catch {
+            // ignore
+          }
+        };
+
         // Set up auth state listener FIRST
         const {
           data: { subscription },
@@ -35,6 +52,13 @@ export function useAuth() {
           setSession(session);
           setUser(session?.user ?? null);
           setLoading(false);
+
+          // Defer DB call to avoid deadlocks in the callback
+          if (session?.user) {
+            setTimeout(() => {
+              void ensureProfile(session.user.id);
+            }, 0);
+          }
         });
 
         // THEN check for existing session
@@ -42,6 +66,12 @@ export function useAuth() {
           setSession(session);
           setUser(session?.user ?? null);
           setLoading(false);
+
+          if (session?.user) {
+            setTimeout(() => {
+              void ensureProfile(session.user.id);
+            }, 0);
+          }
         });
 
         return () => subscription.unsubscribe();
