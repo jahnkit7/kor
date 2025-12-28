@@ -281,7 +281,19 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
       console.log("AI response:", data, error);
 
       if (error) {
-        throw new Error(error.message || "Erreur lors de l'analyse");
+        // Try to extract more details from the error
+        const errorDetails = error.message || "Erreur lors de l'analyse";
+        console.error("Edge function error:", errorDetails, error);
+        
+        // Check if it's a network error
+        if (errorDetails.includes("FunctionsFetchError") || errorDetails.includes("non-2xx")) {
+          throw new Error("Erreur de connexion au serveur. Vérifiez votre connexion internet.");
+        }
+        throw new Error(errorDetails);
+      }
+
+      if (!data) {
+        throw new Error("Aucune réponse reçue du serveur");
       }
 
       if (data?.error) {
@@ -291,6 +303,9 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
         }
         if (data.error.includes("Crédits")) {
           throw new Error("Crédits IA épuisés. Utilisez le mode manuel.");
+        }
+        if (data.error.includes("LOVABLE_API_KEY")) {
+          throw new Error("Configuration serveur manquante. Contactez le support.");
         }
         throw new Error(data.error);
       }
@@ -325,17 +340,22 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
       const errorMsg = error instanceof Error ? error.message : "Erreur inconnue";
       
       // Retry logic for network errors
-      if (!isRetry && retryCount < maxRetries && (errorMsg.includes("réseau") || errorMsg.includes("network"))) {
+      if (!isRetry && retryCount < maxRetries && (
+        errorMsg.includes("réseau") || 
+        errorMsg.includes("network") || 
+        errorMsg.includes("connexion") ||
+        errorMsg.includes("non-2xx")
+      )) {
         setRetryCount(prev => prev + 1);
         toast({
           title: "Nouvelle tentative...",
           description: `Tentative ${retryCount + 1}/${maxRetries}`,
         });
-        setTimeout(() => analyzeTranscript(text, true), 1500);
+        setTimeout(() => analyzeTranscript(text, true), 2000);
         return;
       }
       
-      setErrorMessage(`Erreur: ${errorMsg}`);
+      setErrorMessage(`Erreur d'analyse: ${errorMsg}`);
       toast({
         title: "Erreur d'analyse",
         description: errorMsg,
