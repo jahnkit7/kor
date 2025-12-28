@@ -13,11 +13,17 @@ import { toast } from "sonner";
 const ProfileSetup = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { profile, loading: profileLoading, refetch } = useProfile();
+  const { profile, loading: profileLoading, refetch, isProfileComplete } = useProfile();
 
   const [shopName, setShopName] = useState("");
   const [ownerName, setOwnerName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!profileLoading && isProfileComplete) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [profileLoading, isProfileComplete, navigate]);
 
   useEffect(() => {
     if (!profileLoading && profile) {
