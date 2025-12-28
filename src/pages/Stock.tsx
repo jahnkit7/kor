@@ -202,8 +202,16 @@ export default function Stock() {
         </TabsContent>
       </Tabs>
 
-      {/* Add Stock Sheet */}
-      <Sheet open={isAddSheetOpen} onOpenChange={handleCloseSheet}>
+      {/* Voice Stock Input - Fullscreen */}
+      {isAddSheetOpen && entryMode === "voice" && (
+        <VoiceStockInput
+          onComplete={handleAddItems}
+          onCancel={handleCloseSheet}
+        />
+      )}
+
+      {/* Add Stock Sheet - for mode selection and manual input */}
+      <Sheet open={isAddSheetOpen && entryMode !== "voice"} onOpenChange={handleCloseSheet}>
         <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl">
           <SheetHeader className="sr-only">
             <SheetTitle>Ajouter du stock</SheetTitle>
@@ -212,18 +220,13 @@ export default function Stock() {
           <div className="pt-4">
             {!entryMode ? (
               <StockEntryModes onSelectMode={setEntryMode} />
-            ) : entryMode === "voice" ? (
-              <VoiceStockInput
-                onComplete={handleAddItems}
-                onCancel={() => setEntryMode(null)}
-              />
-            ) : (
+            ) : entryMode !== "voice" ? (
               <ManualStockInput
                 mode={entryMode}
                 onComplete={handleAddItem}
                 onCancel={() => setEntryMode(null)}
               />
-            )}
+            ) : null}
           </div>
         </SheetContent>
       </Sheet>

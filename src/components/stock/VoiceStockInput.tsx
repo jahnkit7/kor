@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Mic, Square, Loader2, Trash2, Edit2, Check, X, Sparkles, Keyboard, RefreshCw, AlertTriangle, ToggleRight, ToggleLeft, Save, Wifi, WifiOff, Zap } from "lucide-react";
+import { Mic, Square, Loader2, Trash2, Edit2, Check, X, Sparkles, Keyboard, RefreshCw, AlertTriangle, ToggleRight, ToggleLeft, Save, Wifi, WifiOff, Zap, ChevronLeft, Copy, Eye } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -12,6 +12,7 @@ import { useNetworkStatus } from "@/hooks/use-network-status";
 import { supabase } from "@/integrations/supabase/client";
 import { parseTranscriptLocally, canParseLocally, type ParsedStockItem } from "@/lib/local-stock-parser";
 import type { NewStockItem } from "@/hooks/use-stock";
+import { cn } from "@/lib/utils";
 
 // TypeScript declarations for Web Speech API
 interface SpeechRecognitionEvent extends Event {
@@ -65,7 +66,7 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
   const { toast } = useToast();
   const { isOnline } = useNetworkStatus();
 
-  const [step, setStep] = useState<"record" | "analyzing" | "saving" | "validate" | "manual">("record");
+  const [step, setStep] = useState<"record" | "analyzing" | "saving" | "validate" | "manual" | "transcript-view">("record");
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [manualText, setManualText] = useState("");
@@ -79,6 +80,7 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
   const [autoSaveMode, setAutoSaveMode] = useState(true);
   const [useLocalParser, setUseLocalParser] = useState(false);
   const [savingTranscript, setSavingTranscript] = useState(false);
+  const [previousStep, setPreviousStep] = useState<typeof step>("record");
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -118,6 +120,30 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  // Truncate transcript for preview
+  const getTruncatedTranscript = (text: string, maxLength = 180) => {
+    if (text.length <= maxLength) return { text, isTruncated: false };
+    return { text: text.slice(0, maxLength) + "…", isTruncated: true };
+  };
+
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(transcript);
+      toast({ title: "Copié", description: "Transcription copiée" });
+    } catch {
+      toast({ title: "Erreur", description: "Impossible de copier", variant: "destructive" });
+    }
+  };
+
+  const openTranscriptView = () => {
+    setPreviousStep(step);
+    setStep("transcript-view");
+  };
+
+  const closeTranscriptView = () => {
+    setStep(previousStep);
   };
 
   const startRecording = useCallback(async () => {
@@ -573,250 +599,462 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
     setErrorMessage(null);
   };
 
-  // Manual text input step
+  // ============================================
+  // FULLSCREEN MODAL WRAPPER
+  // ============================================
+  const FullscreenModal = ({ 
+    children, 
+    title, 
+    onBack,
+    footer
+  }: { 
+    children: React.ReactNode; 
+    title: string;
+    onBack?: () => void;
+    footer?: React.ReactNode;
+  }) => (
+    <div className="fixed inset-0 z-50 bg-background flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      {/* Fixed Header */}
+      <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b bg-background">
+        {onBack ? (
+          <Button variant="ghost" size="icon" onClick={onBack}>
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+        ) : (
+          <div className="w-10" />
+        )}
+        <h2 className="text-lg font-semibold">{title}</h2>
+        <Button variant="ghost" size="icon" onClick={onCancel}>
+          <X className="h-5 w-5" />
+        </Button>
+      </div>
+      
+      {/* Scrollable Body */}
+      <div className="flex-1 overflow-y-auto px-4 py-4">
+        {children}
+      </div>
+      
+      {/* Sticky Footer */}
+      {footer && (
+        <div className="flex-shrink-0 px-4 py-4 border-t bg-background space-y-2" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' }}>
+          {footer}
+        </div>
+      )}
+    </div>
+  );
+
+  // ============================================
+  // ANIMATED MICROPHONE BUTTON
+  // ============================================
+  const AnimatedMicButton = () => (
+    <div className="relative flex items-center justify-center">
+      {/* Ripple animations when recording */}
+      {isRecording && (
+        <>
+          <span className="absolute inset-0 rounded-full bg-destructive/20 animate-ping" style={{ animationDuration: '1.5s' }} />
+          <span className="absolute inset-[-8px] rounded-full border-2 border-destructive/30 animate-ping" style={{ animationDuration: '2s', animationDelay: '0.3s' }} />
+          <span className="absolute inset-[-16px] rounded-full border border-destructive/20 animate-ping" style={{ animationDuration: '2.5s', animationDelay: '0.6s' }} />
+        </>
+      )}
+      
+      {/* Gradient ring */}
+      <div className={cn(
+        "relative p-1 rounded-full transition-all duration-300",
+        isRecording 
+          ? "bg-gradient-to-r from-destructive via-red-400 to-destructive" 
+          : "bg-gradient-to-r from-primary via-accent to-primary"
+      )}>
+        <Button
+          size="lg"
+          variant={isRecording ? "destructive" : "default"}
+          className={cn(
+            "h-24 w-24 rounded-full shadow-xl transition-all duration-200",
+            isRecording && "scale-95"
+          )}
+          onClick={isRecording ? stopRecording : startRecording}
+        >
+          {isRecording ? (
+            <Square className="h-10 w-10 fill-current" />
+          ) : (
+            <Mic className="h-10 w-10" />
+          )}
+        </Button>
+      </div>
+    </div>
+  );
+
+  // ============================================
+  // TRANSCRIPT PREVIEW COMPONENT
+  // ============================================
+  const TranscriptPreview = () => {
+    const { text, isTruncated } = getTruncatedTranscript(transcript);
+    
+    if (!transcript) return null;
+    
+    return (
+      <Card 
+        className="p-4 bg-muted/50 cursor-pointer active:bg-muted/70 transition-colors"
+        onClick={openTranscriptView}
+      >
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-muted-foreground mb-1">Transcription :</p>
+            <p className="text-sm italic line-clamp-3">"{text}"</p>
+          </div>
+          {isTruncated && (
+            <Button variant="ghost" size="sm" className="shrink-0 text-primary">
+              <Eye className="h-4 w-4 mr-1" />
+              Voir tout
+            </Button>
+          )}
+        </div>
+      </Card>
+    );
+  };
+
+  // ============================================
+  // FULLSCREEN TRANSCRIPT VIEW
+  // ============================================
+  if (step === "transcript-view") {
+    return (
+      <FullscreenModal 
+        title="Transcription complète" 
+        onBack={closeTranscriptView}
+        footer={
+          <Button variant="outline" onClick={copyToClipboard} className="w-full gap-2">
+            <Copy className="h-4 w-4" />
+            Copier la transcription
+          </Button>
+        }
+      >
+        <Card className="p-4 bg-muted/30">
+          <p className="text-sm leading-relaxed whitespace-pre-wrap">{transcript}</p>
+        </Card>
+      </FullscreenModal>
+    );
+  }
+
+  // ============================================
+  // MANUAL TEXT INPUT STEP
+  // ============================================
   if (step === "manual") {
     return (
-      <div className="space-y-6">
-        <div className="text-center space-y-2">
-          <h3 className="text-lg font-semibold">Mode texte</h3>
-          <p className="text-sm text-muted-foreground">
+      <FullscreenModal 
+        title="Mode texte"
+        onBack={switchToVoice}
+        footer={
+          <>
+            <Button 
+              onClick={handleManualSubmit} 
+              disabled={!manualText.trim()}
+              className="w-full gap-2"
+              size="lg"
+            >
+              {isOnline ? <Sparkles className="h-4 w-4" /> : <Zap className="h-4 w-4" />}
+              {isOnline ? "Analyser (IA)" : "Analyser (local)"}
+            </Button>
+            {isSupported && (
+              <Button variant="outline" onClick={switchToVoice} className="w-full gap-2">
+                <Mic className="h-4 w-4" />
+                Mode vocal
+              </Button>
+            )}
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground text-center">
             Décrivez votre stock par écrit
           </p>
-        </div>
 
-        {errorMessage && (
-          <Card className="p-3 bg-destructive/10 border-destructive/20">
-            <p className="text-sm text-destructive">{errorMessage}</p>
-          </Card>
-        )}
+          {errorMessage && (
+            <Card className="p-3 bg-destructive/10 border-destructive/20">
+              <p className="text-sm text-destructive">{errorMessage}</p>
+            </Card>
+          )}
 
-        <div className="space-y-3">
           <Textarea
             value={manualText}
             onChange={(e) => setManualText(e.target.value)}
             placeholder="Exemple: J'ai 50 savons Lux à 500 francs, 10 paquets de riz à 15000..."
-            className="min-h-[120px] text-base"
+            className="min-h-[150px] text-base"
           />
           <p className="text-xs text-muted-foreground">
             💡 Mentionnez le nom, la quantité et le prix de chaque produit
           </p>
         </div>
-
-        <div className="flex gap-3">
-          {isSupported && (
-            <Button variant="outline" onClick={switchToVoice} className="flex-1 gap-2">
-              <Mic className="h-4 w-4" />
-              Mode vocal
-            </Button>
-          )}
-          <Button 
-            onClick={handleManualSubmit} 
-            disabled={!manualText.trim()}
-            className="flex-1 gap-2"
-          >
-            {isOnline ? <Sparkles className="h-4 w-4" /> : <Zap className="h-4 w-4" />}
-            {isOnline ? "Analyser (IA)" : "Analyser (local)"}
-          </Button>
-        </div>
-
-        <Button variant="ghost" onClick={onCancel} className="w-full">
-          Annuler
-        </Button>
-      </div>
+      </FullscreenModal>
     );
   }
 
-  // Recording step
+  // ============================================
+  // RECORDING STEP
+  // ============================================
   if (step === "record") {
     return (
-      <div className="space-y-6">
-        <div className="text-center space-y-2">
-          <h3 className="text-lg font-semibold">Dictez votre stock</h3>
-          <p className="text-sm text-muted-foreground">
-            Parlez naturellement. Dites "suivant" entre chaque produit.
-          </p>
-        </div>
-
-        {/* Toggle mode auto/validation */}
-        <div className="flex items-center justify-between px-3 py-2 border rounded-lg bg-muted/30">
-          <Label htmlFor="auto-save-toggle" className="text-sm flex items-center gap-2 cursor-pointer">
-            {autoSaveMode ? (
-              <ToggleRight className="h-4 w-4 text-primary" />
-            ) : (
-              <ToggleLeft className="h-4 w-4 text-muted-foreground" />
-            )}
-            {autoSaveMode ? "Enregistrement auto" : "Valider avant"}
-          </Label>
-          <Switch
-            id="auto-save-toggle"
-            checked={autoSaveMode}
-            onCheckedChange={setAutoSaveMode}
-          />
-        </div>
-
-        {/* Online/Offline status */}
-        <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${isOnline ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
-          {isOnline ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
-          <span>{isOnline ? "En ligne - Analyse IA disponible" : "Hors-ligne - Analyse locale uniquement"}</span>
-        </div>
-
-        {/* Browser not supported warning */}
-        {!isSupported && (
-          <Card className="p-4 bg-warning/10 border-warning/20">
-            <div className="flex gap-3">
-              <AlertTriangle className="h-5 w-5 text-warning shrink-0" />
-              <div>
-                <p className="font-medium text-warning">Navigateur non supporté</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Utilisez Chrome, Edge ou Safari, ou passez au mode texte.
-                </p>
-              </div>
-            </div>
-          </Card>
-        )}
-
-        {/* Error message */}
-        {errorMessage && (
-          <Card className="p-3 bg-destructive/10 border-destructive/20">
-            <p className="text-sm text-destructive">{errorMessage}</p>
-          </Card>
-        )}
-
-        {/* Recording button */}
-        {isSupported && (
-          <div className="flex flex-col items-center gap-4">
-            <Button
-              size="lg"
-              variant={isRecording ? "destructive" : "default"}
-              className={`h-24 w-24 rounded-full ${isRecording ? "animate-pulse" : ""}`}
-              onClick={isRecording ? stopRecording : startRecording}
-            >
-              {isRecording ? (
-                <Square className="h-10 w-10" />
-              ) : (
-                <Mic className="h-10 w-10" />
-              )}
-            </Button>
-            <div className="text-center">
-              <span className="text-sm text-muted-foreground">
-                {isRecording ? "Appuyez pour arrêter" : "Appuyez pour dicter"}
-              </span>
-              {isRecording && (
-                <p className="text-lg font-mono text-primary mt-1">
-                  {formatDuration(recordingDuration)}
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Live transcript */}
-        {transcript && (
-          <Card className="p-4 bg-muted/50">
-            <p className="text-xs text-muted-foreground mb-1">Transcription :</p>
-            <p className="text-sm italic">"{transcript}"</p>
-          </Card>
-        )}
-
-        {/* Action buttons after recording */}
-        {!!transcript.trim() && !isRecording && (
-          <div className="flex flex-col gap-2">
-            {/* Primary: Quick local parse & validate */}
-            <Button
-              onClick={handleDirectSave}
-              disabled={savingTranscript}
-              className="w-full gap-2"
-              size="lg"
-            >
-              {savingTranscript ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Zap className="h-4 w-4" />
-              )}
-              Valider & enregistrer
-            </Button>
-
-            {/* Secondary: Analyze with AI (if online) */}
-            {isOnline && (
+      <FullscreenModal 
+        title="Dictez votre stock"
+        footer={
+          !!transcript.trim() && !isRecording ? (
+            <>
+              <Button
+                onClick={handleDirectSave}
+                disabled={savingTranscript}
+                className="w-full gap-2"
+                size="lg"
+              >
+                {savingTranscript ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                Valider & enregistrer
+              </Button>
               <Button
                 variant="outline"
                 onClick={() => analyzeTranscript(transcript.trim())}
+                disabled={!isOnline}
                 className="w-full gap-2"
-                size="sm"
               >
                 <Sparkles className="h-4 w-4" />
-                Analyse IA (optionnel)
+                {isOnline ? "Réanalyser (IA)" : "IA indisponible"}
               </Button>
-            )}
+            </>
+          ) : (
+            <Button variant="outline" onClick={switchToManual} className="w-full gap-2">
+              <Keyboard className="h-4 w-4" />
+              Passer au mode texte
+            </Button>
+          )
+        }
+      >
+        <div className="space-y-6">
+          {/* Toggle mode auto/validation */}
+          <div className="flex items-center justify-between px-3 py-2 border rounded-lg bg-muted/30">
+            <Label htmlFor="auto-save-toggle" className="text-sm flex items-center gap-2 cursor-pointer">
+              {autoSaveMode ? (
+                <ToggleRight className="h-4 w-4 text-primary" />
+              ) : (
+                <ToggleLeft className="h-4 w-4 text-muted-foreground" />
+              )}
+              {autoSaveMode ? "Enregistrement auto" : "Valider avant"}
+            </Label>
+            <Switch
+              id="auto-save-toggle"
+              checked={autoSaveMode}
+              onCheckedChange={setAutoSaveMode}
+            />
           </div>
-        )}
 
-        {/* Fallback to manual mode */}
-        <Button 
-          variant="outline" 
-          onClick={switchToManual} 
-          className="w-full gap-2"
-        >
-          <Keyboard className="h-4 w-4" />
-          Passer au mode texte
-        </Button>
+          {/* Online/Offline status */}
+          <div className={cn(
+            "flex items-center gap-2 px-3 py-2 rounded-lg text-sm",
+            isOnline ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+          )}>
+            {isOnline ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
+            <span>{isOnline ? "En ligne - Analyse IA disponible" : "Hors-ligne - Analyse locale"}</span>
+          </div>
 
-        {/* Tips */}
-        {!isRecording && !transcript && isSupported && (
-          <Card className="p-4 bg-accent/5 border-accent/20">
-            <p className="text-xs font-medium text-accent-foreground mb-2">💡 Comment dicter :</p>
-            <ul className="text-xs text-muted-foreground space-y-1">
-              <li>• Dites "suivant" pour séparer les produits</li>
-              <li>• Exemple: "10 bidons d'huile à 6000, suivant, 5 casiers de coca à 8000"</li>
-              <li>• Dites "stop" ou "c'est tout" pour terminer</li>
-            </ul>
-          </Card>
-        )}
+          {/* Browser not supported warning */}
+          {!isSupported && (
+            <Card className="p-4 bg-warning/10 border-warning/20">
+              <div className="flex gap-3">
+                <AlertTriangle className="h-5 w-5 text-warning shrink-0" />
+                <div>
+                  <p className="font-medium text-warning">Navigateur non supporté</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Utilisez Chrome, Edge ou Safari, ou passez au mode texte.
+                  </p>
+                </div>
+              </div>
+            </Card>
+          )}
 
-        <Button variant="ghost" onClick={onCancel} className="w-full">
-          Annuler
-        </Button>
-      </div>
+          {/* Error message */}
+          {errorMessage && (
+            <Card className="p-3 bg-destructive/10 border-destructive/20">
+              <p className="text-sm text-destructive">{errorMessage}</p>
+            </Card>
+          )}
+
+          {/* Animated Microphone Button */}
+          {isSupported && (
+            <div className="flex flex-col items-center gap-4 py-4">
+              <AnimatedMicButton />
+              <div className="text-center">
+                <span className={cn(
+                  "text-sm font-medium",
+                  isRecording ? "text-destructive" : "text-muted-foreground"
+                )}>
+                  {isRecording ? "Écoute en cours…" : "Appuyez pour dicter"}
+                </span>
+                {isRecording && (
+                  <p className="text-2xl font-mono text-destructive mt-2 tabular-nums">
+                    {formatDuration(recordingDuration)}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Transcript Preview (collapsed) */}
+          <TranscriptPreview />
+
+          {/* Tips */}
+          {!isRecording && !transcript && isSupported && (
+            <Card className="p-4 bg-accent/5 border-accent/20">
+              <p className="text-xs font-medium text-accent-foreground mb-2">💡 Comment dicter :</p>
+              <ul className="text-xs text-muted-foreground space-y-1">
+                <li>• Dites "suivant" pour séparer les produits</li>
+                <li>• Exemple: "10 bidons d'huile à 6000, suivant, 5 casiers"</li>
+                <li>• Dites "stop" ou "c'est tout" pour terminer</li>
+              </ul>
+            </Card>
+          )}
+        </div>
+      </FullscreenModal>
     );
   }
 
-  // Analyzing step
+  // ============================================
+  // ANALYZING STEP
+  // ============================================
   if (step === "analyzing") {
     return (
-      <div className="flex flex-col items-center justify-center py-12 space-y-4">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="text-muted-foreground">Analyse en cours...</p>
-        <p className="text-sm text-muted-foreground italic text-center px-4">"{transcript}"</p>
-        {retryCount > 0 && (
-          <p className="text-xs text-muted-foreground">
-            Tentative {retryCount}/{maxRetries}
-          </p>
-        )}
-      </div>
+      <FullscreenModal title="Analyse en cours">
+        <div className="flex flex-col items-center justify-center py-12 space-y-4">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="text-muted-foreground">Analyse en cours...</p>
+          <TranscriptPreview />
+          {retryCount > 0 && (
+            <p className="text-xs text-muted-foreground">
+              Tentative {retryCount}/{maxRetries}
+            </p>
+          )}
+        </div>
+      </FullscreenModal>
     );
   }
 
-  // Saving step (auto-enregistrement)
+  // ============================================
+  // SAVING STEP
+  // ============================================
   if (step === "saving") {
     return (
-      <div className="flex flex-col items-center justify-center py-12 space-y-4">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="text-muted-foreground">Enregistrement dans le stock...</p>
-        <p className="text-sm text-muted-foreground italic text-center px-4">"{transcript}"</p>
-      </div>
+      <FullscreenModal title="Enregistrement">
+        <div className="flex flex-col items-center justify-center py-12 space-y-4">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="text-muted-foreground">Enregistrement dans le stock...</p>
+          <TranscriptPreview />
+        </div>
+      </FullscreenModal>
     );
   }
 
-  // Validation step
+  // ============================================
+  // VALIDATION STEP
+  // ============================================
   if (step === "validate") {
     return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Vérifier le stock</h3>
-          <Badge variant="secondary" className="gap-1">
-            <Sparkles className="h-3 w-3" />
-            {items.length} produit{items.length > 1 ? "s" : ""}
-          </Badge>
+      <FullscreenModal 
+        title="Vérifier le stock"
+        onBack={() => setStep("record")}
+        footer={
+          <>
+            <Button
+              onClick={handleComplete}
+              disabled={items.length === 0 || isSubmitting}
+              className="w-full gap-2"
+              size="lg"
+            >
+              {isSubmitting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4" />
+              )}
+              Valider & enregistrer
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => analyzeTranscript(transcript)}
+              disabled={!isOnline || !transcript}
+              className="w-full gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              {isOnline ? "Réanalyser (IA)" : "IA indisponible"}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Badge variant="secondary" className="gap-1">
+              <Sparkles className="h-3 w-3" />
+              {items.length} produit{items.length > 1 ? "s" : ""}
+            </Badge>
+          </div>
+
+          {suggestions.length > 0 && (
+            <Card className="p-3 bg-accent/10 border-accent/20">
+              <p className="text-sm text-accent-foreground">💡 {suggestions[0]}</p>
+            </Card>
+          )}
+
+          {/* Transcript Preview */}
+          <TranscriptPreview />
+
+          {/* Items list */}
+          <div className="space-y-3">
+            {items.map((item) => (
+              <VoiceStockItemCard
+                key={item.tempId}
+                item={item}
+                onUpdate={(updates) => updateItem(item.tempId, updates)}
+                onDelete={() => deleteItem(item.tempId)}
+                formatMoney={formatMoney}
+              />
+            ))}
+          </div>
+
+          {items.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              <p>Aucun produit à valider</p>
+              <Button variant="link" onClick={() => setStep("record")}>
+                Recommencer la dictée
+              </Button>
+            </div>
+          )}
+        </div>
+      </FullscreenModal>
+    );
+  }
+
+  // ============================================
+  // FINAL SCREEN (after auto-save)
+  // ============================================
+  return (
+    <FullscreenModal 
+      title="Stock ajouté"
+      footer={
+        <>
+          <Button onClick={() => setStep("record")} className="w-full gap-2">
+            <RefreshCw className="h-4 w-4" />
+            Nouvelle dictée
+          </Button>
+          <Button variant="outline" onClick={onCancel} className="w-full">
+            Fermer
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-4 py-8">
+        <div className="text-center space-y-2">
+          <div className="h-16 w-16 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
+            <Check className="h-8 w-8 text-primary" />
+          </div>
+          <p className="text-muted-foreground">
+            Les produits ont été enregistrés.
+          </p>
         </div>
 
         {suggestions.length > 0 && (
@@ -824,93 +1062,14 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
             <p className="text-sm text-accent-foreground">💡 {suggestions[0]}</p>
           </Card>
         )}
-
-        {/* Items list */}
-        <div className="space-y-3 max-h-[400px] overflow-y-auto">
-          {items.map((item) => (
-            <VoiceStockItemCard
-              key={item.tempId}
-              item={item}
-              onUpdate={(updates) => updateItem(item.tempId, updates)}
-              onDelete={() => deleteItem(item.tempId)}
-              formatMoney={formatMoney}
-            />
-          ))}
-        </div>
-
-        {items.length === 0 && (
-          <div className="text-center py-8 text-muted-foreground">
-            <p>Aucun produit à valider</p>
-            <Button variant="link" onClick={() => setStep("record")}>
-              Recommencer la dictée
-            </Button>
-          </div>
-        )}
-
-        {/* Retry button */}
-        {transcript && isOnline && (
-          <Button
-            variant="outline"
-            onClick={() => analyzeTranscript(transcript)}
-            className="w-full gap-2"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Ré-analyser avec IA
-          </Button>
-        )}
-
-        {/* Actions */}
-        <div className="flex gap-3 pt-4">
-          <Button variant="outline" onClick={onCancel} className="flex-1">
-            Annuler
-          </Button>
-          <Button
-            onClick={handleComplete}
-            disabled={items.length === 0 || isSubmitting}
-            className="flex-1 gap-2"
-          >
-            {isSubmitting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4" />
-            )}
-            Ajouter au stock
-          </Button>
-        </div>
       </div>
-    );
-  }
-
-  // Final screen after auto-save
-  return (
-    <div className="space-y-4">
-      <div className="text-center space-y-2">
-        <h3 className="text-lg font-semibold">Stock ajouté</h3>
-        <p className="text-sm text-muted-foreground">
-          Les produits ont été enregistrés.
-        </p>
-      </div>
-
-      {suggestions.length > 0 && (
-        <Card className="p-3 bg-accent/10 border-accent/20">
-          <p className="text-sm text-accent-foreground">💡 {suggestions[0]}</p>
-        </Card>
-      )}
-
-      <div className="flex gap-3 pt-2">
-        <Button variant="secondary" onClick={() => setStep("record")} className="flex-1 gap-2">
-          <RefreshCw className="h-4 w-4" />
-          Nouvelle dictée
-        </Button>
-        <Button variant="outline" onClick={onCancel} className="flex-1">
-          Fermer
-        </Button>
-      </div>
-    </div>
+    </FullscreenModal>
   );
 }
 
-// Individual item card component
+// ============================================
+// INDIVIDUAL ITEM CARD COMPONENT
+// ============================================
 function VoiceStockItemCard({
   item,
   onUpdate,
@@ -1018,26 +1177,13 @@ function VoiceStockItemCard({
               {formatMoney(item.unit_price)}
             </span>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            Total: {formatMoney(item.quantity * item.unit_price)}
-          </p>
         </div>
-        <div className="flex gap-1">
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={() => setIsEditing(true)}
-            className="h-8 w-8"
-          >
+        <div className="flex gap-1 shrink-0">
+          <Button size="icon" variant="ghost" onClick={() => setIsEditing(true)}>
             <Edit2 className="h-4 w-4" />
           </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={onDelete}
-            className="h-8 w-8 text-destructive hover:text-destructive"
-          >
-            <Trash2 className="h-4 w-4" />
+          <Button size="icon" variant="ghost" onClick={onDelete}>
+            <Trash2 className="h-4 w-4 text-destructive" />
           </Button>
         </div>
       </div>
