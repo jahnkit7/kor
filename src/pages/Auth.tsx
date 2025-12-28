@@ -1,50 +1,88 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Phone, Lock } from "lucide-react";
+import { ArrowLeft, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { toast } from "sonner";
+import { useAuth } from "@/hooks/use-auth";
+import { pullFromCloud } from "@/lib/supabase-sync";
 
 const Auth = () => {
   const navigate = useNavigate();
-  const [step, setStep] = useState<"phone" | "pin">("phone");
-  const [phone, setPhone] = useState("");
-  const [pin, setPin] = useState("");
+  const { signIn, signUp, isAuthenticated, user, loading } = useAuth();
+  
   const [isNewUser, setIsNewUser] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handlePhoneSubmit = () => {
-    if (phone.length >= 8) {
-      setStep("pin");
-    }
-  };
-
-  const handlePinSubmit = () => {
-    if (pin.length === 4) {
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      // Pull data from cloud when authenticated
+      if (user) {
+        pullFromCloud(user.id).catch(console.error);
+      }
       navigate("/dashboard");
     }
-  };
+  }, [isAuthenticated, loading, navigate, user]);
 
-  const handleNumberClick = (num: string) => {
-    if (step === "phone" && phone.length < 10) {
-      setPhone((prev) => prev + num);
-    } else if (step === "pin" && pin.length < 4) {
-      setPin((prev) => prev + num);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email || !password) {
+      toast.error("Remplissez tous les champs");
+      return;
+    }
+
+    if (isNewUser && password !== confirmPassword) {
+      toast.error("Les mots de passe ne correspondent pas");
+      return;
+    }
+
+    if (password.length < 6) {
+      toast.error("Le mot de passe doit contenir au moins 6 caractères");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      if (isNewUser) {
+        const { error } = await signUp(email, password);
+        if (error) {
+          if (error.message.includes("already registered")) {
+            toast.error("Cet email est déjà utilisé");
+          } else {
+            toast.error(error.message);
+          }
+        } else {
+          toast.success("Compte créé avec succès !");
+        }
+      } else {
+        const { error } = await signIn(email, password);
+        if (error) {
+          if (error.message.includes("Invalid login")) {
+            toast.error("Email ou mot de passe incorrect");
+          } else {
+            toast.error(error.message);
+          }
+        }
+      }
+    } catch (error) {
+      toast.error("Une erreur est survenue");
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleDelete = () => {
-    if (step === "phone") {
-      setPhone((prev) => prev.slice(0, -1));
-    } else {
-      setPin((prev) => prev.slice(0, -1));
-    }
-  };
-
-  const handleClear = () => {
-    if (step === "phone") {
-      setPhone("");
-    } else {
-      setPin("");
-    }
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -53,7 +91,7 @@ const Auth = () => {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => (step === "pin" ? setStep("phone") : navigate("/"))}
+          onClick={() => navigate("/")}
         >
           <ArrowLeft className="w-6 h-6" />
         </Button>
@@ -63,116 +101,107 @@ const Auth = () => {
       <div className="flex-1 flex flex-col px-6">
         <div className="text-center mb-8 animate-fade-in">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4">
-            {step === "phone" ? (
-              <Phone className="w-8 h-8 text-primary" />
-            ) : (
-              <Lock className="w-8 h-8 text-primary" />
-            )}
+            <Lock className="w-8 h-8 text-primary" />
           </div>
           <h1 className="text-2xl font-bold text-foreground mb-2">
-            {step === "phone" ? "Votre numéro" : "Code PIN"}
+            {isNewUser ? "Créer un compte" : "Se connecter"}
           </h1>
           <p className="text-muted-foreground">
-            {step === "phone"
-              ? "Entrez votre numéro de téléphone"
-              : isNewUser
-              ? "Créez votre code PIN (4 chiffres)"
-              : "Entrez votre code PIN"}
+            {isNewUser
+              ? "Créez votre compte CAISSE+ pour commencer"
+              : "Connectez-vous à votre compte"}
           </p>
         </div>
 
-        {/* Display */}
-        <div className="mb-8">
-          {step === "phone" ? (
-            <div className="text-center">
-              <div className="inline-flex items-center gap-2 px-6 py-4 bg-secondary rounded-xl">
-                <span className="text-muted-foreground font-semibold">+221</span>
-                <span className="text-money-md text-foreground min-w-[180px]">
-                  {phone || <span className="text-muted-foreground/50">__ __ __ __</span>}
-                </span>
+        <form onSubmit={handleSubmit} className="space-y-4 max-w-sm mx-auto w-full">
+          {/* Email */}
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-muted-foreground">Email</label>
+            <div className="flex items-center gap-3 px-4 py-3 bg-secondary rounded-xl">
+              <Mail className="w-5 h-5 text-muted-foreground" />
+              <input
+                type="email"
+                placeholder="votre@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="flex-1 bg-transparent text-lg outline-none placeholder:text-muted-foreground/50"
+                autoComplete="email"
+              />
+            </div>
+          </div>
+
+          {/* Password */}
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-muted-foreground">Mot de passe</label>
+            <div className="flex items-center gap-3 px-4 py-3 bg-secondary rounded-xl">
+              <Lock className="w-5 h-5 text-muted-foreground" />
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="flex-1 bg-transparent text-lg outline-none placeholder:text-muted-foreground/50"
+                autoComplete={isNewUser ? "new-password" : "current-password"}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="text-muted-foreground"
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
+          </div>
+
+          {/* Confirm Password (for signup) */}
+          {isNewUser && (
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-muted-foreground">Confirmer le mot de passe</label>
+              <div className="flex items-center gap-3 px-4 py-3 bg-secondary rounded-xl">
+                <Lock className="w-5 h-5 text-muted-foreground" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="flex-1 bg-transparent text-lg outline-none placeholder:text-muted-foreground/50"
+                  autoComplete="new-password"
+                />
               </div>
             </div>
-          ) : (
-            <div className="flex justify-center gap-4">
-              {[0, 1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className={`w-14 h-14 rounded-xl border-2 flex items-center justify-center transition-all duration-200 ${
-                    pin.length > i
-                      ? "bg-primary border-primary"
-                      : "border-border bg-secondary"
-                  }`}
-                >
-                  {pin.length > i && (
-                    <div className="w-3 h-3 rounded-full bg-primary-foreground" />
-                  )}
-                </div>
-              ))}
-            </div>
           )}
-        </div>
+
+          {/* Submit Button */}
+          <Button
+            type="submit"
+            variant="action"
+            size="lg"
+            className="w-full"
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <div className="animate-spin w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full" />
+            ) : isNewUser ? (
+              "Créer le compte"
+            ) : (
+              "Se connecter"
+            )}
+          </Button>
+        </form>
 
         {/* Toggle new/existing user */}
-        {step === "phone" && (
-          <button
-            className="text-sm text-primary font-semibold mb-6 underline underline-offset-4"
-            onClick={() => setIsNewUser(!isNewUser)}
-          >
-            {isNewUser ? "J'ai déjà un compte" : "Créer un nouveau compte"}
-          </button>
-        )}
-      </div>
-
-      {/* Numpad */}
-      <div className="px-6 pb-6 safe-bottom">
-        <div className="grid grid-cols-3 gap-3 max-w-xs mx-auto mb-4">
-          {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((num) => (
-            <NumpadButton key={num} onClick={() => handleNumberClick(num)}>
-              {num}
-            </NumpadButton>
-          ))}
-          <NumpadButton onClick={handleClear} variant="secondary">
-            C
-          </NumpadButton>
-          <NumpadButton onClick={() => handleNumberClick("0")}>0</NumpadButton>
-          <NumpadButton onClick={handleDelete} variant="secondary">
-            ←
-          </NumpadButton>
-        </div>
-
-        <Button
-          variant="action"
-          size="lg"
-          className="w-full max-w-xs mx-auto block"
-          onClick={step === "phone" ? handlePhoneSubmit : handlePinSubmit}
-          disabled={step === "phone" ? phone.length < 8 : pin.length < 4}
+        <button
+          type="button"
+          className="text-sm text-primary font-semibold mt-6 underline underline-offset-4 text-center"
+          onClick={() => setIsNewUser(!isNewUser)}
         >
-          {step === "phone" ? "Continuer" : isNewUser ? "Créer le compte" : "Se connecter"}
-        </Button>
+          {isNewUser ? "J'ai déjà un compte" : "Créer un nouveau compte"}
+        </button>
       </div>
+
+      <div className="p-6 safe-bottom" />
     </div>
   );
 };
-
-const NumpadButton = ({
-  children,
-  onClick,
-  variant = "default",
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-  variant?: "default" | "secondary";
-}) => (
-  <button
-    onClick={onClick}
-    className={`h-16 rounded-xl text-2xl font-bold transition-all duration-150 active:scale-95 ${
-      variant === "secondary"
-        ? "bg-secondary text-secondary-foreground"
-        : "bg-card text-foreground border border-border hover:bg-secondary"
-    }`}
-  >
-    {children}
-  </button>
-);
 
 export default Auth;
