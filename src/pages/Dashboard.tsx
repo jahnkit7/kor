@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,20 +12,42 @@ import {
   Bell
 } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
+import { useRequireAuth } from "@/hooks/use-require-auth";
+import { getDashboardStats, getSales } from "@/lib/db";
+import type { Sale } from "@/lib/db";
 
 const Dashboard = () => {
+  const { loading } = useRequireAuth();
   const navigate = useNavigate();
-  const [todayData] = useState({
-    totalSales: 125000,
-    cashSales: 85000,
-    creditSales: 40000,
-    totalDebts: 340000,
-    clientsWithDebts: 12,
+  const [todayData, setTodayData] = useState({
+    totalSales: 0,
+    cashSales: 0,
+    creditSales: 0,
+    totalDebts: 0,
+    clientsWithDebts: 0,
   });
+  const [recentSales, setRecentSales] = useState<Sale[]>([]);
+
+  useEffect(() => {
+    getDashboardStats().then(setTodayData);
+    getSales().then((sales) => {
+      // Get last 5 sales
+      const sorted = sales.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      setRecentSales(sorted.slice(0, 5));
+    });
+  }, []);
 
   const formatMoney = (amount: number) => {
     return new Intl.NumberFormat("fr-FR").format(amount);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background pb-24">

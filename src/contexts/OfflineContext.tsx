@@ -1,7 +1,9 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { useNetworkStatus } from "@/hooks/use-network-status";
 import { useSync } from "@/hooks/use-sync";
+import { useAuth } from "@/hooks/use-auth";
 import { getDB } from "@/lib/db";
+import { fullSync } from "@/lib/supabase-sync";
 import { toast } from "sonner";
 
 interface OfflineContextValue {
@@ -16,6 +18,7 @@ const OfflineContext = createContext<OfflineContextValue | null>(null);
 
 export function OfflineProvider({ children }: { children: ReactNode }) {
   const { isOnline, wasOffline } = useNetworkStatus();
+  const { user, isAuthenticated } = useAuth();
   const { isSyncing, pendingCount, performSync, updatePendingCount } = useSync();
   const [isReady, setIsReady] = useState(false);
   const [prevOnline, setPrevOnline] = useState(isOnline);
@@ -40,8 +43,8 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
         toast.success("Connexion rétablie", {
           description: pendingCount > 0 ? "Synchronisation en cours..." : undefined,
         });
-        if (wasOffline && pendingCount > 0) {
-          performSync();
+        if (wasOffline && pendingCount > 0 && isAuthenticated && user) {
+          fullSync(user.id).catch(console.error);
         }
       } else {
         toast.warning("Mode hors-ligne", {
@@ -50,7 +53,14 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
       }
       setPrevOnline(isOnline);
     }
-  }, [isOnline, prevOnline, wasOffline, pendingCount, performSync]);
+  }, [isOnline, prevOnline, wasOffline, pendingCount, isAuthenticated, user]);
+
+  // Sync when user logs in
+  useEffect(() => {
+    if (isAuthenticated && user && isOnline && isReady) {
+      fullSync(user.id).catch(console.error);
+    }
+  }, [isAuthenticated, user, isOnline, isReady]);
 
   return (
     <OfflineContext.Provider

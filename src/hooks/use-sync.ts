@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { getSyncQueue, removeSyncQueueItem } from "@/lib/db";
+import { processSyncQueue } from "@/lib/supabase-sync";
 import type { SyncQueueItem } from "@/lib/db";
+import { useAuth } from "./use-auth";
 
 interface SyncState {
   isSyncing: boolean;
@@ -10,6 +12,7 @@ interface SyncState {
 }
 
 export function useSync() {
+  const { user, isAuthenticated } = useAuth();
   const [syncState, setSyncState] = useState<SyncState>({
     isSyncing: false,
     pendingCount: 0,
@@ -27,30 +30,8 @@ export function useSync() {
     }
   }, []);
 
-  const syncItem = async (item: SyncQueueItem): Promise<boolean> => {
-    // Simulate API call - in real implementation, this would call your backend
-    // For now, we'll just mark it as synced after a short delay
-    try {
-      console.log(`Syncing ${item.type} to ${item.table}:`, item.data);
-      
-      // Simulate network delay
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      
-      // In a real app, you would:
-      // 1. Make API call based on item.type (create/update/delete)
-      // 2. Update the local record to mark synced = true
-      // 3. Remove from sync queue
-      
-      await removeSyncQueueItem(item.id);
-      return true;
-    } catch (error) {
-      console.error(`Failed to sync item ${item.id}:`, error);
-      return false;
-    }
-  };
-
   const performSync = useCallback(async () => {
-    if (syncInProgress.current || !navigator.onLine) return;
+    if (syncInProgress.current || !navigator.onLine || !isAuthenticated || !user) return;
 
     syncInProgress.current = true;
     setSyncState((prev) => ({ ...prev, isSyncing: true, error: null }));
@@ -68,23 +49,15 @@ export function useSync() {
         return;
       }
 
-      let successCount = 0;
-      for (const item of queue) {
-        const success = await syncItem(item);
-        if (success) {
-          successCount++;
-          setSyncState((prev) => ({
-            ...prev,
-            pendingCount: prev.pendingCount - 1,
-          }));
-        }
-      }
+      // Use the cloud sync service
+      const result = await processSyncQueue(user.id);
 
       setSyncState((prev) => ({
         ...prev,
         isSyncing: false,
+        pendingCount: result.failed,
         lastSyncAt: new Date().toISOString(),
-        error: successCount < queue.length ? `${queue.length - successCount} items failed to sync` : null,
+        error: result.failed > 0 ? `${result.failed} items failed to sync` : null,
       }));
     } catch (error) {
       setSyncState((prev) => ({
@@ -95,7 +68,7 @@ export function useSync() {
     } finally {
       syncInProgress.current = false;
     }
-  }, []);
+  }, [isAuthenticated, user]);
 
   // Listen for sync-needed events
   useEffect(() => {
@@ -105,26 +78,26 @@ export function useSync() {
 
     window.addEventListener("app:sync-needed", handleSyncNeeded);
     
-    // Also run on mount if online
-    if (navigator.onLine) {
+    // Also run on mount if online and authenticated
+    if (navigator.onLine && isAuthenticated) {
       updatePendingCount();
     }
 
     return () => {
       window.removeEventListener("app:sync-needed", handleSyncNeeded);
     };
-  }, [performSync, updatePendingCount]);
+  }, [performSync, updatePendingCount, isAuthenticated]);
 
   // Periodic sync check
   useEffect(() => {
     const interval = setInterval(() => {
-      if (navigator.onLine) {
+      if (navigator.onLine && isAuthenticated) {
         updatePendingCount();
       }
     }, 10000); // Check every 10 seconds
 
     return () => clearInterval(interval);
-  }, [updatePendingCount]);
+  }, [updatePendingCount, isAuthenticated]);
 
   return {
     ...syncState,
