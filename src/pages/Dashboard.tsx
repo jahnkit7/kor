@@ -9,6 +9,7 @@ import {
   Plus,
   ChevronRight,
   Bell,
+  Package,
 } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { RoleBadge } from "@/components/RoleBadge";
@@ -20,6 +21,7 @@ import { useRole, usePermissions } from "@/hooks/use-role";
 import { useProfile } from "@/hooks/use-profile";
 import { useSales } from "@/hooks/use-sales";
 import { useDebts } from "@/hooks/use-debts";
+import { useStock } from "@/hooks/use-stock";
 
 const Dashboard = () => {
   const { loading: authLoading } = useRequireAuth();
@@ -31,13 +33,16 @@ const Dashboard = () => {
   const { profile, loading: profileLoading, isProfileComplete } = useProfile();
   const { sales, loading: salesLoading, getTodayStats } = useSales();
   const { totalDebts, clientsWithDebts, loading: debtsLoading } = useDebts();
+  const { items: stockItems, loading: stockLoading, getTotalValue } = useStock();
 
   // Note: RequireProfile guard handles incomplete profile redirect globally
 
   const todayStats = getTodayStats();
   const shopName = profile?.shop_name || "Ma Boutique";
+  const stockTotalValue = getTotalValue();
+  const stockItemsCount = stockItems.length;
 
-  const isLoading = authLoading || profileLoading || salesLoading || debtsLoading;
+  const isLoading = authLoading || profileLoading || salesLoading || debtsLoading || stockLoading;
 
   if (isLoading) {
     return (
@@ -149,6 +154,32 @@ const Dashboard = () => {
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <span className="text-sm font-medium">{clientsWithDebts} clients</span>
+                <ChevronRight className="w-5 h-5" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Stock Summary */}
+      <div className="px-5 mt-4">
+        <Card 
+          className="cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => navigate("/stock")}
+        >
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Package className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground font-medium">Valeur du stock</p>
+                  <p className="text-money-md text-primary">{formatMoney(stockTotalValue)}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <span className="text-sm font-medium">{stockItemsCount} produits</span>
                 <ChevronRight className="w-5 h-5" />
               </div>
             </div>
