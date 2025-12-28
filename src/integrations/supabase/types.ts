@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_risky: boolean | null
           name: string
           phone: string
           photo: string | null
@@ -27,6 +28,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          is_risky?: boolean | null
           name: string
           phone: string
           photo?: string | null
@@ -36,6 +38,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          is_risky?: boolean | null
           name?: string
           phone?: string
           photo?: string | null
@@ -82,6 +85,33 @@ export type Database = {
           },
         ]
       }
+      employee_invites: {
+        Row: {
+          created_at: string
+          employee_phone: string
+          expires_at: string
+          id: string
+          owner_user_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          employee_phone: string
+          expires_at?: string
+          id?: string
+          owner_user_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          employee_phone?: string
+          expires_at?: string
+          id?: string
+          owner_user_id?: string
+          status?: string
+        }
+        Relationships: []
+      }
       payments: {
         Row: {
           amount: number
@@ -126,10 +156,14 @@ export type Database = {
       }
       profiles: {
         Row: {
+          app_pin: string | null
+          auto_lock_minutes: number | null
           created_at: string
           currency: string
+          hide_amounts: boolean | null
           id: string
           language: string
+          onboarding_completed: boolean | null
           owner_name: string | null
           phone: string | null
           shop_name: string
@@ -137,10 +171,14 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          app_pin?: string | null
+          auto_lock_minutes?: number | null
           created_at?: string
           currency?: string
+          hide_amounts?: boolean | null
           id?: string
           language?: string
+          onboarding_completed?: boolean | null
           owner_name?: string | null
           phone?: string | null
           shop_name?: string
@@ -148,10 +186,14 @@ export type Database = {
           user_id: string
         }
         Update: {
+          app_pin?: string | null
+          auto_lock_minutes?: number | null
           created_at?: string
           currency?: string
+          hide_amounts?: boolean | null
           id?: string
           language?: string
+          onboarding_completed?: boolean | null
           owner_name?: string | null
           phone?: string | null
           shop_name?: string
@@ -198,15 +240,78 @@ export type Database = {
           },
         ]
       }
+      subscriptions: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean | null
+          max_clients: number | null
+          plan: string
+          trial_ends_at: string
+          trial_started_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          max_clients?: number | null
+          plan?: string
+          trial_ends_at?: string
+          trial_started_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          max_clients?: number | null
+          plan?: string
+          trial_ends_at?: string
+          trial_started_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "owner" | "employee"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -333,6 +438,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["owner", "employee"],
+    },
   },
 } as const
