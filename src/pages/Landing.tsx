@@ -1,16 +1,49 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Shield, Wallet, Users, TrendingUp } from "lucide-react";
+import { Onboarding } from "@/components/Onboarding";
+
+const ONBOARDING_KEY = "caisse_onboarding_completed";
 
 const Landing = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [checkingOnboarding, setCheckingOnboarding] = useState(true);
+
+  useEffect(() => {
+    // Check if onboarding was completed
+    const completed = localStorage.getItem(ONBOARDING_KEY);
+    if (!completed) {
+      setShowOnboarding(true);
+    }
+    setCheckingOnboarding(false);
+  }, []);
+
+  const handleOnboardingComplete = () => {
+    localStorage.setItem(ONBOARDING_KEY, "true");
+    setShowOnboarding(false);
+  };
 
   const handleStart = () => {
     setIsLoading(true);
     setTimeout(() => navigate("/auth"), 300);
   };
+
+  // Show loading while checking
+  if (checkingOnboarding) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  // Show onboarding on first launch
+  if (showOnboarding) {
+    return <Onboarding onComplete={handleOnboardingComplete} />;
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
