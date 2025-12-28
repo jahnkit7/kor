@@ -16,7 +16,8 @@ import {
   EyeOff,
   Clock,
   UserCheck,
-  Users
+  Users,
+  Palette
 } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { OwnerBadge, RoleBadge } from "@/components/RoleBadge";
@@ -24,6 +25,7 @@ import { useRole, usePermissions } from "@/hooks/use-role";
 import { useSecurity } from "@/hooks/use-security";
 import { useProfile } from "@/hooks/use-profile";
 import { useAuth } from "@/hooks/use-auth";
+import { ThemeSelector } from "@/components/ThemeSelector";
 import { toast } from "sonner";
 
 const Settings = () => {
@@ -206,6 +208,27 @@ const Settings = () => {
                   <ChevronRight className="w-5 h-5 text-muted-foreground" />
                 </button>
               ))}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Theme / Appearance */}
+        <div>
+          <p className="text-sm font-semibold text-muted-foreground mb-3 px-1">
+            Apparence
+          </p>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center">
+                  <Palette className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="font-semibold text-foreground">Changer de style</p>
+                  <p className="text-sm text-muted-foreground">Personnalisez l'apparence</p>
+                </div>
+              </div>
+              <ThemeSelector />
             </CardContent>
           </Card>
         </div>
