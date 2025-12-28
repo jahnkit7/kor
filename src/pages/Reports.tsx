@@ -8,17 +8,21 @@ import {
   Wallet,
   CreditCard,
   TrendingUp,
-  Download
+  Download,
+  Lock
 } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
+import { WhatsAppShare } from "@/components/WhatsAppShare";
+import { usePermissions } from "@/hooks/use-role";
+import { useHiddenAmount } from "@/components/HideAmountsToggle";
+import { toast } from "sonner";
 
 const Reports = () => {
   const navigate = useNavigate();
   const [period, setPeriod] = useState<"day" | "week" | "month">("day");
-
-  const formatMoney = (amount: number) => {
-    return new Intl.NumberFormat("fr-FR").format(amount);
-  };
+  const { canViewReports } = usePermissions();
+  const { formatMoney, hideAmounts } = useHiddenAmount();
+  const [shopName] = useState("Boutique Mamadou");
 
   // Mock data based on period
   const data = {
@@ -28,6 +32,43 @@ const Reports = () => {
   };
 
   const currentData = data[period];
+
+  // Access denied for employees
+  if (!canViewReports) {
+    return (
+      <div className="min-h-screen bg-background pb-24">
+        <div className="bg-card px-4 pt-4 pb-6 border-b border-border">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/dashboard")}
+            >
+              <ArrowLeft className="w-6 h-6" />
+            </Button>
+            <h1 className="text-xl font-bold">Rapports</h1>
+          </div>
+        </div>
+        
+        <div className="flex flex-col items-center justify-center p-8 mt-20 text-center">
+          <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mb-4">
+            <Lock className="w-8 h-8 text-muted-foreground" />
+          </div>
+          <h2 className="text-lg font-bold mb-2">Accès limité</h2>
+          <p className="text-muted-foreground max-w-xs">
+            Seul le propriétaire peut voir les rapports.
+          </p>
+        </div>
+        
+        <BottomNav />
+      </div>
+    );
+  }
+
+  const handleDownload = () => {
+    toast.success("Téléchargement en cours...");
+    // In a real app, this would generate and download a PDF
+  };
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -69,14 +110,28 @@ const Reports = () => {
         {/* Total Sales */}
         <Card className="gradient-hero text-primary-foreground">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium opacity-80 flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
-              Ventes totales ({period === "day" ? "aujourd'hui" : period === "week" ? "cette semaine" : "ce mois"})
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium opacity-80 flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Ventes totales ({period === "day" ? "aujourd'hui" : period === "week" ? "cette semaine" : "ce mois"})
+              </CardTitle>
+              <WhatsAppShare
+                type="sales"
+                data={{
+                  totalSales: currentData.total,
+                  cashSales: currentData.cash,
+                  creditSales: currentData.credit,
+                  shopName,
+                }}
+                variant="ghost"
+                size="sm"
+                className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10 h-7 text-xs"
+              />
+            </div>
           </CardHeader>
           <CardContent>
             <p className="text-money-xl">
-              {formatMoney(currentData.total)} <span className="text-lg">CFA</span>
+              {formatMoney(currentData.total)} <span className="text-lg">{!hideAmounts && "CFA"}</span>
             </p>
           </CardContent>
         </Card>
@@ -144,7 +199,7 @@ const Reports = () => {
                   <CreditCard className="w-5 h-5 text-debt" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Total dettes impayées</p>
+                  <p className="text-sm font-medium text-muted-foreground">Dettes à récupérer</p>
                   <p className="text-money-md text-debt">{formatMoney(currentData.outstanding)}</p>
                 </div>
               </div>
@@ -164,10 +219,10 @@ const Reports = () => {
           variant="secondary"
           size="lg"
           className="w-full"
-          onClick={() => {}}
+          onClick={handleDownload}
         >
           <Download className="w-5 h-5 mr-2" />
-          Exporter le rapport
+          Télécharger
         </Button>
       </div>
 

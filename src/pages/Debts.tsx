@@ -13,14 +13,14 @@ import {
   TrendingUp
 } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
+import { ClientWarningBadge } from "@/components/ClientWarningBadge";
+import { WhatsAppShare } from "@/components/WhatsAppShare";
+import { useHiddenAmount } from "@/components/HideAmountsToggle";
 
 const Debts = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
-
-  const formatMoney = (amount: number) => {
-    return new Intl.NumberFormat("fr-FR").format(amount);
-  };
+  const { formatMoney } = useHiddenAmount();
 
   // Mock data
   const totalDebts = 340000;
@@ -32,6 +32,7 @@ const Debts = () => {
       amount: 125000,
       daysOverdue: 15,
       lastPayment: "Il y a 10 jours",
+      isRisky: true,
     },
     {
       id: "2",
@@ -40,6 +41,7 @@ const Debts = () => {
       amount: 75000,
       daysOverdue: 5,
       lastPayment: "Il y a 3 jours",
+      isRisky: false,
     },
     {
       id: "3",
@@ -48,6 +50,7 @@ const Debts = () => {
       amount: 50000,
       daysOverdue: 0,
       lastPayment: "Aujourd'hui",
+      isRisky: false,
     },
     {
       id: "4",
@@ -56,6 +59,7 @@ const Debts = () => {
       amount: 90000,
       daysOverdue: 30,
       lastPayment: "Il y a 1 mois",
+      isRisky: true,
     },
   ];
 
@@ -94,7 +98,7 @@ const Debts = () => {
                 <TrendingUp className="w-6 h-6 text-debt" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground font-medium">Total impayé</p>
+                <p className="text-sm text-muted-foreground font-medium">Dettes à récupérer</p>
                 <p className="text-money-lg text-debt">{formatMoney(totalDebts)} <span className="text-sm">CFA</span></p>
               </div>
             </div>
@@ -129,8 +133,14 @@ const Debts = () => {
             >
               <CardContent className="p-4">
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center shrink-0">
-                    <User className="w-6 h-6 text-muted-foreground" />
+                  <div className="relative">
+                    <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center shrink-0">
+                      <User className="w-6 h-6 text-muted-foreground" />
+                    </div>
+                    {/* Warning badge positioned on avatar */}
+                    <div className="absolute -top-1 -right-1">
+                      <ClientWarningBadge isRisky={debt.isRisky} />
+                    </div>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
@@ -145,9 +155,22 @@ const Debts = () => {
                     </div>
                     
                     <div className="flex items-center justify-between mt-3">
-                      <p className="text-money-sm text-debt">
-                        {formatMoney(debt.amount)} <span className="text-xs">CFA</span>
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-money-sm text-debt">
+                          {formatMoney(debt.amount)} <span className="text-xs">CFA</span>
+                        </p>
+                        <WhatsAppShare
+                          type="debt"
+                          data={{
+                            clientName: debt.name,
+                            clientPhone: debt.phone,
+                            amount: debt.amount,
+                          }}
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 text-xs px-2"
+                        />
+                      </div>
                       
                       {debt.daysOverdue > 0 ? (
                         <span className={`text-xs font-semibold px-2 py-1 rounded-full flex items-center gap-1 ${getOverdueColor(debt.daysOverdue)}`}>

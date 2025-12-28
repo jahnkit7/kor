@@ -6,19 +6,26 @@ import {
   Wallet, 
   CreditCard, 
   TrendingUp, 
-  Users, 
   Plus,
   ChevronRight,
   Bell
 } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
+import { RoleBadge } from "@/components/RoleBadge";
+import { HideAmountsToggle, useHiddenAmount } from "@/components/HideAmountsToggle";
+import { WhatsAppShare } from "@/components/WhatsAppShare";
 import { useRequireAuth } from "@/hooks/use-require-auth";
+import { useRole, usePermissions } from "@/hooks/use-role";
 import { getDashboardStats, getSales } from "@/lib/db";
 import type { Sale } from "@/lib/db";
 
 const Dashboard = () => {
   const { loading } = useRequireAuth();
   const navigate = useNavigate();
+  const { role } = useRole();
+  const { canViewReports } = usePermissions();
+  const { formatMoney, hideAmounts } = useHiddenAmount();
+  
   const [todayData, setTodayData] = useState({
     totalSales: 0,
     cashSales: 0,
@@ -27,6 +34,7 @@ const Dashboard = () => {
     clientsWithDebts: 0,
   });
   const [recentSales, setRecentSales] = useState<Sale[]>([]);
+  const [shopName] = useState("Boutique Mamadou");
 
   useEffect(() => {
     getDashboardStats().then(setTodayData);
@@ -36,10 +44,6 @@ const Dashboard = () => {
       setRecentSales(sorted.slice(0, 5));
     });
   }, []);
-
-  const formatMoney = (amount: number) => {
-    return new Intl.NumberFormat("fr-FR").format(amount);
-  };
 
   if (loading) {
     return (
@@ -55,20 +59,40 @@ const Dashboard = () => {
       <div className="gradient-hero px-5 pt-6 pb-8 text-primary-foreground">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <p className="text-sm opacity-80 font-medium">Bonjour 👋</p>
-            <h1 className="text-xl font-bold">Boutique Mamadou</h1>
+            <div className="flex items-center gap-2 mb-1">
+              <p className="text-sm opacity-80 font-medium">Bonjour 👋</p>
+              <RoleBadge role={role} />
+            </div>
+            <h1 className="text-xl font-bold">{shopName}</h1>
           </div>
-          <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-foreground/10">
-            <Bell className="w-6 h-6" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <HideAmountsToggle />
+            <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-foreground/10">
+              <Bell className="w-6 h-6" />
+            </Button>
+          </div>
         </div>
 
         {/* Today's Total */}
         <Card className="bg-primary-foreground/10 border-0 backdrop-blur-sm">
           <CardContent className="p-5">
-            <p className="text-sm opacity-80 font-medium mb-1">Ventes du jour</p>
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-sm opacity-80 font-medium">Ventes du jour</p>
+              <WhatsAppShare
+                type="sales"
+                data={{
+                  totalSales: todayData.totalSales,
+                  cashSales: todayData.cashSales,
+                  creditSales: todayData.creditSales,
+                  shopName,
+                }}
+                variant="ghost"
+                size="sm"
+                className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10 h-7 text-xs"
+              />
+            </div>
             <p className="text-money-xl text-primary-foreground">
-              {formatMoney(todayData.totalSales)} <span className="text-lg">CFA</span>
+              {formatMoney(todayData.totalSales)} <span className="text-lg">{!hideAmounts && "CFA"}</span>
             </p>
             <div className="flex gap-4 mt-4">
               <div className="flex-1">
@@ -122,7 +146,7 @@ const Dashboard = () => {
                   <TrendingUp className="w-6 h-6 text-debt" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground font-medium">Total Dettes</p>
+                  <p className="text-sm text-muted-foreground font-medium">Dettes à récupérer</p>
                   <p className="text-money-md text-debt">{formatMoney(todayData.totalDebts)}</p>
                 </div>
               </div>
@@ -139,7 +163,14 @@ const Dashboard = () => {
       <div className="px-5 mt-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold">Activité récente</h2>
-          <button className="text-sm text-primary font-semibold">Voir tout</button>
+          {canViewReports && (
+            <button 
+              className="text-sm text-primary font-semibold"
+              onClick={() => navigate("/reports")}
+            >
+              Voir tout
+            </button>
+          )}
         </div>
         
         <div className="space-y-3">
@@ -148,18 +179,21 @@ const Dashboard = () => {
             amount={15000}
             time="Il y a 5 min"
             note="Ciment x2"
+            hideAmounts={hideAmounts}
           />
           <ActivityItem
             type="credit"
             amount={25000}
             client="Ousmane Diallo"
             time="Il y a 30 min"
+            hideAmounts={hideAmounts}
           />
           <ActivityItem
             type="payment"
             amount={10000}
             client="Fatou Ndiaye"
             time="Il y a 1h"
+            hideAmounts={hideAmounts}
           />
         </div>
       </div>
@@ -183,15 +217,18 @@ const ActivityItem = ({
   client,
   time,
   note,
+  hideAmounts = false,
 }: {
   type: "cash" | "credit" | "payment";
   amount: number;
   client?: string;
   time: string;
   note?: string;
+  hideAmounts?: boolean;
 }) => {
-  const formatMoney = (amount: number) => {
-    return new Intl.NumberFormat("fr-FR").format(amount);
+  const formatMoney = (val: number) => {
+    if (hideAmounts) return "•••••";
+    return new Intl.NumberFormat("fr-FR").format(val);
   };
 
   const config = {
