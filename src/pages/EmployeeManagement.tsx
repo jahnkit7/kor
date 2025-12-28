@@ -13,19 +13,24 @@ import {
   Trash2,
   Loader2,
   Users,
-  Send
+  MessageCircle,
+  ExternalLink
 } from "lucide-react";
 import { useEmployees, type EmployeeInvite } from "@/hooks/use-employees";
+import { useProfile } from "@/hooks/use-profile";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
+import CountryCodeSelect, { countries, type Country } from "@/components/CountryCodeSelect";
 
 const EmployeeManagement = () => {
   const navigate = useNavigate();
   const { invites, loading, sendInvite, cancelInvite } = useEmployees();
+  const { profile } = useProfile();
   
   const [showAddModal, setShowAddModal] = useState(false);
   const [phone, setPhone] = useState("");
+  const [selectedCountry, setSelectedCountry] = useState<Country>(countries[0]); // Sénégal par défaut
   const [sending, setSending] = useState(false);
 
   const formatDate = (dateString: string) => {
@@ -39,20 +44,64 @@ const EmployeeManagement = () => {
     return `${phone.slice(0, 2)} ${phone.slice(2, 5)} ${phone.slice(5, 7)} ${phone.slice(7, 9)}`;
   };
 
+  const generateInviteLink = (inviteId: string) => {
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/auth?invite=${inviteId}`;
+  };
+
+  const generateWhatsAppMessage = (inviteId: string) => {
+    const shopName = profile?.shop_name || "Ma Boutique";
+    const ownerName = profile?.owner_name || "Le propriétaire";
+    const inviteLink = generateInviteLink(inviteId);
+    
+    return `👋 Bonjour !
+
+${ownerName} vous invite à rejoindre l'équipe de *${shopName}* sur Kasy.
+
+🔗 Cliquez sur ce lien pour vous connecter :
+${inviteLink}
+
+📱 Vous pourrez ensuite accéder au tableau de bord et aider à gérer la boutique.
+
+À bientôt ! 🎉`;
+  };
+
+  const openWhatsApp = (phoneNumber: string, inviteId: string) => {
+    const message = generateWhatsAppMessage(inviteId);
+    const cleanPhone = phoneNumber.replace(/\D/g, "");
+    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, "_blank");
+  };
+
   const handleSendInvite = async () => {
     if (!phone.trim()) {
       toast.error("Entrez un numéro de téléphone");
       return;
     }
     
-    setSending(true);
-    const success = await sendInvite(phone);
-    setSending(false);
+    if (phone.length < 7) {
+      toast.error("Numéro de téléphone trop court");
+      return;
+    }
     
-    if (success) {
+    setSending(true);
+    
+    // Format le numéro complet avec l'indicatif pays
+    const fullPhone = `${selectedCountry.dial_code.replace("+", "")}${phone}`;
+    const inviteId = await sendInvite(fullPhone);
+    
+    if (inviteId) {
+      // Ouvrir WhatsApp automatiquement avec l'ID de l'invite
+      setTimeout(() => {
+        openWhatsApp(fullPhone, inviteId);
+      }, 300);
+      
       setPhone("");
       setShowAddModal(false);
+      toast.success("WhatsApp ouvert pour envoyer l'invitation");
     }
+    
+    setSending(false);
   };
 
   const getStatusIcon = (status: EmployeeInvite["status"]) => {
@@ -140,9 +189,8 @@ const EmployeeManagement = () => {
               <div>
                 <p className="font-semibold text-foreground">Comment ça marche ?</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  L'employé recevra un code d'accès par SMS. Il pourra ensuite se connecter 
-                  avec son numéro de téléphone et voir les données de votre boutique avec des 
-                  permissions limitées.
+                  L'employé recevra une invitation WhatsApp avec un lien pour se connecter. 
+                  Il pourra ensuite accéder au tableau de bord avec des permissions limitées.
                 </p>
               </div>
             </div>
@@ -166,7 +214,7 @@ const EmployeeManagement = () => {
                       <div className="flex-1">
                         <p className="font-semibold flex items-center gap-2">
                           <Phone className="w-4 h-4 text-muted-foreground" />
-                          {formatPhone(invite.employee_phone)}
+                          +{invite.employee_phone.slice(0, 3)} {formatPhone(invite.employee_phone.slice(3))}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           Envoyée le {formatDate(invite.created_at)} • 
@@ -175,14 +223,25 @@ const EmployeeManagement = () => {
                           </span>
                         </p>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => cancelInvite(invite.id)}
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openWhatsApp(invite.employee_phone, invite.id)}
+                          className="text-success hover:text-success hover:bg-success/10"
+                          title="Renvoyer via WhatsApp"
+                        >
+                          <MessageCircle className="w-5 h-5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => cancelInvite(invite.id)}
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -210,7 +269,7 @@ const EmployeeManagement = () => {
                       <div className="flex-1">
                         <p className="font-semibold flex items-center gap-2">
                           <Phone className="w-4 h-4 text-muted-foreground" />
-                          {formatPhone(invite.employee_phone)}
+                          +{invite.employee_phone.slice(0, 3)} {formatPhone(invite.employee_phone.slice(3))}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {formatDate(invite.created_at)} • 
@@ -261,17 +320,24 @@ const EmployeeManagement = () => {
               Entrez le numéro de téléphone de l'employé
             </p>
             
-            <div className="mb-6">
-              <div className="flex items-center gap-2 bg-secondary rounded-xl px-4 py-3">
-                <Phone className="w-5 h-5 text-muted-foreground" />
+            <div className="mb-4">
+              <div className="flex items-center gap-2 bg-secondary rounded-xl px-3 py-2">
+                <CountryCodeSelect
+                  value={selectedCountry}
+                  onChange={setSelectedCountry}
+                />
+                <div className="w-px h-6 bg-border" />
                 <Input
                   type="tel"
                   placeholder="77 123 45 67"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 9))}
-                  className="border-0 bg-transparent text-lg font-semibold focus-visible:ring-0 p-0"
+                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                  className="border-0 bg-transparent text-lg font-semibold focus-visible:ring-0 p-0 flex-1"
                 />
               </div>
+              <p className="text-xs text-muted-foreground mt-2 text-center">
+                L'invitation sera envoyée via WhatsApp
+              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -290,14 +356,15 @@ const EmployeeManagement = () => {
                 variant="action"
                 size="lg"
                 onClick={handleSendInvite}
-                disabled={sending || phone.length < 8}
+                disabled={sending || phone.length < 7}
+                className="bg-success hover:bg-success/90"
               >
                 {sending ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
                   <>
-                    <Send className="w-5 h-5 mr-2" />
-                    Envoyer
+                    <MessageCircle className="w-5 h-5 mr-2" />
+                    WhatsApp
                   </>
                 )}
               </Button>

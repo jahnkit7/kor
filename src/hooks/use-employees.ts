@@ -16,7 +16,7 @@ interface EmployeesState {
   invites: EmployeeInvite[];
   loading: boolean;
   refetch: () => Promise<void>;
-  sendInvite: (phone: string) => Promise<boolean>;
+  sendInvite: (phone: string) => Promise<string | false>;
   cancelInvite: (id: string) => Promise<void>;
 }
 
@@ -65,7 +65,7 @@ export function useEmployees(): EmployeesState {
     fetchInvites();
   }, [fetchInvites]);
 
-  const sendInvite = useCallback(async (phone: string): Promise<boolean> => {
+  const sendInvite = useCallback(async (phone: string): Promise<string | false> => {
     if (!user || !isSupabaseConfigured()) return false;
 
     // Validate phone number
@@ -108,9 +108,9 @@ export function useEmployees(): EmployeesState {
         return false;
       }
 
-      setInvites(prev => [data as EmployeeInvite, ...prev]);
-      toast.success("Invitation envoyée");
-      return true;
+      const newInvite = data as EmployeeInvite;
+      setInvites(prev => [newInvite, ...prev]);
+      return newInvite.id; // Retourne l'ID pour pouvoir générer le lien
     } catch (error) {
       console.error("Error sending invite:", error);
       toast.error("Erreur lors de l'envoi de l'invitation");
