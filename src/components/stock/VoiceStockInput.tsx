@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Mic, Square, Loader2, Trash2, Edit2, Check, X, Sparkles, Keyboard, RefreshCw, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useNetworkStatus } from "@/hooks/use-network-status";
 import { supabase } from "@/integrations/supabase/client";
 import type { NewStockItem } from "@/hooks/use-stock";
 
@@ -58,6 +59,8 @@ const isSpeechRecognitionSupported = () => {
 
 export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) {
   const { toast } = useToast();
+  const { isOnline } = useNetworkStatus();
+
   const [step, setStep] = useState<"record" | "analyzing" | "validate" | "manual">("record");
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState("");
@@ -235,7 +238,7 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
 
   const stopRecording = useCallback(async () => {
     stopTimer();
-    
+
     if (recognitionRef.current) {
       recognitionRef.current.stop();
       recognitionRef.current = null;
@@ -243,7 +246,7 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
     setIsRecording(false);
 
     const trimmedTranscript = transcript.trim();
-    
+
     if (!trimmedTranscript) {
       setErrorMessage("Aucun texte détecté. Parlez plus fort ou utilisez le mode texte.");
       toast({
@@ -264,106 +267,135 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
       return;
     }
 
-    await analyzeTranscript(trimmedTranscript);
-  }, [transcript, toast, stopTimer]);
-
-  const analyzeTranscript = useCallback(async (text: string, isRetry = false) => {
-    setStep("analyzing");
-    setErrorMessage(null);
-
-    try {
-      console.log("Analyzing transcript:", text);
-      
-      const { data, error } = await supabase.functions.invoke("analyze-stock-voice", {
-        body: { transcript: text },
+    // Ne pas analyser automatiquement : l'utilisateur clique ensuite sur "Analyser"
+    // (et on bloque proprement si hors-ligne)
+    if (!isOnline) {
+      setErrorMessage("Vous êtes hors-ligne. L'analyse nécessite une connexion internet.");
+      toast({
+        title: "Hors-ligne",
+        description: "Reconnectez-vous pour analyser et enregistrer le stock.",
+        variant: "destructive",
       });
+    }
+  }, [transcript, toast, stopTimer, isOnline]);
 
-      console.log("AI response:", data, error);
-
-      if (error) {
-        // Try to extract more details from the error
-        const errorDetails = error.message || "Erreur lors de l'analyse";
-        console.error("Edge function error:", errorDetails, error);
-        
-        // Check if it's a network error
-        if (errorDetails.includes("FunctionsFetchError") || errorDetails.includes("non-2xx")) {
-          throw new Error("Erreur de connexion au serveur. Vérifiez votre connexion internet.");
-        }
-        throw new Error(errorDetails);
+  const analyzeTranscript = useCallback(
+    async (text: string, isRetry = false) => {
+      if (!isOnline) {
+        const msg = "Vous êtes hors-ligne. L'analyse nécessite une connexion internet.";
+        setErrorMessage(msg);
+        toast({ title: "Hors-ligne", description: msg, variant: "destructive" });
+        return;
       }
 
-      if (!data) {
-        throw new Error("Aucune réponse reçue du serveur");
-      }
+      setStep("analyzing");
+      setErrorMessage(null);
 
-      if (data?.error) {
-        // Handle specific errors
-        if (data.error.includes("Trop de requêtes")) {
-          throw new Error("Trop de requêtes. Attendez quelques secondes et réessayez.");
+      try {
+        console.log("Analyzing transcript:", text);
+
+        const { data, error } = await supabase.functions.invoke("analyze-stock-voice", {
+          body: { transcript: text },
+        });
+
+        console.log("AI response:", data, error);
+
+        if (error) {
+          const anyErr = error as any;
+          const status: number | undefined = anyErr?.context?.status;
+          const errorDetails = error.message || "Erreur lors de l'analyse";
+          console.error("Edge function error:", { status, errorDetails, error });
+
+          if (status === 401) {
+            throw new Error("Session expirée. Reconnectez-vous puis réessayez.");
+          }
+
+          if (errorDetails.includes("FunctionsFetchError") || errorDetails.includes("non-2xx")) {
+            throw new Error("Erreur de connexion au serveur. Vérifiez votre connexion internet.");
+          }
+
+          throw new Error(errorDetails);
         }
-        if (data.error.includes("Crédits")) {
-          throw new Error("Crédits IA épuisés. Utilisez le mode manuel.");
+
+        if (!data) {
+          throw new Error("Aucune réponse reçue du serveur");
         }
-        if (data.error.includes("LOVABLE_API_KEY")) {
-          throw new Error("Configuration serveur manquante. Contactez le support.");
+
+        if (data?.error) {
+          if (data.error.includes("Trop de requêtes")) {
+            throw new Error("Trop de requêtes. Attendez quelques secondes et réessayez.");
+          }
+          if (data.error.includes("Crédits")) {
+            throw new Error("Crédits IA épuisés. Utilisez le mode manuel.");
+          }
+          if (data.error.includes("LOVABLE_API_KEY")) {
+            throw new Error("Configuration serveur manquante. Contactez le support.");
+          }
+          if (data.error.includes("Authentification")) {
+            throw new Error("Session expirée. Reconnectez-vous puis réessayez.");
+          }
+          throw new Error(data.error);
         }
-        throw new Error(data.error);
-      }
 
-      const voiceItems: VoiceStockItem[] = (data?.items || []).map((item: NewStockItem, idx: number) => ({
-        ...item,
-        tempId: `voice-${Date.now()}-${idx}`,
-        source: "voice" as const,
-      }));
+        const voiceItems: VoiceStockItem[] = (data?.items || []).map((item: NewStockItem, idx: number) => ({
+          ...item,
+          tempId: `voice-${Date.now()}-${idx}`,
+          source: "voice" as const,
+        }));
 
-      setItems(voiceItems);
-      setSuggestions(data?.suggestions || []);
-      setRetryCount(0);
+        setItems(voiceItems);
+        setSuggestions(data?.suggestions || []);
+        setRetryCount(0);
 
-      if (voiceItems.length === 0) {
-        setErrorMessage("Aucun produit détecté. Exemple: '50 savons à 500 francs'");
+        if (voiceItems.length === 0) {
+          setErrorMessage("Aucun produit détecté. Exemple: '50 savons à 500 francs'");
+          toast({
+            title: "Aucun produit détecté",
+            description: "Reformulez votre dictée",
+            variant: "destructive",
+          });
+          setStep("record");
+        } else {
+          setStep("validate");
+          toast({
+            title: "Analyse terminée",
+            description: `${voiceItems.length} produit${voiceItems.length > 1 ? "s" : ""} détecté${voiceItems.length > 1 ? "s" : ""}`,
+          });
+        }
+      } catch (error) {
+        console.error("Error analyzing voice:", error);
+        const errorMsg = error instanceof Error ? error.message : "Erreur inconnue";
+
+        // Retry logic for network errors (pas pour les erreurs de session)
+        if (
+          !isRetry &&
+          retryCount < maxRetries &&
+          !errorMsg.toLowerCase().includes("session") &&
+          (errorMsg.includes("réseau") ||
+            errorMsg.includes("network") ||
+            errorMsg.includes("connexion") ||
+            errorMsg.includes("non-2xx"))
+        ) {
+          setRetryCount((prev) => prev + 1);
+          toast({
+            title: "Nouvelle tentative...",
+            description: `Tentative ${retryCount + 1}/${maxRetries}`,
+          });
+          setTimeout(() => analyzeTranscript(text, true), 2000);
+          return;
+        }
+
+        setErrorMessage(`Erreur d'analyse: ${errorMsg}`);
         toast({
-          title: "Aucun produit détecté",
-          description: "Reformulez votre dictée",
+          title: "Erreur d'analyse",
+          description: errorMsg,
           variant: "destructive",
         });
         setStep("record");
-      } else {
-        setStep("validate");
-        toast({
-          title: "Analyse terminée",
-          description: `${voiceItems.length} produit${voiceItems.length > 1 ? "s" : ""} détecté${voiceItems.length > 1 ? "s" : ""}`,
-        });
       }
-    } catch (error) {
-      console.error("Error analyzing voice:", error);
-      const errorMsg = error instanceof Error ? error.message : "Erreur inconnue";
-      
-      // Retry logic for network errors
-      if (!isRetry && retryCount < maxRetries && (
-        errorMsg.includes("réseau") || 
-        errorMsg.includes("network") || 
-        errorMsg.includes("connexion") ||
-        errorMsg.includes("non-2xx")
-      )) {
-        setRetryCount(prev => prev + 1);
-        toast({
-          title: "Nouvelle tentative...",
-          description: `Tentative ${retryCount + 1}/${maxRetries}`,
-        });
-        setTimeout(() => analyzeTranscript(text, true), 2000);
-        return;
-      }
-      
-      setErrorMessage(`Erreur d'analyse: ${errorMsg}`);
-      toast({
-        title: "Erreur d'analyse",
-        description: errorMsg,
-        variant: "destructive",
-      });
-      setStep("record");
-    }
-  }, [toast, retryCount]);
+    },
+    [toast, retryCount, isOnline]
+  );
 
   const handleManualSubmit = async () => {
     const text = manualText.trim();
@@ -461,7 +493,7 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
           )}
           <Button 
             onClick={handleManualSubmit} 
-            disabled={!manualText.trim()}
+            disabled={!manualText.trim() || !isOnline}
             className="flex-1 gap-2"
           >
             <Sparkles className="h-4 w-4" />
@@ -543,6 +575,27 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
             <p className="text-xs text-muted-foreground mb-1">Transcription :</p>
             <p className="text-sm italic">"{transcript}"</p>
           </Card>
+        )}
+
+        {/* Offline hint */}
+        {!isOnline && transcript && (
+          <Card className="p-3 bg-destructive/10 border-destructive/20">
+            <p className="text-sm text-destructive">
+              Vous êtes hors-ligne : l'analyse nécessite une connexion internet.
+            </p>
+          </Card>
+        )}
+
+        {/* Analyze (explicit step after stopping) */}
+        {!!transcript.trim() && !isRecording && (
+          <Button
+            onClick={() => analyzeTranscript(transcript.trim())}
+            disabled={!isOnline}
+            className="w-full gap-2"
+          >
+            <Sparkles className="h-4 w-4" />
+            Analyser
+          </Button>
         )}
 
         {/* Fallback to manual mode */}
