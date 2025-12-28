@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, Check, User, Camera, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
+import { addSale, getClients } from "@/lib/db";
+import type { Client } from "@/lib/db";
 
 const Sale = () => {
   const navigate = useNavigate();
@@ -14,6 +16,12 @@ const Sale = () => {
   const [note, setNote] = useState("");
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [clients, setClients] = useState<Client[]>([]);
+
+  useEffect(() => {
+    getClients().then(setClients);
+  }, []);
 
   const formatMoney = (value: string) => {
     const num = parseInt(value) || 0;
@@ -34,7 +42,7 @@ const Sale = () => {
     setAmount("");
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!amount || parseInt(amount) === 0) {
       toast.error("Entrez un montant valide");
       return;
@@ -44,20 +52,25 @@ const Sale = () => {
       return;
     }
     
-    setShowSuccess(true);
-    setTimeout(() => {
-      navigate("/dashboard");
-    }, 1500);
+    setIsLoading(true);
+    try {
+      await addSale({
+        type: isCash ? "cash" : "credit",
+        amount: parseInt(amount),
+        note: note || undefined,
+        clientId: selectedClient || undefined,
+      });
+      setShowSuccess(true);
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 1500);
+    } catch (error) {
+      toast.error("Erreur lors de l'enregistrement");
+      setIsLoading(false);
+    }
   };
 
   const quickAmounts = [1000, 2000, 5000, 10000, 25000, 50000];
-
-  // Mock clients for credit sales
-  const clients = [
-    { id: "1", name: "Ousmane Diallo", phone: "77 123 45 67" },
-    { id: "2", name: "Fatou Ndiaye", phone: "78 234 56 78" },
-    { id: "3", name: "Ibrahima Fall", phone: "76 345 67 89" },
-  ];
 
   if (showSuccess) {
     return (
@@ -206,7 +219,7 @@ const Sale = () => {
           size="lg"
           className="w-full"
           onClick={handleSubmit}
-          disabled={!amount || parseInt(amount) === 0 || (!isCash && !selectedClient)}
+          disabled={!amount || parseInt(amount) === 0 || (!isCash && !selectedClient) || isLoading}
         >
           <Check className="w-6 h-6 mr-2" />
           Enregistrer la vente

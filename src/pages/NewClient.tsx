@@ -4,13 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, User, Phone, Camera, Check } from "lucide-react";
 import { toast } from "sonner";
+import { addClient } from "@/lib/db";
 
 const NewClient = () => {
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!name.trim()) {
       toast.error("Entrez le nom du client");
       return;
@@ -20,8 +22,16 @@ const NewClient = () => {
       return;
     }
     
-    toast.success("Client ajouté avec succès");
-    navigate(-1);
+    setIsLoading(true);
+    try {
+      await addClient({ name: name.trim(), phone: phone.trim() });
+      toast.success("Client ajouté avec succès");
+      navigate(-1);
+    } catch (error) {
+      toast.error("Erreur lors de l'ajout du client");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -97,7 +107,7 @@ const NewClient = () => {
           size="lg"
           className="w-full"
           onClick={handleSubmit}
-          disabled={!name.trim() || phone.length < 8}
+          disabled={!name.trim() || phone.length < 8 || isLoading}
         >
           <Check className="w-6 h-6 mr-2" />
           Ajouter le client
