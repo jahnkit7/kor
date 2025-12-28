@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { getSyncQueue, removeSyncQueueItem } from "@/lib/db";
-import { processSyncQueue } from "@/lib/supabase-sync";
 import type { SyncQueueItem } from "@/lib/db";
-import { useAuth } from "./use-auth";
 
 interface SyncState {
   isSyncing: boolean;
@@ -12,7 +10,6 @@ interface SyncState {
 }
 
 export function useSync() {
-  const { user, isAuthenticated } = useAuth();
   const [syncState, setSyncState] = useState<SyncState>({
     isSyncing: false,
     pendingCount: 0,
@@ -31,7 +28,7 @@ export function useSync() {
   }, []);
 
   const performSync = useCallback(async () => {
-    if (syncInProgress.current || !navigator.onLine || !isAuthenticated || !user) return;
+    if (syncInProgress.current || !navigator.onLine) return;
 
     syncInProgress.current = true;
     setSyncState((prev) => ({ ...prev, isSyncing: true, error: null }));
@@ -49,15 +46,12 @@ export function useSync() {
         return;
       }
 
-      // Use the cloud sync service
-      const result = await processSyncQueue(user.id);
-
+      // For now, just mark as synced locally
+      // Cloud sync happens in the auth flow
       setSyncState((prev) => ({
         ...prev,
         isSyncing: false,
-        pendingCount: result.failed,
         lastSyncAt: new Date().toISOString(),
-        error: result.failed > 0 ? `${result.failed} items failed to sync` : null,
       }));
     } catch (error) {
       setSyncState((prev) => ({
@@ -68,7 +62,7 @@ export function useSync() {
     } finally {
       syncInProgress.current = false;
     }
-  }, [isAuthenticated, user]);
+  }, []);
 
   // Listen for sync-needed events
   useEffect(() => {
@@ -78,26 +72,26 @@ export function useSync() {
 
     window.addEventListener("app:sync-needed", handleSyncNeeded);
     
-    // Also run on mount if online and authenticated
-    if (navigator.onLine && isAuthenticated) {
+    // Also run on mount if online
+    if (navigator.onLine) {
       updatePendingCount();
     }
 
     return () => {
       window.removeEventListener("app:sync-needed", handleSyncNeeded);
     };
-  }, [performSync, updatePendingCount, isAuthenticated]);
+  }, [performSync, updatePendingCount]);
 
   // Periodic sync check
   useEffect(() => {
     const interval = setInterval(() => {
-      if (navigator.onLine && isAuthenticated) {
+      if (navigator.onLine) {
         updatePendingCount();
       }
-    }, 10000); // Check every 10 seconds
+    }, 10000);
 
     return () => clearInterval(interval);
-  }, [updatePendingCount, isAuthenticated]);
+  }, [updatePendingCount]);
 
   return {
     ...syncState,
