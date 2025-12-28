@@ -204,9 +204,21 @@
     @apply min-h-[56px] min-w-[56px];
   }
 
-  /* Safe area for mobile */
+  /* Safe area for mobile PWA */
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
   .safe-bottom {
-    padding-bottom: calc(env(safe-area-inset-bottom) + 1rem);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Main app container with safe areas */
+  .app-container {
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom));
   }
 }
 

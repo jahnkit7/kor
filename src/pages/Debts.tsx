@@ -12,7 +12,7 @@ import {
   Clock,
   TrendingUp
 } from "lucide-react";
-import BottomNav from "@/components/BottomNav";
+import AppLayout from "@/components/layout/AppLayout";
 import { ClientWarningBadge } from "@/components/ClientWarningBadge";
 import { WhatsAppShare } from "@/components/WhatsAppShare";
 import { useHiddenAmount } from "@/components/HideAmountsToggle";
@@ -86,7 +86,7 @@ const Debts = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <AppLayout>
       {/* Header */}
       <div className="bg-card px-4 pt-4 pb-6 border-b border-border">
         <div className="flex items-center gap-4 mb-6">
@@ -209,9 +209,7 @@ const Debts = () => {
           )}
         </div>
       </div>
-
-      <BottomNav />
-    </div>
+    </AppLayout>
   );
 };
 

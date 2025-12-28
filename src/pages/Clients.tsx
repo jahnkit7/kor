@@ -11,7 +11,7 @@ import {
   ChevronRight,
   AlertTriangle
 } from "lucide-react";
-import BottomNav from "@/components/BottomNav";
+import AppLayout from "@/components/layout/AppLayout";
 import { ClientWarningBadge } from "@/components/ClientWarningBadge";
 import { usePermissions } from "@/hooks/use-role";
 import { useHiddenAmount } from "@/components/HideAmountsToggle";
@@ -44,7 +44,7 @@ const Clients = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <AppLayout>
       {/* Header */}
       <div className="bg-card px-4 pt-4 pb-6 border-b border-border">
         <div className="flex items-center justify-between mb-6">
@@ -162,9 +162,7 @@ const Clients = () => {
           )}
         </div>
       </div>
-
-      <BottomNav />
-    </div>
+    </AppLayout>
   );
 };
 

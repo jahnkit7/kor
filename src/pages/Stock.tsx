@@ -20,7 +20,7 @@ import { ArrowLeft, Plus, Package, Search, Mic, Loader2, History } from "lucide-
 import { useStock, type NewStockItem, type StockItem } from "@/hooks/use-stock";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { useToast } from "@/hooks/use-toast";
-import BottomNav from "@/components/BottomNav";
+import AppLayout from "@/components/layout/AppLayout";
 import { StockEntryModes, type StockEntryMode } from "@/components/stock/StockEntryModes";
 import { ManualStockInput } from "@/components/stock/ManualStockInput";
 import { VoiceStockInput } from "@/components/stock/VoiceStockInput";
@@ -89,7 +89,7 @@ export default function Stock() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <AppLayout>
       {/* Header */}
       <header className="sticky top-0 z-10 bg-background border-b">
         <div className="flex items-center gap-4 p-4">
@@ -257,8 +257,6 @@ export default function Stock() {
           return success;
         }}
       />
-
-      <BottomNav />
-    </div>
+    </AppLayout>
   );
 }
