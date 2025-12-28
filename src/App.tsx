@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { OfflineProvider } from "./contexts/OfflineContext";
 import { OfflineIndicator } from "./components/OfflineIndicator";
+import { RequireProfile } from "./components/RequireProfile";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import ProfileSetup from "./pages/ProfileSetup";
@@ -30,18 +31,84 @@ const App = () => (
         <OfflineIndicator />
         <BrowserRouter>
           <Routes>
+            {/* Public routes */}
             <Route path="/" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/profile-setup" element={<ProfileSetup />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/sale/:type" element={<Sale />} />
-            <Route path="/debts" element={<Debts />} />
-            <Route path="/debts/:id" element={<DebtDetail />} />
-            <Route path="/clients" element={<Clients />} />
-            <Route path="/clients/new" element={<NewClient />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/stock" element={<Stock />} />
+
+            {/* Protected routes - require complete profile */}
+            <Route
+              path="/dashboard"
+              element={
+                <RequireProfile>
+                  <Dashboard />
+                </RequireProfile>
+              }
+            />
+            <Route
+              path="/sale/:type"
+              element={
+                <RequireProfile>
+                  <Sale />
+                </RequireProfile>
+              }
+            />
+            <Route
+              path="/debts"
+              element={
+                <RequireProfile>
+                  <Debts />
+                </RequireProfile>
+              }
+            />
+            <Route
+              path="/debts/:id"
+              element={
+                <RequireProfile>
+                  <DebtDetail />
+                </RequireProfile>
+              }
+            />
+            <Route
+              path="/clients"
+              element={
+                <RequireProfile>
+                  <Clients />
+                </RequireProfile>
+              }
+            />
+            <Route
+              path="/clients/new"
+              element={
+                <RequireProfile>
+                  <NewClient />
+                </RequireProfile>
+              }
+            />
+            <Route
+              path="/reports"
+              element={
+                <RequireProfile>
+                  <Reports />
+                </RequireProfile>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <RequireProfile>
+                  <Settings />
+                </RequireProfile>
+              }
+            />
+            <Route
+              path="/stock"
+              element={
+                <RequireProfile>
+                  <Stock />
+                </RequireProfile>
+              }
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
