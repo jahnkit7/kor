@@ -1,12 +1,45 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Mic, Square, Loader2, Trash2, Edit2, Check, X, Sparkles } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Mic, Square, Loader2, Trash2, Edit2, Check, X, Sparkles, Keyboard, RefreshCw, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { NewStockItem } from "@/hooks/use-stock";
+
+// TypeScript declarations for Web Speech API
+interface SpeechRecognitionEvent extends Event {
+  resultIndex: number;
+  results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string;
+  message?: string;
+}
+
+interface SpeechRecognitionInstance extends EventTarget {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  maxAlternatives: number;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
+  onend: (() => void) | null;
+  onstart: (() => void) | null;
+}
+
+declare global {
+  interface Window {
+    SpeechRecognition: new () => SpeechRecognitionInstance;
+    webkitSpeechRecognition: new () => SpeechRecognitionInstance;
+  }
+}
 
 interface VoiceStockItem extends NewStockItem {
   tempId: string;
@@ -18,19 +51,44 @@ interface VoiceStockInputProps {
   onCancel: () => void;
 }
 
+// Check if browser supports speech recognition
+const isSpeechRecognitionSupported = () => {
+  return typeof window !== 'undefined' && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+};
+
 export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) {
   const { toast } = useToast();
-  const [step, setStep] = useState<"record" | "analyzing" | "validate">("record");
+  const [step, setStep] = useState<"record" | "analyzing" | "validate" | "manual">("record");
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState("");
+  const [manualText, setManualText] = useState("");
   const [items, setItems] = useState<VoiceStockItem[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [isSupported, setIsSupported] = useState(true);
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const maxRetries = 3;
+
+  // Check browser support on mount
+  useEffect(() => {
+    setIsSupported(isSpeechRecognitionSupported());
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stopTimer();
+      if (recognitionRef.current) {
+        recognitionRef.current.abort();
+        recognitionRef.current = null;
+      }
+    };
+  }, []);
 
   // Start recording timer
   const startTimer = useCallback(() => {
@@ -58,14 +116,23 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
     try {
       setErrorMessage(null);
       
-      // Use Web Speech API for transcription (free, browser-based)
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       
       if (!SpeechRecognition) {
-        setErrorMessage("Votre navigateur ne supporte pas la reconnaissance vocale. Utilisez Chrome, Edge ou Safari sur mobile.");
+        setIsSupported(false);
+        setErrorMessage("Reconnaissance vocale non supportée. Utilisez le mode texte.");
+        return;
+      }
+
+      // Request microphone permission first
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch (permError) {
+        console.error("Microphone permission error:", permError);
+        setErrorMessage("Accès au microphone refusé. Autorisez l'accès ou utilisez le mode texte.");
         toast({
-          title: "Non supporté",
-          description: "Utilisez Chrome, Edge ou Safari sur mobile pour la reconnaissance vocale.",
+          title: "Microphone bloqué",
+          description: "Autorisez l'accès ou utilisez le mode texte",
           variant: "destructive",
         });
         return;
@@ -75,15 +142,25 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
       recognition.lang = "fr-FR";
       recognition.continuous = true;
       recognition.interimResults = true;
-      recognition.maxAlternatives = 1;
+      recognition.maxAlternatives = 3;
 
       let finalTranscript = "";
+      let lastResultTime = Date.now();
+
+      recognition.onstart = () => {
+        console.log("Speech recognition started");
+        setIsRecording(true);
+        startTimer();
+      };
 
       recognition.onresult = (event) => {
+        lastResultTime = Date.now();
         let interimTranscript = "";
+        
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const result = event.results[i];
           if (result.isFinal) {
+            // Use best alternative
             finalTranscript += result[0].transcript + " ";
           } else {
             interimTranscript += result[0].transcript;
@@ -94,47 +171,60 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
 
       recognition.onerror = (event) => {
         console.error("Speech recognition error:", event.error);
-        stopTimer();
         
-        if (event.error === "not-allowed") {
-          setErrorMessage("Accès au microphone refusé. Autorisez l'accès dans les paramètres de votre navigateur.");
-          toast({
-            title: "Microphone bloqué",
-            description: "Autorisez l'accès au microphone dans les paramètres",
-            variant: "destructive",
-          });
-        } else if (event.error === "no-speech") {
-          // This is normal when user stops without speaking
-          if (!finalTranscript.trim()) {
-            setErrorMessage("Aucune parole détectée. Parlez clairement près du microphone.");
-          }
-        } else if (event.error !== "aborted") {
-          setErrorMessage("Erreur de reconnaissance vocale. Réessayez.");
-          toast({
-            title: "Erreur",
-            description: "Erreur lors de l'enregistrement vocal",
-            variant: "destructive",
-          });
+        switch (event.error) {
+          case "not-allowed":
+          case "permission-denied":
+            setErrorMessage("Accès au microphone refusé. Autorisez l'accès dans les paramètres de votre navigateur.");
+            toast({
+              title: "Microphone bloqué",
+              description: "Autorisez l'accès au microphone",
+              variant: "destructive",
+            });
+            break;
+          case "no-speech":
+            // Don't show error during recording - only when stopped
+            if (!finalTranscript.trim() && !isRecording) {
+              setErrorMessage("Aucune parole détectée. Parlez plus fort et clairement.");
+            }
+            break;
+          case "audio-capture":
+            setErrorMessage("Microphone non disponible. Vérifiez qu'il est connecté.");
+            toast({
+              title: "Microphone introuvable",
+              description: "Vérifiez votre microphone",
+              variant: "destructive",
+            });
+            break;
+          case "network":
+            setErrorMessage("Erreur réseau. Vérifiez votre connexion internet.");
+            break;
+          case "aborted":
+            // User cancelled - no error needed
+            break;
+          default:
+            if (event.error !== "aborted") {
+              setErrorMessage(`Erreur: ${event.error}. Réessayez ou utilisez le mode texte.`);
+            }
         }
+        
+        stopTimer();
         setIsRecording(false);
       };
 
       recognition.onend = () => {
-        // Recognition ended - could be auto-stop or manual
+        console.log("Speech recognition ended");
         stopTimer();
-        if (isRecording) {
-          setIsRecording(false);
-        }
+        setIsRecording(false);
       };
 
       recognitionRef.current = recognition;
       recognition.start();
-      setIsRecording(true);
       setTranscript("");
-      startTimer();
+      
     } catch (error) {
       console.error("Error starting recording:", error);
-      setErrorMessage("Impossible d'accéder au microphone. Vérifiez les permissions.");
+      setErrorMessage("Impossible de démarrer l'enregistrement. Essayez le mode texte.");
       toast({
         title: "Erreur",
         description: "Impossible d'accéder au microphone",
@@ -155,18 +245,17 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
     const trimmedTranscript = transcript.trim();
     
     if (!trimmedTranscript) {
-      setErrorMessage("Aucun texte n'a été détecté. Parlez plus fort et clairement.");
+      setErrorMessage("Aucun texte détecté. Parlez plus fort ou utilisez le mode texte.");
       toast({
         title: "Aucune dictée",
-        description: "Aucun texte n'a été détecté. Réessayez.",
+        description: "Réessayez ou utilisez le mode texte",
         variant: "destructive",
       });
       return;
     }
 
-    // Minimum text length check
     if (trimmedTranscript.length < 5) {
-      setErrorMessage("La dictée est trop courte. Décrivez vos produits avec plus de détails.");
+      setErrorMessage("Dictée trop courte. Décrivez vos produits avec plus de détails.");
       toast({
         title: "Dictée trop courte",
         description: "Décrivez vos produits plus en détail",
@@ -175,25 +264,34 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
       return;
     }
 
-    // Analyze with AI
+    await analyzeTranscript(trimmedTranscript);
+  }, [transcript, toast, stopTimer]);
+
+  const analyzeTranscript = useCallback(async (text: string, isRetry = false) => {
     setStep("analyzing");
     setErrorMessage(null);
 
     try {
-      console.log("Sending transcript to AI:", trimmedTranscript);
+      console.log("Analyzing transcript:", text);
       
       const { data, error } = await supabase.functions.invoke("analyze-stock-voice", {
-        body: { transcript: trimmedTranscript },
+        body: { transcript: text },
       });
 
       console.log("AI response:", data, error);
 
       if (error) {
-        console.error("Edge function error:", error);
         throw new Error(error.message || "Erreur lors de l'analyse");
       }
 
       if (data?.error) {
+        // Handle specific errors
+        if (data.error.includes("Trop de requêtes")) {
+          throw new Error("Trop de requêtes. Attendez quelques secondes et réessayez.");
+        }
+        if (data.error.includes("Crédits")) {
+          throw new Error("Crédits IA épuisés. Utilisez le mode manuel.");
+        }
         throw new Error(data.error);
       }
 
@@ -205,17 +303,18 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
 
       setItems(voiceItems);
       setSuggestions(data?.suggestions || []);
-      setStep("validate");
+      setRetryCount(0);
 
       if (voiceItems.length === 0) {
-        setErrorMessage("Aucun produit détecté. Essayez avec une dictée comme: '50 savons à 500 francs, 10 paquets de riz'");
+        setErrorMessage("Aucun produit détecté. Exemple: '50 savons à 500 francs'");
         toast({
           title: "Aucun produit détecté",
-          description: "Réessayez avec une dictée plus claire",
+          description: "Reformulez votre dictée",
           variant: "destructive",
         });
         setStep("record");
       } else {
+        setStep("validate");
         toast({
           title: "Analyse terminée",
           description: `${voiceItems.length} produit${voiceItems.length > 1 ? "s" : ""} détecté${voiceItems.length > 1 ? "s" : ""}`,
@@ -224,7 +323,19 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
     } catch (error) {
       console.error("Error analyzing voice:", error);
       const errorMsg = error instanceof Error ? error.message : "Erreur inconnue";
-      setErrorMessage(`Erreur d'analyse: ${errorMsg}`);
+      
+      // Retry logic for network errors
+      if (!isRetry && retryCount < maxRetries && (errorMsg.includes("réseau") || errorMsg.includes("network"))) {
+        setRetryCount(prev => prev + 1);
+        toast({
+          title: "Nouvelle tentative...",
+          description: `Tentative ${retryCount + 1}/${maxRetries}`,
+        });
+        setTimeout(() => analyzeTranscript(text, true), 1500);
+        return;
+      }
+      
+      setErrorMessage(`Erreur: ${errorMsg}`);
       toast({
         title: "Erreur d'analyse",
         description: errorMsg,
@@ -232,7 +343,21 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
       });
       setStep("record");
     }
-  }, [transcript, toast, stopTimer]);
+  }, [toast, retryCount]);
+
+  const handleManualSubmit = async () => {
+    const text = manualText.trim();
+    if (!text) {
+      setErrorMessage("Entrez une description de votre stock");
+      return;
+    }
+    if (text.length < 5) {
+      setErrorMessage("Description trop courte");
+      return;
+    }
+    setTranscript(text);
+    await analyzeTranscript(text);
+  };
 
   const updateItem = (tempId: string, updates: Partial<VoiceStockItem>) => {
     setItems((prev) =>
@@ -253,6 +378,11 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
       await onComplete(stockItems);
     } catch (error) {
       console.error("Error completing stock:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'ajouter le stock",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -262,6 +392,70 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
     return new Intl.NumberFormat("fr-FR").format(amount) + " CFA";
   };
 
+  const switchToManual = () => {
+    setStep("manual");
+    setErrorMessage(null);
+    setManualText(transcript);
+  };
+
+  const switchToVoice = () => {
+    setStep("record");
+    setErrorMessage(null);
+  };
+
+  // Manual text input step
+  if (step === "manual") {
+    return (
+      <div className="space-y-6">
+        <div className="text-center space-y-2">
+          <h3 className="text-lg font-semibold">Mode texte</h3>
+          <p className="text-sm text-muted-foreground">
+            Décrivez votre stock par écrit
+          </p>
+        </div>
+
+        {errorMessage && (
+          <Card className="p-3 bg-destructive/10 border-destructive/20">
+            <p className="text-sm text-destructive">{errorMessage}</p>
+          </Card>
+        )}
+
+        <div className="space-y-3">
+          <Textarea
+            value={manualText}
+            onChange={(e) => setManualText(e.target.value)}
+            placeholder="Exemple: J'ai 50 savons Lux à 500 francs, 10 paquets de riz à 15000, 3 cartons de Fanta..."
+            className="min-h-[120px] text-base"
+          />
+          <p className="text-xs text-muted-foreground">
+            💡 Mentionnez le nom, la quantité et le prix de chaque produit
+          </p>
+        </div>
+
+        <div className="flex gap-3">
+          {isSupported && (
+            <Button variant="outline" onClick={switchToVoice} className="flex-1 gap-2">
+              <Mic className="h-4 w-4" />
+              Mode vocal
+            </Button>
+          )}
+          <Button 
+            onClick={handleManualSubmit} 
+            disabled={!manualText.trim()}
+            className="flex-1 gap-2"
+          >
+            <Sparkles className="h-4 w-4" />
+            Analyser
+          </Button>
+        </div>
+
+        <Button variant="ghost" onClick={onCancel} className="w-full">
+          Annuler
+        </Button>
+      </div>
+    );
+  }
+
   // Recording step
   if (step === "record") {
     return (
@@ -269,9 +463,24 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
         <div className="text-center space-y-2">
           <h3 className="text-lg font-semibold">Dictez votre stock</h3>
           <p className="text-sm text-muted-foreground">
-            Parlez naturellement : "J'ai 50 savons Lux à 500 francs, 3 cartons de Fanta..."
+            Parlez naturellement : "J'ai 50 savons Lux à 500 francs..."
           </p>
         </div>
+
+        {/* Browser not supported warning */}
+        {!isSupported && (
+          <Card className="p-4 bg-warning/10 border-warning/20">
+            <div className="flex gap-3">
+              <AlertTriangle className="h-5 w-5 text-warning shrink-0" />
+              <div>
+                <p className="font-medium text-warning">Navigateur non supporté</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  La reconnaissance vocale n'est pas disponible. Utilisez Chrome, Edge ou Safari, ou passez au mode texte.
+                </p>
+              </div>
+            </div>
+          </Card>
+        )}
 
         {/* Error message */}
         {errorMessage && (
@@ -281,41 +490,53 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
         )}
 
         {/* Recording button */}
-        <div className="flex flex-col items-center gap-4">
-          <Button
-            size="lg"
-            variant={isRecording ? "destructive" : "default"}
-            className={`h-24 w-24 rounded-full ${isRecording ? "animate-pulse" : ""}`}
-            onClick={isRecording ? stopRecording : startRecording}
-          >
-            {isRecording ? (
-              <Square className="h-10 w-10" />
-            ) : (
-              <Mic className="h-10 w-10" />
-            )}
-          </Button>
-          <div className="text-center">
-            <span className="text-sm text-muted-foreground">
-              {isRecording ? "Appuyez pour arrêter" : "Appuyez pour dicter"}
-            </span>
-            {isRecording && (
-              <p className="text-lg font-mono text-primary mt-1">
-                {formatDuration(recordingDuration)}
-              </p>
-            )}
+        {isSupported && (
+          <div className="flex flex-col items-center gap-4">
+            <Button
+              size="lg"
+              variant={isRecording ? "destructive" : "default"}
+              className={`h-24 w-24 rounded-full ${isRecording ? "animate-pulse" : ""}`}
+              onClick={isRecording ? stopRecording : startRecording}
+            >
+              {isRecording ? (
+                <Square className="h-10 w-10" />
+              ) : (
+                <Mic className="h-10 w-10" />
+              )}
+            </Button>
+            <div className="text-center">
+              <span className="text-sm text-muted-foreground">
+                {isRecording ? "Appuyez pour arrêter" : "Appuyez pour dicter"}
+              </span>
+              {isRecording && (
+                <p className="text-lg font-mono text-primary mt-1">
+                  {formatDuration(recordingDuration)}
+                </p>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Live transcript */}
         {transcript && (
           <Card className="p-4 bg-muted/50">
-            <p className="text-xs text-muted-foreground mb-1">Transcription en direct :</p>
+            <p className="text-xs text-muted-foreground mb-1">Transcription :</p>
             <p className="text-sm italic">"{transcript}"</p>
           </Card>
         )}
 
+        {/* Fallback to manual mode */}
+        <Button 
+          variant="secondary" 
+          onClick={switchToManual} 
+          className="w-full gap-2"
+        >
+          <Keyboard className="h-4 w-4" />
+          Passer au mode texte
+        </Button>
+
         {/* Tips */}
-        {!isRecording && !transcript && (
+        {!isRecording && !transcript && isSupported && (
           <Card className="p-4 bg-accent/5 border-accent/20">
             <p className="text-xs font-medium text-accent-foreground mb-2">💡 Conseils :</p>
             <ul className="text-xs text-muted-foreground space-y-1">
@@ -326,7 +547,7 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
           </Card>
         )}
 
-        <Button variant="outline" onClick={onCancel} className="w-full">
+        <Button variant="ghost" onClick={onCancel} className="w-full">
           Annuler
         </Button>
       </div>
@@ -339,7 +560,12 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
       <div className="flex flex-col items-center justify-center py-12 space-y-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
         <p className="text-muted-foreground">Analyse en cours...</p>
-        <p className="text-sm text-muted-foreground italic">"{transcript}"</p>
+        <p className="text-sm text-muted-foreground italic text-center px-4">"{transcript}"</p>
+        {retryCount > 0 && (
+          <p className="text-xs text-muted-foreground">
+            Tentative {retryCount}/{maxRetries}
+          </p>
+        )}
       </div>
     );
   }
@@ -385,6 +611,18 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
         </div>
       )}
 
+      {/* Retry button */}
+      {transcript && (
+        <Button 
+          variant="outline" 
+          onClick={() => analyzeTranscript(transcript)} 
+          className="w-full gap-2"
+        >
+          <RefreshCw className="h-4 w-4" />
+          Ré-analyser la dictée
+        </Button>
+      )}
+
       {/* Actions */}
       <div className="flex gap-3 pt-4">
         <Button variant="outline" onClick={onCancel} className="flex-1">
@@ -400,7 +638,7 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
           ) : (
             <Sparkles className="h-4 w-4" />
           )}
-          Générer mon stock
+          Ajouter au stock
         </Button>
       </div>
     </div>
@@ -493,82 +731,44 @@ function VoiceStockItemCard({
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <p className="text-sm text-muted-foreground truncate">{item.name}</p>
-            <Badge variant="outline" className="text-xs shrink-0">
-              Voix
-            </Badge>
+            <p className="font-medium truncate">{item.name}</p>
+            {item.model && (
+              <Badge variant="outline" className="text-xs shrink-0">
+                {item.model}
+              </Badge>
+            )}
           </div>
-          <div className="flex items-baseline gap-4 mt-1">
-            <span className="text-2xl font-bold money-display">{item.quantity}</span>
-            <span className="text-lg font-semibold text-primary">
+          <div className="flex items-center gap-3 mt-1">
+            <span className="text-sm text-muted-foreground">
+              Qté: {item.quantity}
+            </span>
+            <span className="text-sm font-medium text-primary">
               {formatMoney(item.unit_price)}
             </span>
           </div>
-          {item.model && (
-            <p className="text-xs text-muted-foreground mt-1">Modèle: {item.model}</p>
-          )}
+          <p className="text-xs text-muted-foreground mt-1">
+            Total: {formatMoney(item.quantity * item.unit_price)}
+          </p>
         </div>
         <div className="flex gap-1">
-          <Button size="icon" variant="ghost" onClick={() => setIsEditing(true)}>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => setIsEditing(true)}
+            className="h-8 w-8"
+          >
             <Edit2 className="h-4 w-4" />
           </Button>
-          <Button size="icon" variant="ghost" onClick={onDelete}>
-            <Trash2 className="h-4 w-4 text-destructive" />
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={onDelete}
+            className="h-8 w-8 text-destructive hover:text-destructive"
+          >
+            <Trash2 className="h-4 w-4" />
           </Button>
         </div>
       </div>
     </Card>
   );
-}
-
-// Web Speech API types
-interface SpeechRecognitionEvent extends Event {
-  resultIndex: number;
-  results: SpeechRecognitionResultList;
-}
-
-interface SpeechRecognitionResultList {
-  length: number;
-  [index: number]: SpeechRecognitionResult;
-}
-
-interface SpeechRecognitionResult {
-  isFinal: boolean;
-  length: number;
-  [index: number]: SpeechRecognitionAlternative;
-}
-
-interface SpeechRecognitionAlternative {
-  transcript: string;
-  confidence: number;
-}
-
-interface SpeechRecognitionErrorEvent extends Event {
-  error: string;
-  message: string;
-}
-
-interface SpeechRecognitionInstance extends EventTarget {
-  lang: string;
-  continuous: boolean;
-  interimResults: boolean;
-  maxAlternatives: number;
-  onresult: ((event: SpeechRecognitionEvent) => void) | null;
-  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
-  onend: (() => void) | null;
-  onstart: (() => void) | null;
-  start: () => void;
-  stop: () => void;
-  abort: () => void;
-}
-
-interface SpeechRecognitionConstructor {
-  new (): SpeechRecognitionInstance;
-}
-
-declare global {
-  interface Window {
-    SpeechRecognition?: SpeechRecognitionConstructor;
-    webkitSpeechRecognition?: SpeechRecognitionConstructor;
-  }
 }
