@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,19 +6,29 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Store, User, ArrowRight } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { useProfile } from "@/hooks/use-profile";
 import { getSupabaseClient } from "@/lib/supabase";
 import { toast } from "sonner";
 
 const ProfileSetup = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { profile, loading: profileLoading, refetch } = useProfile();
+
   const [shopName, setShopName] = useState("");
   const [ownerName, setOwnerName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
+  useEffect(() => {
+    if (!profileLoading && profile) {
+      setShopName(profile.shop_name && profile.shop_name !== "Ma Boutique" ? profile.shop_name : "");
+      setOwnerName(profile.owner_name ?? "");
+    }
+  }, [profileLoading, profile]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!shopName.trim() || !ownerName.trim()) {
       toast.error("Veuillez remplir tous les champs");
       return;
@@ -33,23 +43,51 @@ const ProfileSetup = () => {
 
     try {
       const supabase = await getSupabaseClient();
-      
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          shop_name: shopName.trim(),
-          owner_name: ownerName.trim(),
-        })
-        .eq("user_id", user.id);
 
-      if (error) {
-        console.error("Error updating profile:", error);
+      // Profiles row may not exist yet (no backend trigger). Create it if missing.
+      const { data: existing, error: existingError } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (existingError) {
+        console.error("Error checking profile:", existingError);
         toast.error("Erreur lors de la sauvegarde");
         return;
       }
 
+      if (!existing) {
+        const { error: insertError } = await supabase.from("profiles").insert({
+          user_id: user.id,
+          shop_name: shopName.trim(),
+          owner_name: ownerName.trim(),
+        });
+
+        if (insertError) {
+          console.error("Error creating profile:", insertError);
+          toast.error("Erreur lors de la sauvegarde");
+          return;
+        }
+      } else {
+        const { error: updateError } = await supabase
+          .from("profiles")
+          .update({
+            shop_name: shopName.trim(),
+            owner_name: ownerName.trim(),
+          })
+          .eq("user_id", user.id);
+
+        if (updateError) {
+          console.error("Error updating profile:", updateError);
+          toast.error("Erreur lors de la sauvegarde");
+          return;
+        }
+      }
+
+      await refetch();
       toast.success("Profil configuré !");
-      navigate("/dashboard");
+      navigate("/dashboard", { replace: true });
     } catch (error) {
       console.error("Error:", error);
       toast.error("Erreur lors de la sauvegarde");

@@ -4,10 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, User, Phone, Camera, Check } from "lucide-react";
 import { toast } from "sonner";
-import { addClient } from "@/lib/db";
+import { useClients } from "@/hooks/use-clients";
 
 const NewClient = () => {
   const navigate = useNavigate();
+  const { addClient } = useClients();
+
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -21,14 +23,14 @@ const NewClient = () => {
       toast.error("Entrez un numéro de téléphone valide");
       return;
     }
-    
+
     setIsLoading(true);
     try {
-      await addClient({ name: name.trim(), phone: phone.trim() });
-      toast.success("Client ajouté avec succès");
+      const created = await addClient({ name: name.trim(), phone: phone.trim() });
+      if (!created) return;
       navigate(-1);
-    } catch (error) {
-      toast.error("Erreur lors de l'ajout du client");
+    } catch {
+      // addClient already toasts
     } finally {
       setIsLoading(false);
     }
