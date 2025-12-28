@@ -39,7 +39,7 @@
     --input: 160 20% 88%;
     --ring: 160 84% 20%;
 
-    --radius: 1rem;
+    --radius: 0.5rem;
 
     /* Custom tokens for CAISSE+ */
     --cash: 160 84% 25%;
