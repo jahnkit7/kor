@@ -6,31 +6,78 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Store, User, ArrowRight } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { useProfile } from "@/hooks/use-profile";
 import { getSupabaseClient } from "@/lib/supabase";
 import { toast } from "sonner";
 
 const ProfileSetup = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { profile, loading: profileLoading, refetch, isProfileComplete } = useProfile();
+  const { user, loading: authLoading } = useAuth();
 
   const [shopName, setShopName] = useState("");
   const [ownerName, setOwnerName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [shouldRedirect, setShouldRedirect] = useState(false);
 
+  // Check profile on mount - if complete, redirect
   useEffect(() => {
-    if (!profileLoading && isProfileComplete) {
+    const checkProfile = async () => {
+      if (authLoading) return;
+      
+      if (!user) {
+        navigate("/auth", { replace: true });
+        return;
+      }
+
+      try {
+        const supabase = await getSupabaseClient();
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (error) {
+          console.error("Error checking profile:", error);
+          setProfileLoading(false);
+          return;
+        }
+
+        // Check if profile is complete
+        const isComplete = Boolean(
+          data?.shop_name &&
+          data.shop_name !== "Ma Boutique" &&
+          data?.owner_name
+        );
+
+        if (isComplete) {
+          // Profile complete - redirect to dashboard
+          navigate("/dashboard", { replace: true });
+          return;
+        }
+
+        // Profile incomplete - populate form with existing values
+        if (data) {
+          setShopName(data.shop_name && data.shop_name !== "Ma Boutique" ? data.shop_name : "");
+          setOwnerName(data.owner_name ?? "");
+        }
+
+        setProfileLoading(false);
+      } catch (error) {
+        console.error("Error:", error);
+        setProfileLoading(false);
+      }
+    };
+
+    checkProfile();
+  }, [user, authLoading, navigate]);
+
+  // Handle redirect after successful save
+  useEffect(() => {
+    if (shouldRedirect) {
       navigate("/dashboard", { replace: true });
     }
-  }, [profileLoading, isProfileComplete, navigate]);
-
-  useEffect(() => {
-    if (!profileLoading && profile) {
-      setShopName(profile.shop_name && profile.shop_name !== "Ma Boutique" ? profile.shop_name : "");
-      setOwnerName(profile.owner_name ?? "");
-    }
-  }, [profileLoading, profile]);
+  }, [shouldRedirect, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,7 +97,7 @@ const ProfileSetup = () => {
     try {
       const supabase = await getSupabaseClient();
 
-      // Profiles row may not exist yet (no backend trigger). Create it if missing.
+      // Check if profile exists
       const { data: existing, error: existingError } = await supabase
         .from("profiles")
         .select("id")
@@ -60,47 +107,69 @@ const ProfileSetup = () => {
       if (existingError) {
         console.error("Error checking profile:", existingError);
         toast.error("Erreur lors de la sauvegarde");
+        setIsLoading(false);
         return;
       }
 
       if (!existing) {
+        // Create new profile
         const { error: insertError } = await supabase.from("profiles").insert({
           user_id: user.id,
           shop_name: shopName.trim(),
           owner_name: ownerName.trim(),
+          onboarding_completed: true,
         });
 
         if (insertError) {
           console.error("Error creating profile:", insertError);
           toast.error("Erreur lors de la sauvegarde");
+          setIsLoading(false);
           return;
         }
       } else {
+        // Update existing profile
         const { error: updateError } = await supabase
           .from("profiles")
           .update({
             shop_name: shopName.trim(),
             owner_name: ownerName.trim(),
+            onboarding_completed: true,
           })
           .eq("user_id", user.id);
 
         if (updateError) {
           console.error("Error updating profile:", updateError);
           toast.error("Erreur lors de la sauvegarde");
+          setIsLoading(false);
           return;
         }
       }
 
-      await refetch();
       toast.success("Profil configuré !");
-      navigate("/dashboard", { replace: true });
+      
+      // Force redirect using window.location as fallback
+      setShouldRedirect(true);
+      
+      // Also use window.location as ultimate fallback
+      setTimeout(() => {
+        window.location.href = "/dashboard";
+      }, 100);
+      
     } catch (error) {
       console.error("Error:", error);
       toast.error("Erreur lors de la sauvegarde");
-    } finally {
       setIsLoading(false);
     }
   };
+
+  // Show loading while checking auth or profile
+  if (authLoading || profileLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
