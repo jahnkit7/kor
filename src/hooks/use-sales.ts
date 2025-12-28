@@ -98,6 +98,23 @@ export function useSales(): SalesState {
         return null;
       }
 
+      // Create debt record for credit sales
+      if (saleData.type === "credit" && saleData.client_id) {
+        const { error: debtError } = await supabase
+          .from("debts")
+          .insert({
+            client_id: saleData.client_id,
+            amount: saleData.amount,
+            paid: 0,
+            user_id: user.id,
+          });
+
+        if (debtError) {
+          console.error("Error creating debt:", debtError);
+          // Sale was created but debt wasn't - log but don't fail
+        }
+      }
+
       const newSale: Sale = {
         ...data,
         type: data.type as "cash" | "credit",
