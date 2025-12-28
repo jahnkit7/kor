@@ -72,7 +72,7 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background pb-24 overflow-x-hidden">
       {/* Header */}
       <div className="gradient-hero px-5 pt-6 pb-8 text-primary-foreground">
         <div className="flex items-center justify-between mb-6">
@@ -240,13 +240,6 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Floating Action Button */}
-      <button
-        className="fixed right-5 bottom-28 w-16 h-16 rounded-full bg-accent text-accent-foreground shadow-glow flex items-center justify-center transition-transform active:scale-95"
-        onClick={() => navigate("/sale/cash")}
-      >
-        <Plus className="w-8 h-8" />
-      </button>
 
       <BottomNav />
     </div>

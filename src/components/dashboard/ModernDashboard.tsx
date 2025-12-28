@@ -54,7 +54,7 @@ const ModernDashboard = ({
   const shopName = profile?.shop_name || "Ma Boutique";
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background pb-24 overflow-x-hidden">
       {/* Modern Header - Clean & Minimal */}
       <div className="px-5 pt-8 pb-6">
         <div className="flex items-center justify-between mb-8">
@@ -151,20 +151,20 @@ const ModernDashboard = ({
         </div>
 
         {/* Quick Actions - Modern Pill Buttons */}
-        <div className="flex gap-3 mt-6">
+        <div className="grid grid-cols-2 gap-3 mt-6">
           <Button
             onClick={() => navigate("/sale/cash")}
-            className="flex-1 h-14 rounded-2xl bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/90 text-primary-foreground shadow-none"
+            className="h-14 rounded-2xl bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/90 text-primary-foreground shadow-none text-sm font-semibold"
           >
-            <Wallet className="w-5 h-5 mr-2" />
-            Vente Cash
+            <Wallet className="w-5 h-5 mr-2 flex-shrink-0" />
+            <span className="truncate">Vente Cash</span>
           </Button>
           <Button
             onClick={() => navigate("/sale/credit")}
-            className="flex-1 h-14 rounded-2xl bg-accent hover:bg-accent/90 text-accent-foreground shadow-none"
+            className="h-14 rounded-2xl bg-accent hover:bg-accent/90 text-accent-foreground shadow-none text-sm font-semibold"
           >
-            <CreditCard className="w-5 h-5 mr-2" />
-            Vente Crédit
+            <CreditCard className="w-5 h-5 mr-2 flex-shrink-0" />
+            <span className="truncate">Vente Crédit</span>
           </Button>
         </div>
 
@@ -217,13 +217,6 @@ const ModernDashboard = ({
         )}
       </div>
 
-      {/* Modern FAB */}
-      <button
-        className="fixed right-5 bottom-28 w-14 h-14 rounded-2xl bg-[hsl(var(--primary))] text-primary-foreground shadow-lg flex items-center justify-center transition-all active:scale-95 hover:shadow-xl"
-        onClick={() => navigate("/sale/cash")}
-      >
-        <Plus className="w-7 h-7" />
-      </button>
 
       <BottomNav />
     </div>
