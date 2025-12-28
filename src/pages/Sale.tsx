@@ -1,27 +1,30 @@
-import { useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Check, User, Camera, MessageSquare } from "lucide-react";
+import { ArrowLeft, Check, User, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
-import { addSale, getClients } from "@/lib/db";
-import type { Client } from "@/lib/db";
+import { useClients } from "@/hooks/use-clients";
+import { useSales } from "@/hooks/use-sales";
 
 const Sale = () => {
   const navigate = useNavigate();
   const { type } = useParams<{ type: "cash" | "credit" }>();
   const isCash = type === "cash";
-  
+
+  const { clients, loading: clientsLoading } = useClients();
+  const { addSale } = useSales();
+
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [clients, setClients] = useState<Client[]>([]);
 
-  useEffect(() => {
-    getClients().then(setClients);
-  }, []);
+  const selectedClientName = useMemo(
+    () => clients.find((c) => c.id === selectedClient)?.name,
+    [clients, selectedClient]
+  );
 
   const formatMoney = (value: string) => {
     const num = parseInt(value) || 0;
@@ -51,20 +54,26 @@ const Sale = () => {
       toast.error("Sélectionnez un client");
       return;
     }
-    
+
     setIsLoading(true);
     try {
-      await addSale({
+      const created = await addSale({
         type: isCash ? "cash" : "credit",
         amount: parseInt(amount),
         note: note || undefined,
-        clientId: selectedClient || undefined,
+        client_id: isCash ? undefined : selectedClient || undefined,
       });
+
+      if (!created) {
+        setIsLoading(false);
+        return;
+      }
+
       setShowSuccess(true);
       setTimeout(() => {
         navigate("/dashboard");
-      }, 1500);
-    } catch (error) {
+      }, 1000);
+    } catch {
       toast.error("Erreur lors de l'enregistrement");
       setIsLoading(false);
     }
@@ -79,16 +88,12 @@ const Sale = () => {
           <div className={`w-24 h-24 rounded-full mx-auto mb-6 flex items-center justify-center ${isCash ? "bg-cash" : "bg-credit"}`}>
             <Check className="w-12 h-12 text-primary-foreground" />
           </div>
-          <h1 className="text-2xl font-bold mb-2">
-            Vente enregistrée !
-          </h1>
+          <h1 className="text-2xl font-bold mb-2">Vente enregistrée !</h1>
           <p className="text-money-lg text-foreground">
             {formatMoney(amount)} <span className="text-lg text-muted-foreground">CFA</span>
           </p>
-          {!isCash && selectedClient && (
-            <p className="text-muted-foreground mt-2">
-              Crédit: {clients.find(c => c.id === selectedClient)?.name}
-            </p>
+          {!isCash && selectedClientName && (
+            <p className="text-muted-foreground mt-2">Crédit: {selectedClientName}</p>
           )}
         </div>
       </div>
@@ -142,39 +147,41 @@ const Sale = () => {
         {/* Client Selection (Credit only) */}
         {!isCash && (
           <div className="mb-4">
-            <p className="text-sm font-semibold text-muted-foreground mb-2">
-              Client
-            </p>
+            <p className="text-sm font-semibold text-muted-foreground mb-2">Client</p>
             <div className="space-y-2">
-              {clients.map((client) => (
-                <Card
-                  key={client.id}
-                  className={`cursor-pointer transition-all ${
-                    selectedClient === client.id
-                      ? "border-2 border-credit bg-credit/5"
-                      : ""
-                  }`}
-                  onClick={() => setSelectedClient(client.id)}
-                >
-                  <CardContent className="p-3 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
-                      <User className="w-5 h-5 text-muted-foreground" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold">{client.name}</p>
-                      <p className="text-xs text-muted-foreground">{client.phone}</p>
-                    </div>
-                    {selectedClient === client.id && (
-                      <Check className="w-5 h-5 text-credit" />
-                    )}
+              {clientsLoading ? (
+                <Card>
+                  <CardContent className="p-4 text-center text-muted-foreground">
+                    Chargement des clients...
                   </CardContent>
                 </Card>
-              ))}
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => navigate("/clients/new")}
-              >
+              ) : (
+                clients.map((client) => (
+                  <Card
+                    key={client.id}
+                    className={`cursor-pointer transition-all ${
+                      selectedClient === client.id
+                        ? "border-2 border-credit bg-credit/5"
+                        : ""
+                    }`}
+                    onClick={() => setSelectedClient(client.id)}
+                  >
+                    <CardContent className="p-3 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+                        <User className="w-5 h-5 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold">{client.name}</p>
+                        <p className="text-xs text-muted-foreground">{client.phone}</p>
+                      </div>
+                      {selectedClient === client.id && (
+                        <Check className="w-5 h-5 text-credit" />
+                      )}
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+              <Button variant="outline" className="w-full" onClick={() => navigate("/clients/new")}>
                 <User className="w-5 h-5 mr-2" />
                 Nouveau client
               </Button>
