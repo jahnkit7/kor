@@ -240,6 +240,42 @@ export type Database = {
           },
         ]
       }
+      stock_items: {
+        Row: {
+          created_at: string
+          id: string
+          model: string | null
+          name: string
+          quantity: number
+          source: string | null
+          unit_price: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          model?: string | null
+          name: string
+          quantity?: number
+          source?: string | null
+          unit_price?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          model?: string | null
+          name?: string
+          quantity?: number
+          source?: string | null
+          unit_price?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           created_at: string
