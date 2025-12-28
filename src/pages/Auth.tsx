@@ -13,6 +13,21 @@ const COUNTRIES = [
   { code: "GN", name: "Guinée", prefix: "+224", flag: "🇬🇳" },
 ];
 
+// Minimum PIN length for security (6 digits instead of 4)
+const PIN_LENGTH = 6;
+
+// Generate a more secure password by combining PIN with phone as salt
+const generateSecurePassword = (pin: string, phone: string, countryPrefix: string): string => {
+  // Create a deterministic but more complex password
+  // Format: reversed_pin + phone_hash_chars + pin + country_code
+  const fullPhone = countryPrefix.replace("+", "") + phone;
+  const reversedPin = pin.split("").reverse().join("");
+  const phoneHash = fullPhone.split("").reduce((acc, char, idx) => {
+    return acc + String.fromCharCode(((char.charCodeAt(0) + idx) % 26) + 97);
+  }, "");
+  return `${reversedPin}${phoneHash.slice(0, 8)}${pin}${fullPhone.slice(-4)}`;
+};
+
 const Auth = () => {
   const navigate = useNavigate();
   const { signIn, signUp, isAuthenticated, loading, configured } = useAuth();
@@ -25,6 +40,10 @@ const Auth = () => {
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Rate limiting state
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [lockoutUntil, setLockoutUntil] = useState<number | null>(null);
 
   useEffect(() => {
     if (!loading && isAuthenticated) {
@@ -59,13 +78,23 @@ const Auth = () => {
 
   const handlePinChange = (value: string) => {
     const digits = value.replace(/\D/g, "");
-    if (digits.length <= 4) {
-      if (isNewUser && step === "pin" && pin.length === 4) {
+    if (digits.length <= PIN_LENGTH) {
+      if (isNewUser && step === "pin" && pin.length === PIN_LENGTH) {
         setConfirmPin(digits);
       } else {
         setPin(digits);
       }
     }
+  };
+  
+  // Calculate lockout delay based on failed attempts (exponential backoff)
+  const getRemainingLockoutTime = (): number => {
+    if (!lockoutUntil) return 0;
+    return Math.max(0, lockoutUntil - Date.now());
+  };
+  
+  const isLockedOut = (): boolean => {
+    return getRemainingLockoutTime() > 0;
   };
 
   const handlePinSubmit = async () => {
@@ -74,8 +103,15 @@ const Auth = () => {
       return;
     }
 
-    if (pin.length !== 4) {
-      toast.error("Le PIN doit contenir 4 chiffres");
+    // Check rate limiting lockout
+    if (isLockedOut()) {
+      const remainingSeconds = Math.ceil(getRemainingLockoutTime() / 1000);
+      toast.error(`Trop de tentatives. Réessayez dans ${remainingSeconds} secondes.`);
+      return;
+    }
+
+    if (pin.length !== PIN_LENGTH) {
+      toast.error(`Le PIN doit contenir ${PIN_LENGTH} chiffres`);
       return;
     }
 
@@ -89,7 +125,8 @@ const Auth = () => {
 
     // Use phone as fake email for Supabase auth
     const fakeEmail = `${selectedCountry.prefix.replace("+", "")}${phone}@caisse.local`;
-    const password = pin + pin + pin; // PIN needs to be at least 6 chars for Supabase
+    // Generate more secure password using PIN + phone as salt
+    const password = generateSecurePassword(pin, phone, selectedCountry.prefix);
 
     try {
       if (isNewUser) {
@@ -99,20 +136,39 @@ const Auth = () => {
             toast.error("Ce numéro est déjà utilisé");
           } else {
             toast.error("Erreur lors de la création du compte");
-            console.error(error);
+            if (import.meta.env.DEV) console.error(error);
           }
         } else {
+          // Reset rate limiting on successful signup
+          setFailedAttempts(0);
+          setLockoutUntil(null);
           toast.success("Compte créé avec succès !");
         }
       } else {
         const { error } = await signIn(fakeEmail, password);
         if (error) {
+          // Increment failed attempts and apply exponential backoff
+          const newFailedAttempts = failedAttempts + 1;
+          setFailedAttempts(newFailedAttempts);
+          
+          // Exponential backoff: 2^attempts seconds, max 30 seconds
+          const lockoutDuration = Math.min(Math.pow(2, newFailedAttempts) * 1000, 30000);
+          setLockoutUntil(Date.now() + lockoutDuration);
+          
           if (error.message.includes("Invalid login")) {
-            toast.error("Numéro ou code PIN incorrect");
+            if (newFailedAttempts >= 3) {
+              toast.error(`Numéro ou code PIN incorrect. Veuillez attendre ${Math.ceil(lockoutDuration / 1000)}s.`);
+            } else {
+              toast.error("Numéro ou code PIN incorrect");
+            }
           } else {
             toast.error("Erreur de connexion");
-            console.error(error);
+            if (import.meta.env.DEV) console.error(error);
           }
+        } else {
+          // Reset rate limiting on successful login
+          setFailedAttempts(0);
+          setLockoutUntil(null);
         }
       }
     } catch (error) {
@@ -169,7 +225,7 @@ const Auth = () => {
     );
   }
 
-  const showConfirmPin = isNewUser && step === "pin" && pin.length === 4;
+  const showConfirmPin = isNewUser && step === "pin" && pin.length === PIN_LENGTH;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -206,7 +262,7 @@ const Auth = () => {
               : showConfirmPin
                 ? "Entrez à nouveau votre code PIN"
                 : isNewUser
-                  ? "Choisissez un code PIN à 4 chiffres"
+                  ? `Choisissez un code PIN à ${PIN_LENGTH} chiffres`
                   : "Entrez votre code PIN"
             }
           </p>
@@ -266,13 +322,13 @@ const Auth = () => {
           ) : (
             <div className="space-y-4">
               {/* PIN Display */}
-              <div className="flex justify-center gap-4">
-                {[0, 1, 2, 3].map((i) => {
+              <div className="flex justify-center gap-3">
+                {Array.from({ length: PIN_LENGTH }, (_, i) => {
                   const currentPin = showConfirmPin ? confirmPin : pin;
                   return (
                     <div
                       key={i}
-                      className={`w-14 h-14 rounded-xl border-2 flex items-center justify-center transition-all duration-200 ${
+                      className={`w-11 h-11 rounded-xl border-2 flex items-center justify-center transition-all duration-200 ${
                         currentPin.length > i
                           ? "bg-primary border-primary"
                           : currentPin.length === i
@@ -281,7 +337,7 @@ const Auth = () => {
                       }`}
                     >
                       {currentPin.length > i && (
-                        <div className="w-3 h-3 rounded-full bg-primary-foreground" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-primary-foreground" />
                       )}
                     </div>
                   );
@@ -331,7 +387,8 @@ const Auth = () => {
           onClick={step === "phone" ? handlePhoneSubmit : handlePinSubmit}
           disabled={
             isLoading || 
-            (step === "phone" ? phone.length < 8 : (isNewUser ? (showConfirmPin ? confirmPin.length < 4 : pin.length < 4) : pin.length < 4))
+            isLockedOut() ||
+            (step === "phone" ? phone.length < 8 : (isNewUser ? (showConfirmPin ? confirmPin.length < PIN_LENGTH : pin.length < PIN_LENGTH) : pin.length < PIN_LENGTH))
           }
         >
           {isLoading ? (
