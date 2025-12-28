@@ -4,11 +4,10 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
-import { pullFromCloud } from "@/lib/supabase-sync";
 
 const Auth = () => {
   const navigate = useNavigate();
-  const { signIn, signUp, isAuthenticated, user, loading } = useAuth();
+  const { signIn, signUp, isAuthenticated, loading, configured } = useAuth();
   
   const [isNewUser, setIsNewUser] = useState(false);
   const [email, setEmail] = useState("");
@@ -19,17 +18,18 @@ const Auth = () => {
 
   useEffect(() => {
     if (!loading && isAuthenticated) {
-      // Pull data from cloud when authenticated
-      if (user) {
-        pullFromCloud(user.id).catch(console.error);
-      }
       navigate("/dashboard");
     }
-  }, [isAuthenticated, loading, navigate, user]);
+  }, [isAuthenticated, loading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!configured) {
+      toast.error("Le service n'est pas encore prêt. Veuillez rafraîchir la page.");
+      return;
+    }
+
     if (!email || !password) {
       toast.error("Remplissez tous les champs");
       return;
@@ -177,7 +177,7 @@ const Auth = () => {
             variant="action"
             size="lg"
             className="w-full"
-            disabled={isLoading}
+            disabled={isLoading || !configured}
           >
             {isLoading ? (
               <div className="animate-spin w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full" />
