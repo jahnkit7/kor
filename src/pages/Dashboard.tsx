@@ -11,7 +11,7 @@ import {
   Bell,
   Package,
 } from "lucide-react";
-import BottomNav from "@/components/BottomNav";
+import AppLayout from "@/components/layout/AppLayout";
 import { RoleBadge } from "@/components/RoleBadge";
 import { HideAmountsToggle, useHiddenAmount } from "@/components/HideAmountsToggle";
 import { WhatsAppShare } from "@/components/WhatsAppShare";
@@ -72,7 +72,7 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-24 overflow-x-hidden">
+    <AppLayout>
       {/* Header */}
       <div className="gradient-hero px-5 pt-6 pb-8 text-primary-foreground">
         <div className="flex items-center justify-between mb-6">
@@ -239,10 +239,7 @@ const Dashboard = () => {
           )}
         </div>
       </div>
-
-
-      <BottomNav />
-    </div>
+    </AppLayout>
   );
 };
 

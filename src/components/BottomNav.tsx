@@ -18,7 +18,7 @@ const BottomNav = () => {
   const visibleItems = navItems.filter(item => item.show);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border safe-bottom">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       <div className="flex items-center justify-around h-16">
         {visibleItems.map(({ icon: Icon, label, path }) => {
           const isActive = location.pathname === path || 

@@ -11,7 +11,7 @@ import {
   Download,
   Lock
 } from "lucide-react";
-import BottomNav from "@/components/BottomNav";
+import AppLayout from "@/components/layout/AppLayout";
 import { WhatsAppShare } from "@/components/WhatsAppShare";
 import { usePermissions } from "@/hooks/use-role";
 import { useHiddenAmount } from "@/components/HideAmountsToggle";
@@ -37,7 +37,7 @@ const Reports = () => {
   // Access denied for employees
   if (!canViewReports) {
     return (
-      <div className="min-h-screen bg-background pb-24">
+      <AppLayout>
         <div className="bg-card px-4 pt-4 pb-6 border-b border-border">
           <div className="flex items-center gap-4">
             <Button
@@ -60,9 +60,7 @@ const Reports = () => {
             Seul le propriétaire peut voir les rapports.
           </p>
         </div>
-        
-        <BottomNav />
-      </div>
+      </AppLayout>
     );
   }
 
@@ -82,7 +80,7 @@ const Reports = () => {
   const totalSales = currentData.total || 1; // Avoid division by zero
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <AppLayout>
       {/* Header */}
       <div className="bg-card px-4 pt-4 pb-6 border-b border-border">
         <div className="flex items-center gap-4 mb-6">
@@ -219,9 +217,7 @@ const Reports = () => {
           Télécharger
         </Button>
       </div>
-
-      <BottomNav />
-    </div>
+    </AppLayout>
   );
 };
 

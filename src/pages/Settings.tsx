@@ -19,7 +19,7 @@ import {
   Users,
   Palette
 } from "lucide-react";
-import BottomNav from "@/components/BottomNav";
+import AppLayout from "@/components/layout/AppLayout";
 import { OwnerBadge, RoleBadge } from "@/components/RoleBadge";
 import { useRole, usePermissions } from "@/hooks/use-role";
 import { useSecurity } from "@/hooks/use-security";
@@ -90,7 +90,7 @@ const Settings = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <AppLayout>
       {/* Header */}
       <div className="bg-card px-4 pt-4 pb-6 border-b border-border">
         <div className="flex items-center gap-4 mb-2">
@@ -299,9 +299,7 @@ const Settings = () => {
           CAISSE+ v1.0.0
         </p>
       </div>
-
-      <BottomNav />
-    </div>
+    </AppLayout>
   );
 };
 
