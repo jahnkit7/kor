@@ -16,42 +16,42 @@ import { HideAmountsToggle, useHiddenAmount } from "@/components/HideAmountsTogg
 import { WhatsAppShare } from "@/components/WhatsAppShare";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { useRole, usePermissions } from "@/hooks/use-role";
-import { getDashboardStats, getSales } from "@/lib/db";
-import type { Sale } from "@/lib/db";
+import { useProfile } from "@/hooks/use-profile";
+import { useSales } from "@/hooks/use-sales";
+import { useDebts } from "@/hooks/use-debts";
 
 const Dashboard = () => {
-  const { loading } = useRequireAuth();
+  const { loading: authLoading } = useRequireAuth();
   const navigate = useNavigate();
   const { role } = useRole();
   const { canViewReports } = usePermissions();
   const { formatMoney, hideAmounts } = useHiddenAmount();
-  
-  const [todayData, setTodayData] = useState({
-    totalSales: 0,
-    cashSales: 0,
-    creditSales: 0,
-    totalDebts: 0,
-    clientsWithDebts: 0,
-  });
-  const [recentSales, setRecentSales] = useState<Sale[]>([]);
-  const [shopName] = useState("Boutique Mamadou");
+  const { profile, loading: profileLoading, isProfileComplete } = useProfile();
+  const { sales, loading: salesLoading, getTodayStats } = useSales();
+  const { totalDebts, clientsWithDebts, loading: debtsLoading } = useDebts();
 
+  // Redirect to profile setup if not complete
   useEffect(() => {
-    getDashboardStats().then(setTodayData);
-    getSales().then((sales) => {
-      // Get last 5 sales
-      const sorted = sales.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-      setRecentSales(sorted.slice(0, 5));
-    });
-  }, []);
+    if (!profileLoading && !isProfileComplete && !authLoading) {
+      navigate("/profile-setup");
+    }
+  }, [profileLoading, isProfileComplete, authLoading, navigate]);
 
-  if (loading) {
+  const todayStats = getTodayStats();
+  const shopName = profile?.shop_name || "Ma Boutique";
+
+  const isLoading = authLoading || profileLoading || salesLoading || debtsLoading;
+
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
       </div>
     );
   }
+
+  // Get recent sales (last 5)
+  const recentSales = sales.slice(0, 5);
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -81,9 +81,9 @@ const Dashboard = () => {
               <WhatsAppShare
                 type="sales"
                 data={{
-                  totalSales: todayData.totalSales,
-                  cashSales: todayData.cashSales,
-                  creditSales: todayData.creditSales,
+                  totalSales: todayStats.total,
+                  cashSales: todayStats.cash,
+                  creditSales: todayStats.credit,
                   shopName,
                 }}
                 variant="ghost"
@@ -92,17 +92,17 @@ const Dashboard = () => {
               />
             </div>
             <p className="text-money-xl text-primary-foreground">
-              {formatMoney(todayData.totalSales)} <span className="text-lg">{!hideAmounts && "CFA"}</span>
+              {formatMoney(todayStats.total)} <span className="text-lg">{!hideAmounts && "CFA"}</span>
             </p>
             <div className="flex gap-4 mt-4">
               <div className="flex-1">
                 <p className="text-xs opacity-70">Cash</p>
-                <p className="text-lg font-bold">{formatMoney(todayData.cashSales)}</p>
+                <p className="text-lg font-bold">{formatMoney(todayStats.cash)}</p>
               </div>
               <div className="w-px bg-primary-foreground/20" />
               <div className="flex-1">
                 <p className="text-xs opacity-70">Crédit</p>
-                <p className="text-lg font-bold text-accent">{formatMoney(todayData.creditSales)}</p>
+                <p className="text-lg font-bold text-accent">{formatMoney(todayStats.credit)}</p>
               </div>
             </div>
           </CardContent>
@@ -147,11 +147,11 @@ const Dashboard = () => {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground font-medium">Dettes à récupérer</p>
-                  <p className="text-money-md text-debt">{formatMoney(todayData.totalDebts)}</p>
+                  <p className="text-money-md text-debt">{formatMoney(totalDebts)}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
-                <span className="text-sm font-medium">{todayData.clientsWithDebts} clients</span>
+                <span className="text-sm font-medium">{clientsWithDebts} clients</span>
                 <ChevronRight className="w-5 h-5" />
               </div>
             </div>
@@ -174,27 +174,25 @@ const Dashboard = () => {
         </div>
         
         <div className="space-y-3">
-          <ActivityItem
-            type="cash"
-            amount={15000}
-            time="Il y a 5 min"
-            note="Ciment x2"
-            hideAmounts={hideAmounts}
-          />
-          <ActivityItem
-            type="credit"
-            amount={25000}
-            client="Ousmane Diallo"
-            time="Il y a 30 min"
-            hideAmounts={hideAmounts}
-          />
-          <ActivityItem
-            type="payment"
-            amount={10000}
-            client="Fatou Ndiaye"
-            time="Il y a 1h"
-            hideAmounts={hideAmounts}
-          />
+          {recentSales.length === 0 ? (
+            <Card>
+              <CardContent className="p-6 text-center text-muted-foreground">
+                Aucune vente aujourd'hui
+              </CardContent>
+            </Card>
+          ) : (
+            recentSales.map((sale) => (
+              <ActivityItem
+                key={sale.id}
+                type={sale.type}
+                amount={sale.amount}
+                client={sale.client_name || undefined}
+                note={sale.note || undefined}
+                time={formatRelativeTime(sale.created_at)}
+                hideAmounts={hideAmounts}
+              />
+            ))
+          )}
         </div>
       </div>
 
@@ -210,6 +208,23 @@ const Dashboard = () => {
     </div>
   );
 };
+
+function formatRelativeTime(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  
+  if (diffMins < 1) return "À l'instant";
+  if (diffMins < 60) return `Il y a ${diffMins} min`;
+  
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `Il y a ${diffHours}h`;
+  
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays === 1) return "Hier";
+  return `Il y a ${diffDays} jours`;
+}
 
 const ActivityItem = ({
   type,

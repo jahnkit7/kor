@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
 import { 
   ArrowLeft, 
   Search, 
@@ -16,22 +15,14 @@ import BottomNav from "@/components/BottomNav";
 import { ClientWarningBadge } from "@/components/ClientWarningBadge";
 import { usePermissions } from "@/hooks/use-role";
 import { useHiddenAmount } from "@/components/HideAmountsToggle";
-import { toast } from "sonner";
+import { useClients } from "@/hooks/use-clients";
 
 const Clients = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const { canDeleteData } = usePermissions();
   const { formatMoney } = useHiddenAmount();
-
-  // Mock data with isRisky flag
-  const [clients, setClients] = useState([
-    { id: "1", name: "Ousmane Diallo", phone: "77 123 45 67", debt: 125000, isRisky: true },
-    { id: "2", name: "Fatou Ndiaye", phone: "78 234 56 78", debt: 75000, isRisky: false },
-    { id: "3", name: "Ibrahima Fall", phone: "76 345 67 89", debt: 50000, isRisky: false },
-    { id: "4", name: "Aminata Sow", phone: "70 456 78 90", debt: 0, isRisky: true },
-    { id: "5", name: "Moussa Ba", phone: "77 567 89 01", debt: 0, isRisky: false },
-  ]);
+  const { clients, loading, toggleRisky } = useClients();
 
   const filteredClients = clients.filter(
     (client) =>
@@ -39,22 +30,18 @@ const Clients = () => {
       client.phone.includes(searchQuery)
   );
 
-  const toggleRisky = (clientId: string, e: React.MouseEvent) => {
+  const handleToggleRisky = (clientId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setClients(prev => 
-      prev.map(c => 
-        c.id === clientId ? { ...c, isRisky: !c.isRisky } : c
-      )
-    );
-    const client = clients.find(c => c.id === clientId);
-    if (client) {
-      toast.success(
-        client.isRisky 
-          ? `${client.name} n'est plus marqué` 
-          : `${client.name} marqué comme souvent en retard`
-      );
-    }
+    toggleRisky(clientId);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -100,67 +87,79 @@ const Clients = () => {
         </p>
         
         <div className="space-y-3">
-          {filteredClients.map((client) => (
-            <Card
-              key={client.id}
-              className="cursor-pointer hover:shadow-lg transition-shadow animate-fade-in"
-              onClick={() => client.debt > 0 ? navigate(`/debts/${client.id}`) : undefined}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-center gap-4">
-                  <div className="relative">
-                    <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center">
-                      <User className="w-6 h-6 text-muted-foreground" />
-                    </div>
-                    {/* Warning badge */}
-                    <div className="absolute -top-1 -right-1">
-                      <ClientWarningBadge isRisky={client.isRisky} />
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-bold text-foreground">{client.name}</p>
-                    <p className="text-sm text-muted-foreground flex items-center gap-1">
-                      <Phone className="w-3 h-3" />
-                      {client.phone}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="text-right">
-                      {client.debt > 0 ? (
-                        <>
-                          <p className="text-sm font-bold text-debt">{formatMoney(client.debt)} CFA</p>
-                          <p className="text-xs text-muted-foreground">dette</p>
-                        </>
-                      ) : (
-                        <span className="text-xs font-semibold px-2 py-1 rounded-full bg-success/10 text-success">
-                          Pas de dette
-                        </span>
-                      )}
-                    </div>
-                    
-                    {/* Risky toggle (only for owners) */}
-                    {canDeleteData && (
-                      <button
-                        onClick={(e) => toggleRisky(client.id, e)}
-                        className={`p-2 rounded-lg transition-colors ${
-                          client.isRisky 
-                            ? "bg-credit/10 text-credit" 
-                            : "bg-secondary text-muted-foreground hover:bg-secondary/80"
-                        }`}
-                        title={client.isRisky ? "Retirer le marquage" : "Marquer comme souvent en retard"}
-                      >
-                        <AlertTriangle className="w-4 h-4" />
-                      </button>
-                    )}
-                    
-                    {client.debt > 0 && (
-                      <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                    )}
-                  </div>
-                </div>
+          {filteredClients.length === 0 ? (
+            <Card>
+              <CardContent className="p-6 text-center">
+                <p className="text-muted-foreground mb-4">Aucun client trouvé</p>
+                <Button onClick={() => navigate("/clients/new")}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Ajouter un client
+                </Button>
               </CardContent>
             </Card>
-          ))}
+          ) : (
+            filteredClients.map((client) => (
+              <Card
+                key={client.id}
+                className="cursor-pointer hover:shadow-lg transition-shadow animate-fade-in"
+                onClick={() => client.total_debt && client.total_debt > 0 ? navigate(`/debts/${client.id}`) : undefined}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-4">
+                    <div className="relative">
+                      <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center">
+                        <User className="w-6 h-6 text-muted-foreground" />
+                      </div>
+                      {/* Warning badge */}
+                      <div className="absolute -top-1 -right-1">
+                        <ClientWarningBadge isRisky={client.is_risky} />
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-bold text-foreground">{client.name}</p>
+                      <p className="text-sm text-muted-foreground flex items-center gap-1">
+                        <Phone className="w-3 h-3" />
+                        {client.phone}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        {client.total_debt && client.total_debt > 0 ? (
+                          <>
+                            <p className="text-sm font-bold text-debt">{formatMoney(client.total_debt)} CFA</p>
+                            <p className="text-xs text-muted-foreground">dette</p>
+                          </>
+                        ) : (
+                          <span className="text-xs font-semibold px-2 py-1 rounded-full bg-success/10 text-success">
+                            Pas de dette
+                          </span>
+                        )}
+                      </div>
+                      
+                      {/* Risky toggle (only for owners) */}
+                      {canDeleteData && (
+                        <button
+                          onClick={(e) => handleToggleRisky(client.id, e)}
+                          className={`p-2 rounded-lg transition-colors ${
+                            client.is_risky 
+                              ? "bg-credit/10 text-credit" 
+                              : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                          }`}
+                          title={client.is_risky ? "Retirer le marquage" : "Marquer comme souvent en retard"}
+                        >
+                          <AlertTriangle className="w-4 h-4" />
+                        </button>
+                      )}
+                      
+                      {client.total_debt && client.total_debt > 0 && (
+                        <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
         </div>
       </div>
 

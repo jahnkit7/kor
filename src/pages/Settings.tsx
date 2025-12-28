@@ -12,7 +12,6 @@ import {
   Globe,
   LogOut,
   ChevronRight,
-  Shield,
   Eye,
   EyeOff,
   Clock,
@@ -23,6 +22,8 @@ import BottomNav from "@/components/BottomNav";
 import { OwnerBadge, RoleBadge } from "@/components/RoleBadge";
 import { useRole, usePermissions } from "@/hooks/use-role";
 import { useSecurity } from "@/hooks/use-security";
+import { useProfile } from "@/hooks/use-profile";
+import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 
 const Settings = () => {
@@ -30,18 +31,17 @@ const Settings = () => {
   const { role } = useRole();
   const { canChangeSettings, canManageEmployees } = usePermissions();
   const { hideAmounts, autoLockMinutes, appPin, updateSettings } = useSecurity();
+  const { profile, loading: profileLoading } = useProfile();
+  const { signOut } = useAuth();
 
-  const [settings] = useState({
-    shopName: "Boutique Mamadou",
-    ownerName: "Mamadou Diop",
-    phone: "+221 77 123 45 67",
-    currency: "CFA",
-    language: "Français",
-  });
-
-  const handleLogout = () => {
-    toast.success("Déconnexion réussie");
-    navigate("/");
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      toast.success("Déconnexion réussie");
+      navigate("/");
+    } catch {
+      toast.error("Erreur lors de la déconnexion");
+    }
   };
 
   const handleToggleHideAmounts = async () => {
@@ -53,15 +53,23 @@ const Settings = () => {
     }
   };
 
+  if (profileLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
   const shopSettings = [
-    { icon: Store, label: "Nom de la boutique", value: settings.shopName },
-    { icon: User, label: "Propriétaire", value: settings.ownerName },
-    { icon: Phone, label: "Téléphone", value: settings.phone },
+    { icon: Store, label: "Nom de la boutique", value: profile?.shop_name || "Ma Boutique" },
+    { icon: User, label: "Propriétaire", value: profile?.owner_name || "Non défini" },
+    { icon: Phone, label: "Téléphone", value: profile?.phone || "Non défini" },
   ];
 
   const appSettings = [
-    { icon: Globe, label: "Devise", value: settings.currency },
-    { icon: Globe, label: "Langue", value: settings.language },
+    { icon: Globe, label: "Devise", value: profile?.currency || "CFA" },
+    { icon: Globe, label: "Langue", value: profile?.language === "fr" ? "Français" : profile?.language || "Français" },
   ];
 
   const securitySettings = [
@@ -129,6 +137,7 @@ const Settings = () => {
                   <button
                     key={label}
                     className="w-full flex items-center gap-4 p-4 text-left hover:bg-secondary/50 transition-colors"
+                    onClick={() => navigate("/profile-setup")}
                   >
                     <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
                       <Icon className="w-5 h-5 text-muted-foreground" />

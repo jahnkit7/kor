@@ -15,6 +15,9 @@ import BottomNav from "@/components/BottomNav";
 import { WhatsAppShare } from "@/components/WhatsAppShare";
 import { usePermissions } from "@/hooks/use-role";
 import { useHiddenAmount } from "@/components/HideAmountsToggle";
+import { useProfile } from "@/hooks/use-profile";
+import { useSales } from "@/hooks/use-sales";
+import { useDebts } from "@/hooks/use-debts";
 import { toast } from "sonner";
 
 const Reports = () => {
@@ -22,16 +25,14 @@ const Reports = () => {
   const [period, setPeriod] = useState<"day" | "week" | "month">("day");
   const { canViewReports } = usePermissions();
   const { formatMoney, hideAmounts } = useHiddenAmount();
-  const [shopName] = useState("Boutique Mamadou");
+  const { profile } = useProfile();
+  const { getPeriodStats, loading: salesLoading } = useSales();
+  const { totalDebts, loading: debtsLoading } = useDebts();
+  
+  const shopName = profile?.shop_name || "Ma Boutique";
+  const currentData = getPeriodStats(period);
 
-  // Mock data based on period
-  const data = {
-    day: { total: 125000, cash: 85000, credit: 40000, payments: 35000, outstanding: 340000 },
-    week: { total: 875000, cash: 595000, credit: 280000, payments: 180000, outstanding: 340000 },
-    month: { total: 3750000, cash: 2550000, credit: 1200000, payments: 850000, outstanding: 340000 },
-  };
-
-  const currentData = data[period];
+  const isLoading = salesLoading || debtsLoading;
 
   // Access denied for employees
   if (!canViewReports) {
@@ -69,6 +70,16 @@ const Reports = () => {
     toast.success("Téléchargement en cours...");
     // In a real app, this would generate and download a PDF
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  const totalSales = currentData.total || 1; // Avoid division by zero
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -150,7 +161,7 @@ const Reports = () => {
                 {formatMoney(currentData.cash)}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                {Math.round((currentData.cash / currentData.total) * 100)}% du total
+                {currentData.total > 0 ? Math.round((currentData.cash / currentData.total) * 100) : 0}% du total
               </p>
             </CardContent>
           </Card>
@@ -167,28 +178,11 @@ const Reports = () => {
                 {formatMoney(currentData.credit)}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                {Math.round((currentData.credit / currentData.total) * 100)}% du total
+                {currentData.total > 0 ? Math.round((currentData.credit / currentData.total) * 100) : 0}% du total
               </p>
             </CardContent>
           </Card>
         </div>
-
-        {/* Payments Received */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-success/10 flex items-center justify-center">
-                  <TrendingUp className="w-5 h-5 text-success" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Paiements reçus</p>
-                  <p className="text-money-md text-success">{formatMoney(currentData.payments)}</p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Outstanding Debts */}
         <Card className="border-debt/20 bg-debt/5">
@@ -196,11 +190,11 @@ const Reports = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-debt/10 flex items-center justify-center">
-                  <CreditCard className="w-5 h-5 text-debt" />
+                  <TrendingUp className="w-5 h-5 text-debt" />
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Dettes à récupérer</p>
-                  <p className="text-money-md text-debt">{formatMoney(currentData.outstanding)}</p>
+                  <p className="text-money-md text-debt">{formatMoney(totalDebts)}</p>
                 </div>
               </div>
               <Button

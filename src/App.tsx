@@ -7,6 +7,7 @@ import { OfflineProvider } from "./contexts/OfflineContext";
 import { OfflineIndicator } from "./components/OfflineIndicator";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
+import ProfileSetup from "./pages/ProfileSetup";
 import Dashboard from "./pages/Dashboard";
 import Sale from "./pages/Sale";
 import Debts from "./pages/Debts";
@@ -30,6 +31,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/profile-setup" element={<ProfileSetup />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/sale/:type" element={<Sale />} />
             <Route path="/debts" element={<Debts />} />
