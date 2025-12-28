@@ -26,18 +26,46 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
   const [items, setItems] = useState<VoiceStockItem[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Start recording timer
+  const startTimer = useCallback(() => {
+    setRecordingDuration(0);
+    timerRef.current = setInterval(() => {
+      setRecordingDuration((prev) => prev + 1);
+    }, 1000);
+  }, []);
+
+  // Stop recording timer
+  const stopTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
 
   const startRecording = useCallback(async () => {
     try {
+      setErrorMessage(null);
+      
       // Use Web Speech API for transcription (free, browser-based)
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       
       if (!SpeechRecognition) {
+        setErrorMessage("Votre navigateur ne supporte pas la reconnaissance vocale. Utilisez Chrome, Edge ou Safari sur mobile.");
         toast({
           title: "Non supporté",
-          description: "Votre navigateur ne supporte pas la reconnaissance vocale. Utilisez Chrome ou Edge.",
+          description: "Utilisez Chrome, Edge ou Safari sur mobile pour la reconnaissance vocale.",
           variant: "destructive",
         });
         return;
@@ -47,6 +75,7 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
       recognition.lang = "fr-FR";
       recognition.continuous = true;
       recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
 
       let finalTranscript = "";
 
@@ -65,12 +94,36 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
 
       recognition.onerror = (event) => {
         console.error("Speech recognition error:", event.error);
-        if (event.error !== "aborted") {
+        stopTimer();
+        
+        if (event.error === "not-allowed") {
+          setErrorMessage("Accès au microphone refusé. Autorisez l'accès dans les paramètres de votre navigateur.");
+          toast({
+            title: "Microphone bloqué",
+            description: "Autorisez l'accès au microphone dans les paramètres",
+            variant: "destructive",
+          });
+        } else if (event.error === "no-speech") {
+          // This is normal when user stops without speaking
+          if (!finalTranscript.trim()) {
+            setErrorMessage("Aucune parole détectée. Parlez clairement près du microphone.");
+          }
+        } else if (event.error !== "aborted") {
+          setErrorMessage("Erreur de reconnaissance vocale. Réessayez.");
           toast({
             title: "Erreur",
             description: "Erreur lors de l'enregistrement vocal",
             variant: "destructive",
           });
+        }
+        setIsRecording(false);
+      };
+
+      recognition.onend = () => {
+        // Recognition ended - could be auto-stop or manual
+        stopTimer();
+        if (isRecording) {
+          setIsRecording(false);
         }
       };
 
@@ -78,24 +131,31 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
       recognition.start();
       setIsRecording(true);
       setTranscript("");
+      startTimer();
     } catch (error) {
       console.error("Error starting recording:", error);
+      setErrorMessage("Impossible d'accéder au microphone. Vérifiez les permissions.");
       toast({
         title: "Erreur",
         description: "Impossible d'accéder au microphone",
         variant: "destructive",
       });
     }
-  }, [toast]);
+  }, [toast, startTimer, stopTimer, isRecording]);
 
   const stopRecording = useCallback(async () => {
+    stopTimer();
+    
     if (recognitionRef.current) {
       recognitionRef.current.stop();
       recognitionRef.current = null;
     }
     setIsRecording(false);
 
-    if (!transcript.trim()) {
+    const trimmedTranscript = transcript.trim();
+    
+    if (!trimmedTranscript) {
+      setErrorMessage("Aucun texte n'a été détecté. Parlez plus fort et clairement.");
       toast({
         title: "Aucune dictée",
         description: "Aucun texte n'a été détecté. Réessayez.",
@@ -104,44 +164,75 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
       return;
     }
 
+    // Minimum text length check
+    if (trimmedTranscript.length < 5) {
+      setErrorMessage("La dictée est trop courte. Décrivez vos produits avec plus de détails.");
+      toast({
+        title: "Dictée trop courte",
+        description: "Décrivez vos produits plus en détail",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Analyze with AI
     setStep("analyzing");
+    setErrorMessage(null);
 
     try {
+      console.log("Sending transcript to AI:", trimmedTranscript);
+      
       const { data, error } = await supabase.functions.invoke("analyze-stock-voice", {
-        body: { transcript: transcript.trim() },
+        body: { transcript: trimmedTranscript },
       });
 
-      if (error) throw error;
+      console.log("AI response:", data, error);
 
-      const voiceItems: VoiceStockItem[] = (data.items || []).map((item: NewStockItem, idx: number) => ({
+      if (error) {
+        console.error("Edge function error:", error);
+        throw new Error(error.message || "Erreur lors de l'analyse");
+      }
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      const voiceItems: VoiceStockItem[] = (data?.items || []).map((item: NewStockItem, idx: number) => ({
         ...item,
         tempId: `voice-${Date.now()}-${idx}`,
         source: "voice" as const,
       }));
 
       setItems(voiceItems);
-      setSuggestions(data.suggestions || []);
+      setSuggestions(data?.suggestions || []);
       setStep("validate");
 
       if (voiceItems.length === 0) {
+        setErrorMessage("Aucun produit détecté. Essayez avec une dictée comme: '50 savons à 500 francs, 10 paquets de riz'");
         toast({
           title: "Aucun produit détecté",
           description: "Réessayez avec une dictée plus claire",
           variant: "destructive",
         });
         setStep("record");
+      } else {
+        toast({
+          title: "Analyse terminée",
+          description: `${voiceItems.length} produit${voiceItems.length > 1 ? "s" : ""} détecté${voiceItems.length > 1 ? "s" : ""}`,
+        });
       }
     } catch (error) {
       console.error("Error analyzing voice:", error);
+      const errorMsg = error instanceof Error ? error.message : "Erreur inconnue";
+      setErrorMessage(`Erreur d'analyse: ${errorMsg}`);
       toast({
         title: "Erreur d'analyse",
-        description: "Impossible d'analyser la dictée. Réessayez.",
+        description: errorMsg,
         variant: "destructive",
       });
       setStep("record");
     }
-  }, [transcript, toast]);
+  }, [transcript, toast, stopTimer]);
 
   const updateItem = (tempId: string, updates: Partial<VoiceStockItem>) => {
     setItems((prev) =>
@@ -182,6 +273,13 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
           </p>
         </div>
 
+        {/* Error message */}
+        {errorMessage && (
+          <Card className="p-3 bg-destructive/10 border-destructive/20">
+            <p className="text-sm text-destructive">{errorMessage}</p>
+          </Card>
+        )}
+
         {/* Recording button */}
         <div className="flex flex-col items-center gap-4">
           <Button
@@ -196,15 +294,35 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
               <Mic className="h-10 w-10" />
             )}
           </Button>
-          <span className="text-sm text-muted-foreground">
-            {isRecording ? "Appuyez pour arrêter" : "Appuyez pour dicter"}
-          </span>
+          <div className="text-center">
+            <span className="text-sm text-muted-foreground">
+              {isRecording ? "Appuyez pour arrêter" : "Appuyez pour dicter"}
+            </span>
+            {isRecording && (
+              <p className="text-lg font-mono text-primary mt-1">
+                {formatDuration(recordingDuration)}
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Live transcript */}
         {transcript && (
           <Card className="p-4 bg-muted/50">
+            <p className="text-xs text-muted-foreground mb-1">Transcription en direct :</p>
             <p className="text-sm italic">"{transcript}"</p>
+          </Card>
+        )}
+
+        {/* Tips */}
+        {!isRecording && !transcript && (
+          <Card className="p-4 bg-accent/5 border-accent/20">
+            <p className="text-xs font-medium text-accent-foreground mb-2">💡 Conseils :</p>
+            <ul className="text-xs text-muted-foreground space-y-1">
+              <li>• Parlez clairement et distinctement</li>
+              <li>• Mentionnez le nom, la quantité et le prix</li>
+              <li>• Exemple: "20 bouteilles d'huile à 1500 francs"</li>
+            </ul>
           </Card>
         )}
 
@@ -434,8 +552,11 @@ interface SpeechRecognitionInstance extends EventTarget {
   lang: string;
   continuous: boolean;
   interimResults: boolean;
+  maxAlternatives: number;
   onresult: ((event: SpeechRecognitionEvent) => void) | null;
   onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
+  onend: (() => void) | null;
+  onstart: (() => void) | null;
   start: () => void;
   stop: () => void;
   abort: () => void;
