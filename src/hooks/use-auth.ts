@@ -55,10 +55,10 @@ export function useAuth() {
 
   const signUp = useCallback(async (email: string, password: string) => {
     if (!configured) return { data: null, error: new Error("Supabase not configured") };
-    
+
     const { supabase } = await import("@/integrations/supabase/client");
     const redirectUrl = `${window.location.origin}/`;
-    
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -66,6 +66,26 @@ export function useAuth() {
         emailRedirectTo: redirectUrl,
       },
     });
+
+    // Create default profile row as soon as we have a session (auto-confirm enabled)
+    if (!error && data?.session?.user) {
+      try {
+        const userId = data.session.user.id;
+
+        const { data: existing, error: existingError } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        if (!existingError && !existing) {
+          await supabase.from("profiles").insert({ user_id: userId });
+        }
+      } catch {
+        // Silent: user can still complete profile via /profile-setup
+      }
+    }
+
     return { data, error };
   }, [configured]);
 
