@@ -19,24 +19,56 @@ serve(async (req) => {
     if (!authHeader) {
       console.error("analyze-stock-voice: Missing authorization header");
       return new Response(
-        JSON.stringify({ error: "Authentification requise" }),
+        JSON.stringify({ error: "Authentification requise. Veuillez vous reconnecter." }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
-    );
-
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(
-      authHeader.replace("Bearer ", "")
-    );
-
-    if (authError || !user) {
-      console.error("analyze-stock-voice: Authentication failed:", authError?.message);
+    const token = authHeader.replace("Bearer ", "").trim();
+    if (!token) {
+      console.error("analyze-stock-voice: Empty token");
       return new Response(
-        JSON.stringify({ error: "Utilisateur non authentifié" }),
+        JSON.stringify({ error: "Token d'authentification manquant." }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error("analyze-stock-voice: Missing Supabase config");
+      return new Response(
+        JSON.stringify({ error: "Configuration serveur incomplète (Supabase)." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
+
+    if (authError) {
+      console.error("analyze-stock-voice: Auth error:", authError.message, authError.status);
+      
+      // Distinguish between different auth errors
+      if (authError.message?.includes("expired") || authError.message?.includes("invalid")) {
+        return new Response(
+          JSON.stringify({ error: "Token expiré ou invalide. Veuillez vous reconnecter." }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      return new Response(
+        JSON.stringify({ error: `Erreur d'authentification: ${authError.message}` }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!user) {
+      console.error("analyze-stock-voice: No user found for token");
+      return new Response(
+        JSON.stringify({ error: "Utilisateur non trouvé. Veuillez vous reconnecter." }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
