@@ -633,7 +633,7 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
         <div className="text-center space-y-2">
           <h3 className="text-lg font-semibold">Dictez votre stock</h3>
           <p className="text-sm text-muted-foreground">
-            Parlez naturellement : "J'ai 50 savons Lux à 500 francs..."
+            Parlez naturellement. Dites "suivant" entre chaque produit.
           </p>
         </div>
 
@@ -720,32 +720,34 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
 
         {/* Action buttons after recording */}
         {!!transcript.trim() && !isRecording && (
-          <div className="space-y-3">
-            {/* Primary: Analyze with AI (if online) */}
-            {isOnline && (
-              <Button
-                onClick={() => analyzeTranscript(transcript.trim())}
-                className="w-full gap-2"
-              >
-                <Sparkles className="h-4 w-4" />
-                Analyser (IA)
-              </Button>
-            )}
-
-            {/* Failsafe: Quick local parse & validate */}
+          <div className="flex flex-col gap-2">
+            {/* Primary: Quick local parse & validate */}
             <Button
-              variant={isOnline ? "secondary" : "default"}
               onClick={handleDirectSave}
               disabled={savingTranscript}
               className="w-full gap-2"
+              size="lg"
             >
               {savingTranscript ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <Zap className="h-4 w-4" />
               )}
-              {isOnline ? "Analyse rapide (local)" : "Analyser & valider"}
+              Valider & enregistrer
             </Button>
+
+            {/* Secondary: Analyze with AI (if online) */}
+            {isOnline && (
+              <Button
+                variant="outline"
+                onClick={() => analyzeTranscript(transcript.trim())}
+                className="w-full gap-2"
+                size="sm"
+              >
+                <Sparkles className="h-4 w-4" />
+                Analyse IA (optionnel)
+              </Button>
+            )}
           </div>
         )}
 
@@ -762,11 +764,11 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
         {/* Tips */}
         {!isRecording && !transcript && isSupported && (
           <Card className="p-4 bg-accent/5 border-accent/20">
-            <p className="text-xs font-medium text-accent-foreground mb-2">💡 Conseils :</p>
+            <p className="text-xs font-medium text-accent-foreground mb-2">💡 Comment dicter :</p>
             <ul className="text-xs text-muted-foreground space-y-1">
-              <li>• Parlez clairement et distinctement</li>
-              <li>• Mentionnez le nom, la quantité et le prix</li>
-              <li>• Exemple: "20 bouteilles d'huile à 1500 francs"</li>
+              <li>• Dites "suivant" pour séparer les produits</li>
+              <li>• Exemple: "10 bidons d'huile à 6000, suivant, 5 casiers de coca à 8000"</li>
+              <li>• Dites "stop" ou "c'est tout" pour terminer</li>
             </ul>
           </Card>
         )}
