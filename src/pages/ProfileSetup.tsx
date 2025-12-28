@@ -17,15 +17,25 @@ const ProfileSetup = () => {
   const [ownerName, setOwnerName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [profileLoading, setProfileLoading] = useState(true);
-  const [shouldRedirect, setShouldRedirect] = useState(false);
 
   // Check profile on mount - if complete, redirect
   useEffect(() => {
+    let cancelled = false;
+
+    const safeRedirect = (path: string) => {
+      try {
+        // Avoid History API (can throw SecurityError in some embedded/sandboxed contexts)
+        window.location.assign(path);
+      } catch (e) {
+        console.error("Redirect failed:", e);
+      }
+    };
+
     const checkProfile = async () => {
       if (authLoading) return;
-      
+
       if (!user) {
-        navigate("/auth", { replace: true });
+        safeRedirect("/auth");
         return;
       }
 
@@ -37,47 +47,43 @@ const ProfileSetup = () => {
           .eq("user_id", user.id)
           .maybeSingle();
 
+        if (cancelled) return;
+
         if (error) {
           console.error("Error checking profile:", error);
-          setProfileLoading(false);
           return;
         }
 
-        // Check if profile is complete
         const isComplete = Boolean(
           data?.shop_name &&
-          data.shop_name !== "Ma Boutique" &&
-          data?.owner_name
+            data.shop_name !== "Ma Boutique" &&
+            data?.owner_name
         );
 
         if (isComplete) {
-          // Profile complete - redirect to dashboard
-          navigate("/dashboard", { replace: true });
+          safeRedirect("/dashboard");
           return;
         }
 
-        // Profile incomplete - populate form with existing values
         if (data) {
-          setShopName(data.shop_name && data.shop_name !== "Ma Boutique" ? data.shop_name : "");
+          setShopName(
+            data.shop_name && data.shop_name !== "Ma Boutique" ? data.shop_name : ""
+          );
           setOwnerName(data.owner_name ?? "");
         }
-
-        setProfileLoading(false);
       } catch (error) {
         console.error("Error:", error);
-        setProfileLoading(false);
+      } finally {
+        if (!cancelled) setProfileLoading(false);
       }
     };
 
     checkProfile();
-  }, [user, authLoading, navigate]);
 
-  // Handle redirect after successful save
-  useEffect(() => {
-    if (shouldRedirect) {
-      navigate("/dashboard", { replace: true });
-    }
-  }, [shouldRedirect, navigate]);
+    return () => {
+      cancelled = true;
+    };
+  }, [user, authLoading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -146,14 +152,11 @@ const ProfileSetup = () => {
       }
 
       toast.success("Profil configuré !");
-      
-      // Force redirect using window.location as fallback
-      setShouldRedirect(true);
-      
-      // Also use window.location as ultimate fallback
-      setTimeout(() => {
-        window.location.href = "/dashboard";
-      }, 100);
+      try {
+        window.location.assign("/dashboard");
+      } catch (e) {
+        console.error("Redirect failed:", e);
+      }
       
     } catch (error) {
       console.error("Error:", error);

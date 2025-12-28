@@ -2,19 +2,20 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { 
-  Wallet, 
-  CreditCard, 
-  TrendingUp, 
+import {
+  Wallet,
+  CreditCard,
+  TrendingUp,
   Plus,
   ChevronRight,
-  Bell
+  Bell,
 } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { RoleBadge } from "@/components/RoleBadge";
 import { HideAmountsToggle, useHiddenAmount } from "@/components/HideAmountsToggle";
 import { WhatsAppShare } from "@/components/WhatsAppShare";
 import { useRequireAuth } from "@/hooks/use-require-auth";
+import { useAuth } from "@/hooks/use-auth";
 import { useRole, usePermissions } from "@/hooks/use-role";
 import { useProfile } from "@/hooks/use-profile";
 import { useSales } from "@/hooks/use-sales";
@@ -22,6 +23,7 @@ import { useDebts } from "@/hooks/use-debts";
 
 const Dashboard = () => {
   const { loading: authLoading } = useRequireAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const { role } = useRole();
   const { canViewReports } = usePermissions();
@@ -30,12 +32,13 @@ const Dashboard = () => {
   const { sales, loading: salesLoading, getTodayStats } = useSales();
   const { totalDebts, clientsWithDebts, loading: debtsLoading } = useDebts();
 
-  // Redirect to profile setup if not complete
+  // Redirect to profile setup only when profile is loaded and present
+  // (avoid redirecting on transient null profile during auth init)
   useEffect(() => {
-    if (!profileLoading && !isProfileComplete && !authLoading) {
+    if (!authLoading && user && !profileLoading && profile && !isProfileComplete) {
       navigate("/profile-setup");
     }
-  }, [profileLoading, isProfileComplete, authLoading, navigate]);
+  }, [authLoading, user, profileLoading, profile, isProfileComplete, navigate]);
 
   const todayStats = getTodayStats();
   const shopName = profile?.shop_name || "Ma Boutique";
