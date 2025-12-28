@@ -4,12 +4,13 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Mic, Square, Loader2, Trash2, Edit2, Check, X, Sparkles, Keyboard, RefreshCw, AlertTriangle, ToggleRight, ToggleLeft } from "lucide-react";
+import { Mic, Square, Loader2, Trash2, Edit2, Check, X, Sparkles, Keyboard, RefreshCw, AlertTriangle, ToggleRight, ToggleLeft, Save, Wifi, WifiOff, Zap } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useNetworkStatus } from "@/hooks/use-network-status";
 import { supabase } from "@/integrations/supabase/client";
+import { parseTranscriptLocally, canParseLocally, type ParsedStockItem } from "@/lib/local-stock-parser";
 import type { NewStockItem } from "@/hooks/use-stock";
 
 // TypeScript declarations for Web Speech API
@@ -47,6 +48,7 @@ declare global {
 interface VoiceStockItem extends NewStockItem {
   tempId: string;
   isEditing?: boolean;
+  confidence?: "high" | "medium" | "low";
 }
 
 interface VoiceStockInputProps {
@@ -74,11 +76,13 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [isSupported, setIsSupported] = useState(true);
-  const [autoSaveMode, setAutoSaveMode] = useState(true); // true = auto-enregistrement
+  const [autoSaveMode, setAutoSaveMode] = useState(true);
+  const [useLocalParser, setUseLocalParser] = useState(false);
+  const [savingTranscript, setSavingTranscript] = useState(false);
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const maxRetries = 3;
+  const maxRetries = 2;
 
   // Check browser support on mount
   useEffect(() => {
@@ -96,7 +100,6 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
     };
   }, []);
 
-  // Start recording timer
   const startTimer = useCallback(() => {
     setRecordingDuration(0);
     timerRef.current = setInterval(() => {
@@ -104,7 +107,6 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
     }, 1000);
   }, []);
 
-  // Stop recording timer
   const stopTimer = useCallback(() => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
@@ -130,7 +132,6 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
         return;
       }
 
-      // Request microphone permission first
       try {
         await navigator.mediaDevices.getUserMedia({ audio: true });
       } catch (permError) {
@@ -151,7 +152,6 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
       recognition.maxAlternatives = 3;
 
       let finalTranscript = "";
-      let lastResultTime = Date.now();
 
       recognition.onstart = () => {
         console.log("Speech recognition started");
@@ -160,13 +160,11 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
       };
 
       recognition.onresult = (event) => {
-        lastResultTime = Date.now();
         let interimTranscript = "";
         
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const result = event.results[i];
           if (result.isFinal) {
-            // Use best alternative
             finalTranscript += result[0].transcript + " ";
           } else {
             interimTranscript += result[0].transcript;
@@ -181,36 +179,23 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
         switch (event.error) {
           case "not-allowed":
           case "permission-denied":
-            setErrorMessage("Accès au microphone refusé. Autorisez l'accès dans les paramètres de votre navigateur.");
-            toast({
-              title: "Microphone bloqué",
-              description: "Autorisez l'accès au microphone",
-              variant: "destructive",
-            });
+            setErrorMessage("Accès au microphone refusé. Autorisez l'accès dans les paramètres.");
+            toast({ title: "Microphone bloqué", variant: "destructive" });
             break;
           case "no-speech":
-            // Don't show error during recording - only when stopped
-            if (!finalTranscript.trim() && !isRecording) {
-              setErrorMessage("Aucune parole détectée. Parlez plus fort et clairement.");
-            }
             break;
           case "audio-capture":
-            setErrorMessage("Microphone non disponible. Vérifiez qu'il est connecté.");
-            toast({
-              title: "Microphone introuvable",
-              description: "Vérifiez votre microphone",
-              variant: "destructive",
-            });
+            setErrorMessage("Microphone non disponible.");
+            toast({ title: "Microphone introuvable", variant: "destructive" });
             break;
           case "network":
-            setErrorMessage("Erreur réseau. Vérifiez votre connexion internet.");
+            setErrorMessage("Erreur réseau pour la reconnaissance vocale.");
             break;
           case "aborted":
-            // User cancelled - no error needed
             break;
           default:
             if (event.error !== "aborted") {
-              setErrorMessage(`Erreur: ${event.error}. Réessayez ou utilisez le mode texte.`);
+              setErrorMessage(`Erreur: ${event.error}`);
             }
         }
         
@@ -230,14 +215,10 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
       
     } catch (error) {
       console.error("Error starting recording:", error);
-      setErrorMessage("Impossible de démarrer l'enregistrement. Essayez le mode texte.");
-      toast({
-        title: "Erreur",
-        description: "Impossible d'accéder au microphone",
-        variant: "destructive",
-      });
+      setErrorMessage("Impossible de démarrer l'enregistrement.");
+      toast({ title: "Erreur", description: "Impossible d'accéder au microphone", variant: "destructive" });
     }
-  }, [toast, startTimer, stopTimer, isRecording]);
+  }, [toast, startTimer, stopTimer]);
 
   const stopRecording = useCallback(async () => {
     stopTimer();
@@ -252,189 +233,290 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
 
     if (!trimmedTranscript) {
       setErrorMessage("Aucun texte détecté. Parlez plus fort ou utilisez le mode texte.");
-      toast({
-        title: "Aucune dictée",
-        description: "Réessayez ou utilisez le mode texte",
-        variant: "destructive",
-      });
+      toast({ title: "Aucune dictée", description: "Réessayez ou utilisez le mode texte", variant: "destructive" });
       return;
     }
 
     if (trimmedTranscript.length < 5) {
       setErrorMessage("Dictée trop courte. Décrivez vos produits avec plus de détails.");
-      toast({
-        title: "Dictée trop courte",
-        description: "Décrivez vos produits plus en détail",
-        variant: "destructive",
-      });
+      toast({ title: "Dictée trop courte", variant: "destructive" });
       return;
     }
 
-    // Ne pas analyser automatiquement : l'utilisateur clique ensuite sur "Analyser"
-    // (et on bloque proprement si hors-ligne)
-    if (!isOnline) {
-      setErrorMessage("Vous êtes hors-ligne. L'analyse nécessite une connexion internet.");
-      toast({
-        title: "Hors-ligne",
-        description: "Reconnectez-vous pour analyser et enregistrer le stock.",
-        variant: "destructive",
-      });
-    }
-  }, [transcript, toast, stopTimer, isOnline]);
+    setErrorMessage(null);
+  }, [transcript, toast, stopTimer]);
 
-  const analyzeTranscript = useCallback(
-    async (text: string, isRetry = false) => {
-      if (!isOnline) {
-        const msg = "Vous êtes hors-ligne. L'analyse nécessite une connexion internet.";
-        setErrorMessage(msg);
-        toast({ title: "Hors-ligne", description: msg, variant: "destructive" });
-        return;
+  // Save transcript to database (failsafe)
+  const saveTranscriptToDatabase = useCallback(async (text: string): Promise<string | null> => {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session?.session?.user) {
+        console.warn("No session for saving transcript");
+        return null;
       }
 
+      const { data, error } = await supabase
+        .from("stock_voice_entries")
+        .insert({
+          user_id: session.session.user.id,
+          raw_transcript: text,
+          status: "pending_parse",
+        })
+        .select("id")
+        .single();
+
+      if (error) {
+        console.error("Error saving transcript:", error);
+        return null;
+      }
+
+      return data?.id || null;
+    } catch (err) {
+      console.error("Failed to save transcript:", err);
+      return null;
+    }
+  }, []);
+
+  // Parse with local parser
+  const parseWithLocalParser = useCallback((text: string) => {
+    const result = parseTranscriptLocally(text);
+    
+    const voiceItems: VoiceStockItem[] = result.items.map((item, idx) => ({
+      name: item.name,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      model: item.model,
+      source: "voice" as const,
+      tempId: `local-${Date.now()}-${idx}`,
+      confidence: item.confidence,
+    }));
+
+    return { items: voiceItems, suggestions: result.suggestions };
+  }, []);
+
+  // Analyze transcript (AI or local)
+  const analyzeTranscript = useCallback(
+    async (text: string, forceLocal = false, isRetry = false) => {
       setStep("analyzing");
       setErrorMessage(null);
 
+      // If offline or forceLocal, use local parser
+      if (!isOnline || forceLocal || useLocalParser) {
+        try {
+          const { items: voiceItems, suggestions: localSuggestions } = parseWithLocalParser(text);
+          
+          setItems(voiceItems);
+          setSuggestions(localSuggestions);
+          setRetryCount(0);
+
+          if (voiceItems.length === 0) {
+            setErrorMessage("Aucun produit détecté. Exemple: '50 sachets de sucre à 1200 CFA'");
+            toast({ title: "Aucun produit détecté", description: "Reformulez votre dictée", variant: "destructive" });
+            setStep("record");
+            return;
+          }
+
+          // Always go to validate for local parsing (less reliable)
+          setStep("validate");
+          toast({
+            title: "Analyse locale terminée",
+            description: `${voiceItems.length} produit(s) détecté(s). Vérifiez les résultats.`,
+          });
+          return;
+        } catch (err) {
+          console.error("Local parse error:", err);
+          setErrorMessage("Erreur d'analyse locale. Vérifiez votre saisie.");
+          setStep("record");
+          return;
+        }
+      }
+
+      // AI analysis (online)
       try {
-        // 1) S'assurer qu'une session valide est disponible (évite le faux "session expirée")
+        // 1) Check/refresh session
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError || !sessionData.session) {
-          throw new Error("Session expirée. Reconnectez-vous puis réessayez.");
+        
+        if (sessionError) {
+          console.error("Session error:", sessionError);
+          throw new Error("Erreur de session. Reconnectez-vous.");
+        }
+        
+        if (!sessionData?.session) {
+          throw new Error("Vous n'êtes pas connecté. Reconnectez-vous pour continuer.");
         }
 
         const expiresAt = sessionData.session.expires_at;
-        // Refresh si la session expire bientôt (1 min)
         if (expiresAt && expiresAt * 1000 - Date.now() < 60_000) {
+          console.log("Session expiring soon, refreshing...");
           const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
-          if (refreshError || !refreshed.session) {
-            throw new Error("Session expirée. Reconnectez-vous puis réessayez.");
+          if (refreshError) {
+            console.error("Refresh error:", refreshError);
+            throw new Error("Session expirée. Reconnectez-vous.");
+          }
+          if (!refreshed?.session) {
+            throw new Error("Session expirée. Reconnectez-vous.");
           }
         }
 
-        console.log("Analyzing transcript:", text);
+        console.log("Calling analyze-stock-voice with transcript:", text.substring(0, 50) + "...");
 
-        // 2) Analyse IA (backend function)
+        // 2) Call edge function
         const { data, error } = await supabase.functions.invoke("analyze-stock-voice", {
           body: { transcript: text },
         });
 
-        console.log("AI response:", data, error);
+        console.log("AI response:", { data, error });
 
         if (error) {
           const anyErr = error as any;
           const status: number | undefined = anyErr?.context?.status;
-          const errorDetails = error.message || "Erreur lors de l'analyse";
-          console.error("Edge function error:", { status, errorDetails, error });
+          const errorMsg = error.message || "Erreur serveur";
+          
+          console.error("Edge function error:", { status, errorMsg, error });
 
+          // Map specific errors
           if (status === 401) {
-            throw new Error("Session expirée. Reconnectez-vous puis réessayez.");
+            throw new Error("Authentification requise. Reconnectez-vous.");
+          }
+          if (status === 403) {
+            throw new Error("Accès refusé. Reconnectez-vous.");
+          }
+          if (status === 429) {
+            throw new Error("Trop de requêtes. Patientez quelques secondes.");
+          }
+          if (status === 402) {
+            throw new Error("Crédits IA épuisés. Utilisez l'analyse locale.");
+          }
+          if (status === 500) {
+            throw new Error("Erreur serveur. Réessayez ou utilisez l'analyse locale.");
+          }
+          if (errorMsg.includes("FunctionsFetchError") || errorMsg.includes("Failed to send")) {
+            throw new Error("Connexion au serveur impossible. Vérifiez votre connexion.");
           }
 
-          if (errorDetails.includes("FunctionsFetchError") || errorDetails.includes("non-2xx")) {
-            throw new Error("Erreur de connexion au serveur. Vérifiez votre connexion internet.");
-          }
-
-          throw new Error(errorDetails);
+          throw new Error(errorMsg);
         }
 
         if (!data) {
-          throw new Error("Aucune réponse reçue du serveur");
+          throw new Error("Aucune réponse du serveur");
         }
 
         if (data?.error) {
-          if (data.error.includes("Trop de requêtes")) {
-            throw new Error("Trop de requêtes. Attendez quelques secondes et réessayez.");
+          // Map backend error messages
+          const backendError = data.error as string;
+          if (backendError.includes("Authentification") || backendError.includes("non authentifié")) {
+            throw new Error("Authentification requise. Reconnectez-vous.");
           }
-          if (data.error.includes("Crédits")) {
-            throw new Error("Crédits IA épuisés. Utilisez le mode manuel.");
+          if (backendError.includes("Trop de requêtes")) {
+            throw new Error("Trop de requêtes. Patientez quelques secondes.");
           }
-          if (data.error.includes("LOVABLE_API_KEY")) {
-            throw new Error("Configuration serveur manquante. Contactez le support.");
+          if (backendError.includes("Crédits")) {
+            throw new Error("Crédits IA épuisés. Utilisez l'analyse locale.");
           }
-          if (data.error.includes("Authentification")) {
-            throw new Error("Session expirée. Reconnectez-vous puis réessayez.");
+          if (backendError.includes("LOVABLE_API_KEY")) {
+            throw new Error("Configuration serveur incomplète. Contactez le support.");
           }
-          throw new Error(data.error);
+          throw new Error(backendError);
         }
 
         const voiceItems: VoiceStockItem[] = (data?.items || []).map((item: NewStockItem, idx: number) => ({
           ...item,
           tempId: `voice-${Date.now()}-${idx}`,
           source: "voice" as const,
+          confidence: "high" as const,
         }));
 
         setItems(voiceItems);
         setSuggestions(data?.suggestions || []);
         setRetryCount(0);
 
-        // 3) Si rien détecté, on reste sur l'étape dictée
         if (voiceItems.length === 0) {
-          setErrorMessage("Aucun produit détecté. Exemple: '50 savons à 500 francs'");
-          toast({
-            title: "Aucun produit détecté",
-            description: "Reformulez votre dictée",
-            variant: "destructive",
-          });
+          setErrorMessage("Aucun produit détecté. Reformulez: '50 savons à 500 francs'");
+          toast({ title: "Aucun produit détecté", description: "Reformulez votre dictée", variant: "destructive" });
           setStep("record");
           return;
         }
 
-        // 4) Mode auto-enregistrement OU validation
+        // Auto-save or validate
         if (autoSaveMode) {
-          // Enregistrement automatique
           setStep("saving");
           setIsSubmitting(true);
           try {
-            const stockItems: NewStockItem[] = voiceItems.map(({ tempId, isEditing, ...it }) => it);
+            const stockItems: NewStockItem[] = voiceItems.map(({ tempId, isEditing, confidence, ...it }) => it);
             await onComplete(stockItems);
             toast({
               title: "Stock ajouté",
-              description: `${stockItems.length} produit${stockItems.length > 1 ? "s" : ""} enregistré${stockItems.length > 1 ? "s" : ""}.`,
+              description: `${stockItems.length} produit(s) enregistré(s).`,
             });
           } finally {
             setIsSubmitting(false);
           }
         } else {
-          // Mode validation: afficher les items pour vérification/édition
           setStep("validate");
           toast({
             title: "Analyse terminée",
-            description: `${voiceItems.length} produit${voiceItems.length > 1 ? "s" : ""} à valider.`,
+            description: `${voiceItems.length} produit(s) à valider.`,
           });
         }
       } catch (error) {
         console.error("Error analyzing voice:", error);
         const errorMsg = error instanceof Error ? error.message : "Erreur inconnue";
 
-        // Retry logic for network errors (pas pour les erreurs de session)
-        if (
-          !isRetry &&
-          retryCount < maxRetries &&
-          !errorMsg.toLowerCase().includes("session") &&
-          (errorMsg.includes("réseau") ||
-            errorMsg.includes("network") ||
-            errorMsg.includes("connexion") ||
-            errorMsg.includes("non-2xx"))
-        ) {
+        // Retry for network errors only
+        if (!isRetry && retryCount < maxRetries && 
+            (errorMsg.includes("connexion") || errorMsg.includes("serveur") || errorMsg.includes("Connexion"))) {
           setRetryCount((prev) => prev + 1);
-          toast({
-            title: "Nouvelle tentative...",
-            description: `Tentative ${retryCount + 1}/${maxRetries}`,
-          });
-          setTimeout(() => analyzeTranscript(text, true), 2000);
+          toast({ title: "Nouvelle tentative...", description: `Tentative ${retryCount + 1}/${maxRetries}` });
+          setTimeout(() => analyzeTranscript(text, false, true), 2000);
           return;
         }
 
-        setErrorMessage(`Erreur d'analyse: ${errorMsg}`);
-        toast({
-          title: "Erreur d'analyse",
-          description: errorMsg,
-          variant: "destructive",
-        });
+        setErrorMessage(errorMsg);
+        toast({ title: "Erreur d'analyse", description: errorMsg, variant: "destructive" });
         setStep("record");
       }
     },
-    [toast, retryCount, isOnline, onComplete, autoSaveMode]
+    [toast, retryCount, isOnline, onComplete, autoSaveMode, useLocalParser, parseWithLocalParser]
   );
+
+  // Direct save (failsafe button)
+  const handleDirectSave = useCallback(async () => {
+    const text = transcript.trim();
+    if (!text) return;
+
+    setSavingTranscript(true);
+    setErrorMessage(null);
+
+    try {
+      // 1) Parse locally
+      const { items: voiceItems, suggestions: localSuggestions } = parseWithLocalParser(text);
+      
+      // 2) Save transcript to DB as backup
+      if (isOnline) {
+        await saveTranscriptToDatabase(text);
+      }
+
+      if (voiceItems.length === 0) {
+        setErrorMessage("Aucun produit détecté. Modifiez la transcription et réessayez.");
+        toast({ title: "Aucun produit détecté", variant: "destructive" });
+        return;
+      }
+
+      setItems(voiceItems);
+      setSuggestions(localSuggestions);
+      setStep("validate");
+      toast({
+        title: "Analyse rapide terminée",
+        description: `${voiceItems.length} produit(s) détecté(s). Vérifiez et corrigez si besoin.`,
+      });
+    } catch (err) {
+      console.error("Direct save error:", err);
+      setErrorMessage("Erreur lors de l'enregistrement.");
+      toast({ title: "Erreur", variant: "destructive" });
+    } finally {
+      setSavingTranscript(false);
+    }
+  }, [transcript, parseWithLocalParser, saveTranscriptToDatabase, isOnline, toast]);
 
   const handleManualSubmit = async () => {
     const text = manualText.trim();
@@ -465,15 +547,12 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
 
     setIsSubmitting(true);
     try {
-      const stockItems: NewStockItem[] = items.map(({ tempId, isEditing, ...item }) => item);
+      const stockItems: NewStockItem[] = items.map(({ tempId, isEditing, confidence, ...item }) => item);
       await onComplete(stockItems);
+      toast({ title: "Stock ajouté", description: `${stockItems.length} produit(s) enregistré(s).` });
     } catch (error) {
       console.error("Error completing stock:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible d'ajouter le stock",
-        variant: "destructive",
-      });
+      toast({ title: "Erreur", description: "Impossible d'ajouter le stock", variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
@@ -515,7 +594,7 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
           <Textarea
             value={manualText}
             onChange={(e) => setManualText(e.target.value)}
-            placeholder="Exemple: J'ai 50 savons Lux à 500 francs, 10 paquets de riz à 15000, 3 cartons de Fanta..."
+            placeholder="Exemple: J'ai 50 savons Lux à 500 francs, 10 paquets de riz à 15000..."
             className="min-h-[120px] text-base"
           />
           <p className="text-xs text-muted-foreground">
@@ -532,11 +611,11 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
           )}
           <Button 
             onClick={handleManualSubmit} 
-            disabled={!manualText.trim() || !isOnline}
+            disabled={!manualText.trim()}
             className="flex-1 gap-2"
           >
-            <Sparkles className="h-4 w-4" />
-            Analyser
+            {isOnline ? <Sparkles className="h-4 w-4" /> : <Zap className="h-4 w-4" />}
+            {isOnline ? "Analyser (IA)" : "Analyser (local)"}
           </Button>
         </div>
 
@@ -566,13 +645,19 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
             ) : (
               <ToggleLeft className="h-4 w-4 text-muted-foreground" />
             )}
-            {autoSaveMode ? "Enregistrement automatique" : "Valider avant enregistrement"}
+            {autoSaveMode ? "Enregistrement auto" : "Valider avant"}
           </Label>
           <Switch
             id="auto-save-toggle"
             checked={autoSaveMode}
             onCheckedChange={setAutoSaveMode}
           />
+        </div>
+
+        {/* Online/Offline status */}
+        <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${isOnline ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+          {isOnline ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
+          <span>{isOnline ? "En ligne - Analyse IA disponible" : "Hors-ligne - Analyse locale uniquement"}</span>
         </div>
 
         {/* Browser not supported warning */}
@@ -583,7 +668,7 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
               <div>
                 <p className="font-medium text-warning">Navigateur non supporté</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  La reconnaissance vocale n'est pas disponible. Utilisez Chrome, Edge ou Safari, ou passez au mode texte.
+                  Utilisez Chrome, Edge ou Safari, ou passez au mode texte.
                 </p>
               </div>
             </div>
@@ -633,30 +718,40 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
           </Card>
         )}
 
-        {/* Offline hint */}
-        {!isOnline && transcript && (
-          <Card className="p-3 bg-destructive/10 border-destructive/20">
-            <p className="text-sm text-destructive">
-              Vous êtes hors-ligne : l'analyse nécessite une connexion internet.
-            </p>
-          </Card>
-        )}
-
-        {/* Analyze (explicit step after stopping) */}
+        {/* Action buttons after recording */}
         {!!transcript.trim() && !isRecording && (
-          <Button
-            onClick={() => analyzeTranscript(transcript.trim())}
-            disabled={!isOnline}
-            className="w-full gap-2"
-          >
-            <Sparkles className="h-4 w-4" />
-            Analyser
-          </Button>
+          <div className="space-y-3">
+            {/* Primary: Analyze with AI (if online) */}
+            {isOnline && (
+              <Button
+                onClick={() => analyzeTranscript(transcript.trim())}
+                className="w-full gap-2"
+              >
+                <Sparkles className="h-4 w-4" />
+                Analyser (IA)
+              </Button>
+            )}
+
+            {/* Failsafe: Quick local parse & validate */}
+            <Button
+              variant={isOnline ? "secondary" : "default"}
+              onClick={handleDirectSave}
+              disabled={savingTranscript}
+              className="w-full gap-2"
+            >
+              {savingTranscript ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Zap className="h-4 w-4" />
+              )}
+              {isOnline ? "Analyse rapide (local)" : "Analyser & valider"}
+            </Button>
+          </div>
         )}
 
         {/* Fallback to manual mode */}
         <Button 
-          variant="secondary" 
+          variant="outline" 
           onClick={switchToManual} 
           className="w-full gap-2"
         >
@@ -710,7 +805,7 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
     );
   }
 
-  // Validation step (mode validation activé)
+  // Validation step
   if (step === "validate") {
     return (
       <div className="space-y-4">
@@ -751,14 +846,14 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
         )}
 
         {/* Retry button */}
-        {transcript && (
+        {transcript && isOnline && (
           <Button
             variant="outline"
             onClick={() => analyzeTranscript(transcript)}
             className="w-full gap-2"
           >
             <RefreshCw className="h-4 w-4" />
-            Ré-analyser la dictée
+            Ré-analyser avec IA
           </Button>
         )}
 
@@ -775,7 +870,7 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
             {isSubmitting ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Sparkles className="h-4 w-4" />
+              <Save className="h-4 w-4" />
             )}
             Ajouter au stock
           </Button>
@@ -784,13 +879,13 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
     );
   }
 
-  // Écran final après enregistrement auto
+  // Final screen after auto-save
   return (
     <div className="space-y-4">
       <div className="text-center space-y-2">
         <h3 className="text-lg font-semibold">Stock ajouté</h3>
         <p className="text-sm text-muted-foreground">
-          Les produits ont été enregistrés. Vous pouvez les modifier depuis la liste du stock.
+          Les produits ont été enregistrés.
         </p>
       </div>
 
@@ -809,19 +904,6 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
           Fermer
         </Button>
       </div>
-
-      {/* fallback si l'utilisateur veut ré-analyser la même dictée */}
-      {!!transcript.trim() && (
-        <Button
-          variant="ghost"
-          onClick={() => analyzeTranscript(transcript.trim())}
-          disabled={isSubmitting || !isOnline}
-          className="w-full gap-2"
-        >
-          <Sparkles className="h-4 w-4" />
-          Analyser à nouveau
-        </Button>
-      )}
     </div>
   );
 }
@@ -865,6 +947,12 @@ function VoiceStockItemCard({
     });
     setIsEditing(false);
   };
+
+  const confidenceBadge = item.confidence && item.confidence !== "high" && (
+    <Badge variant={item.confidence === "low" ? "destructive" : "secondary"} className="text-xs">
+      {item.confidence === "low" ? "À vérifier" : "Partiel"}
+    </Badge>
+  );
 
   if (isEditing) {
     return (
@@ -911,13 +999,14 @@ function VoiceStockItemCard({
     <Card className="p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <p className="font-medium truncate">{item.name}</p>
             {item.model && (
               <Badge variant="outline" className="text-xs shrink-0">
                 {item.model}
               </Badge>
             )}
+            {confidenceBadge}
           </div>
           <div className="flex items-center gap-3 mt-1">
             <span className="text-sm text-muted-foreground">
