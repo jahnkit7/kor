@@ -166,7 +166,7 @@ const Settings = () => {
               <CardContent className="p-0">
                 <button
                   className="w-full flex items-center gap-4 p-4 text-left hover:bg-secondary/50 transition-colors"
-                  onClick={() => toast.info("Fonctionnalité bientôt disponible")}
+                  onClick={() => navigate("/employees")}
                 >
                   <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
                     <Users className="w-5 h-5 text-muted-foreground" />
