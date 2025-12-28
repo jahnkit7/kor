@@ -31,9 +31,12 @@ export function useProfile(): ProfileState {
 
   const fetchProfile = useCallback(async () => {
     if (!user || !isSupabaseConfigured()) {
+      setProfile(null);
       setLoading(false);
       return;
     }
+
+    setLoading(true);
 
     try {
       const supabase = await getSupabaseClient();
@@ -45,11 +48,13 @@ export function useProfile(): ProfileState {
 
       if (error) {
         console.error("Error fetching profile:", error);
+        setProfile(null);
       } else {
         setProfile(data);
       }
     } catch (error) {
       console.error("Error fetching profile:", error);
+      setProfile(null);
     } finally {
       setLoading(false);
     }
