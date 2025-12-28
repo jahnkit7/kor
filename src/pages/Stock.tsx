@@ -17,7 +17,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { ArrowLeft, Plus, Package, Search, Mic, Loader2, History } from "lucide-react";
-import { useStock, type NewStockItem } from "@/hooks/use-stock";
+import { useStock, type NewStockItem, type StockItem } from "@/hooks/use-stock";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { useToast } from "@/hooks/use-toast";
 import BottomNav from "@/components/BottomNav";
@@ -25,17 +25,20 @@ import { StockEntryModes, type StockEntryMode } from "@/components/stock/StockEn
 import { ManualStockInput } from "@/components/stock/ManualStockInput";
 import { VoiceStockInput } from "@/components/stock/VoiceStockInput";
 import { VoiceEntriesHistory } from "@/components/stock/VoiceEntriesHistory";
+import { EditStockDialog } from "@/components/stock/EditStockDialog";
 
 export default function Stock() {
   useRequireAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { items, loading, addItem, addItems, getTotalValue } = useStock();
+  const { items, loading, addItem, addItems, updateItem, deleteItem, getTotalValue } = useStock();
   
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
   const [entryMode, setEntryMode] = useState<StockEntryMode | null>(null);
   const [activeTab, setActiveTab] = useState("stock");
+  const [editingItem, setEditingItem] = useState<StockItem | null>(null);
+  
   const filteredItems = items.filter((item) =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.model?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -161,7 +164,11 @@ export default function Stock() {
               </div>
             ) : (
               filteredItems.map((item) => (
-                <Card key={item.id} className="p-4">
+                <Card 
+                  key={item.id} 
+                  className="p-4 cursor-pointer hover:shadow-md transition-shadow active:scale-[0.99]"
+                  onClick={() => setEditingItem(item)}
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -220,6 +227,33 @@ export default function Stock() {
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Edit Stock Dialog */}
+      <EditStockDialog
+        item={editingItem}
+        open={!!editingItem}
+        onOpenChange={(open) => !open && setEditingItem(null)}
+        onSave={async (id, updates) => {
+          const success = await updateItem(id, updates);
+          if (success) {
+            toast({
+              title: "Produit modifié",
+              description: "Les modifications ont été enregistrées",
+            });
+          }
+          return success;
+        }}
+        onDelete={async (id) => {
+          const success = await deleteItem(id);
+          if (success) {
+            toast({
+              title: "Produit supprimé",
+              description: "Le produit a été retiré du stock",
+            });
+          }
+          return success;
+        }}
+      />
 
       <BottomNav />
     </div>
