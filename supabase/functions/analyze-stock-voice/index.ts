@@ -6,14 +6,20 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log("analyze-stock-voice: Request received", req.method);
+  
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { transcript } = await req.json();
+    const body = await req.json();
+    const { transcript } = body;
+    
+    console.log("analyze-stock-voice: Transcript received, length:", transcript?.length || 0);
     
     if (!transcript || typeof transcript !== "string") {
+      console.error("analyze-stock-voice: Invalid transcript");
       return new Response(
         JSON.stringify({ error: "Transcript is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -22,8 +28,14 @@ serve(async (req) => {
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+      console.error("analyze-stock-voice: LOVABLE_API_KEY not configured");
+      return new Response(
+        JSON.stringify({ error: "Configuration serveur manquante (LOVABLE_API_KEY)" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
+
+    console.log("analyze-stock-voice: Calling AI gateway...");
 
     const systemPrompt = `Tu es un assistant spécialisé dans l'analyse de dictées vocales pour la gestion de stock de boutiques africaines.
 
@@ -41,6 +53,7 @@ EXEMPLES:
 - "J'ai 50 savons Lux à 500 francs" → nom: "Savon Lux", quantité: 50, prix: 500
 - "3 cartons de Fanta, le carton à 6000" → nom: "Fanta (carton)", quantité: 3, prix: 6000
 - "Riz 25kg, j'en ai 10 sacs" → nom: "Riz 25kg", quantité: 10, prix: 0
+- "Haricots 10 sachets de 1 kg à 1500" → nom: "Haricots 1kg", quantité: 10, prix: 1500
 
 Réponds UNIQUEMENT avec un JSON valide dans ce format:
 {
@@ -71,9 +84,11 @@ Réponds UNIQUEMENT avec un JSON valide dans ce format:
       }),
     });
 
+    console.log("analyze-stock-voice: AI response status:", response.status);
+
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
+      console.error("analyze-stock-voice: AI gateway error:", response.status, errorText);
       
       if (response.status === 429) {
         return new Response(
@@ -87,18 +102,30 @@ Réponds UNIQUEMENT avec un JSON valide dans ce format:
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+      if (response.status === 401) {
+        return new Response(
+          JSON.stringify({ error: "Erreur d'authentification API" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
       
       return new Response(
-        JSON.stringify({ error: "Erreur lors de l'analyse IA" }),
+        JSON.stringify({ error: `Erreur IA (${response.status})` }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content;
+    
+    console.log("analyze-stock-voice: AI content received, length:", content?.length || 0);
 
     if (!content) {
-      throw new Error("No content in AI response");
+      console.error("analyze-stock-voice: No content in AI response");
+      return new Response(
+        JSON.stringify({ error: "Pas de réponse de l'IA" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // Parse JSON from response (handle markdown code blocks)
@@ -108,9 +135,13 @@ Réponds UNIQUEMENT avec un JSON valide dans ce format:
                         content.match(/```\s*([\s\S]*?)\s*```/);
       const jsonStr = jsonMatch ? jsonMatch[1] : content;
       parsed = JSON.parse(jsonStr.trim());
-    } catch {
-      console.error("Failed to parse AI response:", content);
-      parsed = { items: [], suggestions: ["L'analyse n'a pas pu extraire les produits. Réessayez avec une dictée plus claire."] };
+      console.log("analyze-stock-voice: Parsed items count:", parsed.items?.length || 0);
+    } catch (parseError) {
+      console.error("analyze-stock-voice: Failed to parse AI response:", content);
+      parsed = { 
+        items: [], 
+        suggestions: ["L'analyse n'a pas pu extraire les produits. Réessayez avec une dictée plus claire."] 
+      };
     }
 
     return new Response(JSON.stringify(parsed), {
@@ -118,7 +149,7 @@ Réponds UNIQUEMENT avec un JSON valide dans ce format:
     });
 
   } catch (error) {
-    console.error("Error in analyze-stock-voice:", error);
+    console.error("analyze-stock-voice: Unexpected error:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Erreur inconnue" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
