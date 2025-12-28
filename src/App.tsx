@@ -18,6 +18,7 @@ import NewClient from "./pages/NewClient";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import Stock from "./pages/Stock";
+import EmployeeManagement from "./pages/EmployeeManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -106,6 +107,14 @@ const App = () => (
               element={
                 <RequireProfile>
                   <Stock />
+                </RequireProfile>
+              }
+            />
+            <Route
+              path="/employees"
+              element={
+                <RequireProfile>
+                  <EmployeeManagement />
                 </RequireProfile>
               }
             />
