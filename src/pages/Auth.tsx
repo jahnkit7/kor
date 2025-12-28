@@ -192,7 +192,7 @@ const Auth = () => {
     if (step === "phone") {
       handlePhoneChange(phone + num);
     } else {
-      handlePinChange((isNewUser && pin.length === 4 ? confirmPin : pin) + num);
+      handlePinChange((isNewUser && pin.length === PIN_LENGTH ? confirmPin : pin) + num);
     }
   };
 
@@ -200,7 +200,7 @@ const Auth = () => {
     if (step === "phone") {
       setPhone(phone.slice(0, -1));
     } else {
-      if (isNewUser && pin.length === 4 && confirmPin.length > 0) {
+      if (isNewUser && pin.length === PIN_LENGTH && confirmPin.length > 0) {
         setConfirmPin(confirmPin.slice(0, -1));
       } else {
         setPin(pin.slice(0, -1));
