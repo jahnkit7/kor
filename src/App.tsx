@@ -4,7 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { OfflineProvider } from "./contexts/OfflineContext";
-import { OfflineIndicator } from "./components/OfflineIndicator";
+import { PWAStatus } from "./components/PWAStatus";
 import { RequireProfile } from "./components/RequireProfile";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
@@ -30,7 +30,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <OfflineIndicator />
+        <PWAStatus />
         <BrowserRouter>
           <Routes>
             {/* Public routes */}
