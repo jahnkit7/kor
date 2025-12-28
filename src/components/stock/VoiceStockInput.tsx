@@ -61,7 +61,7 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
   const { toast } = useToast();
   const { isOnline } = useNetworkStatus();
 
-  const [step, setStep] = useState<"record" | "analyzing" | "validate" | "manual">("record");
+  const [step, setStep] = useState<"record" | "analyzing" | "saving" | "manual">("record");
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [manualText, setManualText] = useState("");
@@ -292,8 +292,24 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
       setErrorMessage(null);
 
       try {
+        // 1) S'assurer qu'une session valide est disponible (évite le faux "session expirée")
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError || !sessionData.session) {
+          throw new Error("Session expirée. Reconnectez-vous puis réessayez.");
+        }
+
+        const expiresAt = sessionData.session.expires_at;
+        // Refresh si la session expire bientôt (1 min)
+        if (expiresAt && expiresAt * 1000 - Date.now() < 60_000) {
+          const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+          if (refreshError || !refreshed.session) {
+            throw new Error("Session expirée. Reconnectez-vous puis réessayez.");
+          }
+        }
+
         console.log("Analyzing transcript:", text);
 
+        // 2) Analyse IA (backend function)
         const { data, error } = await supabase.functions.invoke("analyze-stock-voice", {
           body: { transcript: text },
         });
@@ -347,6 +363,7 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
         setSuggestions(data?.suggestions || []);
         setRetryCount(0);
 
+        // 3) Si rien détecté, on reste sur l'étape dictée
         if (voiceItems.length === 0) {
           setErrorMessage("Aucun produit détecté. Exemple: '50 savons à 500 francs'");
           toast({
@@ -355,12 +372,21 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
             variant: "destructive",
           });
           setStep("record");
-        } else {
-          setStep("validate");
+          return;
+        }
+
+        // 4) Demande du user: pas de correction/validation → on enregistre automatiquement
+        setStep("saving");
+        setIsSubmitting(true);
+        try {
+          const stockItems: NewStockItem[] = voiceItems.map(({ tempId, isEditing, ...it }) => it);
+          await onComplete(stockItems);
           toast({
-            title: "Analyse terminée",
-            description: `${voiceItems.length} produit${voiceItems.length > 1 ? "s" : ""} détecté${voiceItems.length > 1 ? "s" : ""}`,
+            title: "Stock ajouté",
+            description: `${stockItems.length} produit${stockItems.length > 1 ? "s" : ""} enregistré${stockItems.length > 1 ? "s" : ""}.`,
           });
+        } finally {
+          setIsSubmitting(false);
         }
       } catch (error) {
         console.error("Error analyzing voice:", error);
@@ -394,7 +420,7 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
         setStep("record");
       }
     },
-    [toast, retryCount, isOnline]
+    [toast, retryCount, isOnline, onComplete]
   );
 
   const handleManualSubmit = async () => {
@@ -643,77 +669,55 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
     );
   }
 
-  // Validation step
+  // Saving step (auto-enregistrement)
+  if (step === "saving") {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 space-y-4">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="text-muted-foreground">Enregistrement dans le stock...</p>
+        <p className="text-sm text-muted-foreground italic text-center px-4">"{transcript}"</p>
+      </div>
+    );
+  }
+
+  // (On ne montre plus l'étape de validation : l'ajout est automatique)
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Valider le stock</h3>
-        <Badge variant="secondary" className="gap-1">
-          <Sparkles className="h-3 w-3" />
-          {items.length} produit{items.length > 1 ? "s" : ""}
-        </Badge>
+      <div className="text-center space-y-2">
+        <h3 className="text-lg font-semibold">Stock ajouté</h3>
+        <p className="text-sm text-muted-foreground">
+          Les produits ont été enregistrés. Vous pouvez les modifier depuis la liste du stock.
+        </p>
       </div>
 
       {suggestions.length > 0 && (
         <Card className="p-3 bg-accent/10 border-accent/20">
-          <p className="text-sm text-accent-foreground">
-            💡 {suggestions[0]}
-          </p>
+          <p className="text-sm text-accent-foreground">💡 {suggestions[0]}</p>
         </Card>
       )}
 
-      {/* Items list */}
-      <div className="space-y-3 max-h-[400px] overflow-y-auto">
-        {items.map((item) => (
-          <VoiceStockItemCard
-            key={item.tempId}
-            item={item}
-            onUpdate={(updates) => updateItem(item.tempId, updates)}
-            onDelete={() => deleteItem(item.tempId)}
-            formatMoney={formatMoney}
-          />
-        ))}
+      <div className="flex gap-3 pt-2">
+        <Button variant="secondary" onClick={() => setStep("record")} className="flex-1 gap-2">
+          <RefreshCw className="h-4 w-4" />
+          Nouvelle dictée
+        </Button>
+        <Button variant="outline" onClick={onCancel} className="flex-1">
+          Fermer
+        </Button>
       </div>
 
-      {items.length === 0 && (
-        <div className="text-center py-8 text-muted-foreground">
-          <p>Aucun produit à valider</p>
-          <Button variant="link" onClick={() => setStep("record")}>
-            Recommencer la dictée
-          </Button>
-        </div>
-      )}
-
-      {/* Retry button */}
-      {transcript && (
-        <Button 
-          variant="outline" 
-          onClick={() => analyzeTranscript(transcript)} 
+      {/* fallback si l'utilisateur veut ré-analyser la même dictée */}
+      {!!transcript.trim() && (
+        <Button
+          variant="ghost"
+          onClick={() => analyzeTranscript(transcript.trim())}
+          disabled={isSubmitting || !isOnline}
           className="w-full gap-2"
         >
-          <RefreshCw className="h-4 w-4" />
-          Ré-analyser la dictée
+          <Sparkles className="h-4 w-4" />
+          Analyser à nouveau
         </Button>
       )}
-
-      {/* Actions */}
-      <div className="flex gap-3 pt-4">
-        <Button variant="outline" onClick={onCancel} className="flex-1">
-          Annuler
-        </Button>
-        <Button
-          onClick={handleComplete}
-          disabled={items.length === 0 || isSubmitting}
-          className="flex-1 gap-2"
-        >
-          {isSubmitting ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Sparkles className="h-4 w-4" />
-          )}
-          Ajouter au stock
-        </Button>
-      </div>
     </div>
   );
 }
