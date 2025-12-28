@@ -32,13 +32,7 @@ const Dashboard = () => {
   const { sales, loading: salesLoading, getTodayStats } = useSales();
   const { totalDebts, clientsWithDebts, loading: debtsLoading } = useDebts();
 
-  // Redirect to profile setup only when profile is loaded and present
-  // (avoid redirecting on transient null profile during auth init)
-  useEffect(() => {
-    if (!authLoading && user && !profileLoading && profile && !isProfileComplete) {
-      navigate("/profile-setup");
-    }
-  }, [authLoading, user, profileLoading, profile, isProfileComplete, navigate]);
+  // Note: RequireProfile guard handles incomplete profile redirect globally
 
   const todayStats = getTodayStats();
   const shopName = profile?.shop_name || "Ma Boutique";
