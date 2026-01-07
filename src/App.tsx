@@ -14,10 +14,12 @@ import Sale from "./pages/Sale";
 import Debts from "./pages/Debts";
 import DebtDetail from "./pages/DebtDetail";
 import Clients from "./pages/Clients";
+import ClientDetail from "./pages/ClientDetail";
 import NewClient from "./pages/NewClient";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import Stock from "./pages/Stock";
+import SalesHistory from "./pages/SalesHistory";
 import EmployeeManagement from "./pages/EmployeeManagement";
 import AcceptInvite from "./pages/AcceptInvite";
 import NotFound from "./pages/NotFound";
@@ -89,6 +91,14 @@ const App = () => (
               }
             />
             <Route
+              path="/clients/:id"
+              element={
+                <RequireProfile>
+                  <ClientDetail />
+                </RequireProfile>
+              }
+            />
+            <Route
               path="/reports"
               element={
                 <RequireProfile>
@@ -109,6 +119,14 @@ const App = () => (
               element={
                 <RequireProfile>
                   <Stock />
+                </RequireProfile>
+              }
+            />
+            <Route
+              path="/sales/history"
+              element={
+                <RequireProfile>
+                  <SalesHistory />
                 </RequireProfile>
               }
             />
