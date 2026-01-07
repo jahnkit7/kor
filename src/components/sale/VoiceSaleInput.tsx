@@ -85,7 +85,8 @@ export function VoiceSaleInput({ clients, onComplete, onCancel }: VoiceSaleInput
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSupported, setIsSupported] = useState(true);
-
+  const [lastTranscript, setLastTranscript] = useState<string | null>(null);
+  const [canRetry, setCanRetry] = useState(false);
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -248,18 +249,27 @@ export function VoiceSaleInput({ clients, onComplete, onCancel }: VoiceSaleInput
   const analyzeTranscript = useCallback(async (text: string) => {
     if (!isOnline) {
       setErrorMessage("Connexion internet requise pour l'analyse vocale des ventes.");
+      setLastTranscript(text);
+      setCanRetry(true);
       return;
     }
 
     setStep("analyzing");
     setErrorMessage(null);
+    setLastTranscript(text);
+    setCanRetry(false);
 
     try {
+      console.log("VoiceSaleInput: Starting analysis for transcript:", text.substring(0, 50));
+      
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       
       if (sessionError || !sessionData?.session) {
+        console.error("VoiceSaleInput: Session error:", sessionError);
         throw new Error("Vous n'êtes pas connecté.");
       }
+
+      console.log("VoiceSaleInput: Session valid, calling edge function...");
 
       const clientsForAI = clients.map(c => ({ id: c.id, name: c.name }));
 
@@ -267,8 +277,22 @@ export function VoiceSaleInput({ clients, onComplete, onCancel }: VoiceSaleInput
         body: { transcript: text, clients: clientsForAI },
       });
 
+      console.log("VoiceSaleInput: Edge function response:", { hasData: !!data, error: error?.message });
+
       if (error) {
-        console.error("Edge function error:", error);
+        console.error("Edge function error details:", {
+          message: error.message,
+          name: error.name,
+          context: error.context
+        });
+        
+        // Handle specific error types
+        if (error.message?.includes("Failed to send") || error.message?.includes("fetch")) {
+          throw new Error("Erreur de connexion. Vérifiez votre réseau et réessayez.");
+        }
+        if (error.message?.includes("timeout") || error.message?.includes("Timeout")) {
+          throw new Error("Délai d'attente dépassé. Réessayez.");
+        }
         throw new Error(error.message || "Erreur serveur");
       }
 
@@ -279,12 +303,14 @@ export function VoiceSaleInput({ clients, onComplete, onCancel }: VoiceSaleInput
       if (!data.sale) {
         setErrorMessage("Aucune vente détectée. Exemple: 'J'ai vendu 5 chargeurs à 1500 à Kofi'");
         setStep("record");
+        setCanRetry(true);
         return;
       }
 
       setParsedSale(data.sale);
       setSuggestions(data.suggestions || []);
       setStep("validate");
+      setCanRetry(false);
       toast({
         title: "Vente analysée",
         description: `${data.sale.type === "cash" ? "Vente cash" : "Vente crédit"} de ${formatMoney(data.sale.amount)} CFA`,
@@ -295,6 +321,7 @@ export function VoiceSaleInput({ clients, onComplete, onCancel }: VoiceSaleInput
       const errorMsg = error instanceof Error ? error.message : "Erreur inconnue";
       setErrorMessage(errorMsg);
       setStep("record");
+      setCanRetry(true);
       toast({ title: "Erreur d'analyse", description: errorMsg, variant: "destructive" });
     }
   }, [clients, isOnline, toast]);
@@ -369,10 +396,20 @@ export function VoiceSaleInput({ clients, onComplete, onCancel }: VoiceSaleInput
           </Card>
         )}
 
-        {/* Error message */}
+        {/* Error message with retry */}
         {errorMessage && (
-          <Card className="p-4 bg-destructive/10 border-destructive/20">
+          <Card className="p-4 bg-destructive/10 border-destructive/20 space-y-3">
             <p className="text-sm text-destructive">{errorMessage}</p>
+            {canRetry && lastTranscript && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => analyzeTranscript(lastTranscript)}
+                className="w-full"
+              >
+                Réessayer l'analyse
+              </Button>
+            )}
           </Card>
         )}
 
