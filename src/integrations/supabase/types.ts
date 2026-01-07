@@ -115,6 +115,45 @@ export type Database = {
         }
         Relationships: []
       }
+      merchant_profiles: {
+        Row: {
+          created_at: string
+          id: string
+          is_visible: boolean
+          location_lat: number | null
+          location_lng: number | null
+          location_name: string | null
+          merchant_type: string
+          specialties: string[] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_visible?: boolean
+          location_lat?: number | null
+          location_lng?: number | null
+          location_name?: string | null
+          merchant_type?: string
+          specialties?: string[] | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_visible?: boolean
+          location_lat?: number | null
+          location_lng?: number | null
+          location_name?: string | null
+          merchant_type?: string
+          specialties?: string[] | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       payments: {
         Row: {
           amount: number
@@ -156,6 +195,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      product_requests: {
+        Row: {
+          created_at: string
+          expires_at: string
+          fulfilled_by: string | null
+          id: string
+          max_price: number | null
+          notes: string | null
+          product_name: string
+          quantity: number | null
+          raw_transcript: string | null
+          status: string
+          unit: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          fulfilled_by?: string | null
+          id?: string
+          max_price?: number | null
+          notes?: string | null
+          product_name: string
+          quantity?: number | null
+          raw_transcript?: string | null
+          status?: string
+          unit?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          fulfilled_by?: string | null
+          id?: string
+          max_price?: number | null
+          notes?: string | null
+          product_name?: string
+          quantity?: number | null
+          raw_transcript?: string | null
+          status?: string
+          unit?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
