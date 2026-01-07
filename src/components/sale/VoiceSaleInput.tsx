@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Mic, Square, Loader2, Check, X, Edit2, User, Wallet, CreditCard, AlertTriangle, UserPlus, Users, History, RotateCcw, Pencil, Trash2, Search } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Mic, Square, Loader2, Check, X, Edit2, User, Wallet, CreditCard, AlertTriangle, UserPlus, Users, History, RotateCcw, Pencil, Trash2, Search, FileText, ChevronDown } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
@@ -1271,70 +1272,76 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient, 
                 </div>
               )}
 
-              {/* Note */}
-              <div className="space-y-2">
-                <Label htmlFor="edit-note">Note / Description</Label>
-                <Input
-                  id="edit-note"
-                  value={editNote}
-                  onChange={(e) => setEditNote(e.target.value)}
-                  placeholder="Note optionnelle..."
-                />
-              </div>
-
-              {/* Amount */}
-              <div className="space-y-2">
-                <Label htmlFor="edit-amount">Montant total (CFA)</Label>
-                <Input
-                  id="edit-amount"
-                  type="number"
-                  value={editAmount}
-                  onChange={(e) => setEditAmount(e.target.value)}
-                  placeholder="Ex: 15000"
-                  className="text-lg"
-                />
-              </div>
-
-              {/* Paid amount - only for credit */}
-              {editType === "credit" && (
-                <div className="space-y-2">
-                  <Label htmlFor="edit-paid">Montant payé (CFA)</Label>
+              {/* Amounts - same line */}
+              <div className={cn("grid gap-3", editType === "credit" ? "grid-cols-2" : "grid-cols-1")}>
+                <div className="space-y-1">
+                  <Label htmlFor="edit-amount" className="text-xs">Montant total</Label>
                   <Input
-                    id="edit-paid"
+                    id="edit-amount"
                     type="number"
-                    value={editPaid}
-                    onChange={(e) => setEditPaid(e.target.value)}
-                    placeholder="Montant déjà payé"
-                    className="text-lg"
+                    value={editAmount}
+                    onChange={(e) => setEditAmount(e.target.value)}
+                    placeholder="15000"
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Restant : {formatMoney(Math.max(0, (parseInt(editAmount) || 0) - (parseInt(editPaid) || 0)))} CFA
-                  </p>
                 </div>
-              )}
-
-              {/* Client selection */}
-              <div className="space-y-3">
-                <Label>Client</Label>
-                
-                {/* Create new client switch */}
-                {onCreateClient && (
-                  <div className="flex items-center justify-between p-3 border rounded-lg bg-secondary/30">
-                    <div className="flex items-center gap-2">
-                      <UserPlus className="w-4 h-4 text-primary" />
-                      <span className="text-sm font-medium">Créer un nouveau client</span>
-                    </div>
-                    <Switch
-                      checked={editCreateNewClient}
-                      onCheckedChange={(checked) => {
-                        setEditCreateNewClient(checked);
-                        if (checked) {
-                          setEditClientId(null);
-                        }
-                      }}
+                {editType === "credit" && (
+                  <div className="space-y-1">
+                    <Label htmlFor="edit-paid" className="text-xs">Montant payé</Label>
+                    <Input
+                      id="edit-paid"
+                      type="number"
+                      value={editPaid}
+                      onChange={(e) => setEditPaid(e.target.value)}
+                      placeholder="0"
                     />
                   </div>
                 )}
+              </div>
+              {editType === "credit" && (
+                <p className="text-xs text-muted-foreground -mt-2">
+                  Restant : {formatMoney(Math.max(0, (parseInt(editAmount) || 0) - (parseInt(editPaid) || 0)))} CFA
+                </p>
+              )}
+
+              {/* Note - collapsible */}
+              <Collapsible>
+                <CollapsibleTrigger className="flex items-center justify-between w-full p-2 rounded-lg hover:bg-secondary/50 border">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm">Note</span>
+                    {editNote && <Badge variant="secondary" className="text-xs px-1.5 py-0">1</Badge>}
+                  </div>
+                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pt-2">
+                  <Input
+                    id="edit-note"
+                    value={editNote}
+                    onChange={(e) => setEditNote(e.target.value)}
+                    placeholder="Note optionnelle..."
+                  />
+                </CollapsibleContent>
+              </Collapsible>
+
+              {/* Client selection - compact */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm">Client</Label>
+                  {onCreateClient && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">Nouveau</span>
+                      <Switch
+                        checked={editCreateNewClient}
+                        onCheckedChange={(checked) => {
+                          setEditCreateNewClient(checked);
+                          if (checked) {
+                            setEditClientId(null);
+                          }
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
                 
                 {/* New client name input */}
                 {editCreateNewClient && (
