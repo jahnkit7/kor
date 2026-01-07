@@ -97,55 +97,66 @@ serve(async (req) => {
       );
     }
 
-    // Build client list for the AI prompt
+    // Build client list for the AI prompt with more details for disambiguation
     const clientsList = clients && clients.length > 0 
-      ? clients.map((c: { name: string; id: string }) => `- "${c.name}" (ID: ${c.id})`).join("\n")
+      ? clients.map((c: { name: string; id: string; phone?: string }) => 
+          `- "${c.name}" (ID: ${c.id}${c.phone ? `, Tél: ${c.phone}` : ""})`
+        ).join("\n")
       : "Aucun client enregistré";
 
     console.log("analyze-sale-voice: Calling AI gateway...");
 
     const systemPrompt = `Tu es un assistant spécialisé dans l'analyse de dictées vocales pour les ventes de boutiques africaines.
 
-L'utilisateur va te donner une transcription vocale brute où il décrit une vente. Ton travail est d'extraire les informations de la vente.
+L'utilisateur va te donner une transcription vocale brute où il décrit UNE OU PLUSIEURS ventes. Ton travail est d'extraire TOUTES les ventes mentionnées.
 
 LISTE DES CLIENTS CONNUS:
 ${clientsList}
 
 RÈGLES IMPORTANTES:
-1. Extrais les informations de vente: produit(s), quantité, prix unitaire, prix total, client, montant payé, montant restant
-2. Détermine si c'est une vente CASH (paiement complet) ou CRÉDIT (paiement partiel ou pas de paiement)
-3. Si un nom de client est mentionné, cherche la correspondance dans la liste des clients connus
-4. Si le client n'existe pas dans la liste, indique "client_name" avec le nom mentionné
+1. Extrais TOUTES les ventes mentionnées dans la dictée (il peut y en avoir plusieurs)
+2. Pour chaque vente, extrais: produit(s), quantité, prix unitaire, prix total, client, montant payé, montant restant
+3. Détermine si c'est une vente CASH (paiement complet) ou CRÉDIT (paiement partiel ou pas de paiement)
+4. Pour CHAQUE client mentionné, détermine son statut:
+   - "found": le nom correspond exactement à UN client dans la liste (utilise son ID)
+   - "ambiguous": le nom correspond à PLUSIEURS clients dans la liste (liste les candidats)
+   - "not_found": le nom ne correspond à aucun client dans la liste
 5. Calcule automatiquement le montant restant si paiement partiel
 6. Les prix peuvent être en CFA, FCFA, francs - normalise tout en nombre entier
 7. Adapte-toi au français africain et aux expressions locales
+8. "rendu" peut signifier "vendu" (erreur de transcription courante)
 
 EXEMPLES:
-- "J'ai vendu 5 chargeurs à 1500 à Kofi, il a payé cash" → type: "cash", amount: 7500, client: Kofi
-- "Mamadou a pris 3 écrans à 5000, il a payé 10000, il reste 5000" → type: "credit", amount: 15000, paid: 10000, remaining: 5000
-- "Vendu 10 sachets de riz à 500" → type: "cash", amount: 5000 (pas de client = vente anonyme cash)
-- "Crédit de 25000 pour Fatou, elle a payé 5000" → type: "credit", amount: 25000, paid: 5000, remaining: 20000
+- "J'ai vendu 5 chargeurs à 1500 à Kofi, il a payé cash" → 1 vente cash de 7500 pour Kofi
+- "Mamadou a pris 3 écrans à 5000, il a payé 10000, et Fatou a pris 2 batteries à 2000" → 2 ventes séparées
+- "Jacob m'a pris des produits" (et il y a 3 Jacob dans la liste) → status: "ambiguous" avec les 3 candidats
+- "Awa a pris 3 sachets à 500" (et Awa n'est pas dans la liste) → status: "not_found"
 
 Réponds UNIQUEMENT avec un JSON valide dans ce format:
 {
-  "sale": {
-    "type": "cash" ou "credit",
-    "amount": number (montant total de la vente),
-    "paid": number (montant payé, = amount si cash),
-    "remaining": number (montant restant, = 0 si cash),
-    "client_id": "string ou null" (ID du client si trouvé dans la liste),
-    "client_name": "string ou null" (nom du client si mentionné mais pas trouvé),
-    "products": [
-      {
-        "name": "string",
-        "quantity": number,
-        "unit_price": number
-      }
-    ],
-    "note": "string ou null" (note optionnelle sur la vente)
-  },
-  "suggestions": ["string"] // suggestions si quelque chose n'était pas clair
-}`;
+  "sales": [
+    {
+      "type": "cash" ou "credit",
+      "amount": number,
+      "paid": number,
+      "remaining": number,
+      "client_match": {
+        "status": "found" | "not_found" | "ambiguous",
+        "client_id": "string ou null",
+        "client_name": "string",
+        "candidates": [
+          {"id": "string", "name": "string", "phone": "string ou null"}
+        ]
+      },
+      "products": [{"name": "string", "quantity": number, "unit_price": number}],
+      "note": "string ou null"
+    }
+  ],
+  "suggestions": ["string"]
+}
+
+Si une seule vente est détectée, retourne quand même un tableau avec un seul élément.
+Si aucune vente n'est détectée, retourne un tableau vide avec une suggestion explicative.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -214,13 +225,33 @@ Réponds UNIQUEMENT avec un JSON valide dans ce format:
                         content.match(/```\s*([\s\S]*?)\s*```/);
       const jsonStr = jsonMatch ? jsonMatch[1] : content;
       parsed = JSON.parse(jsonStr.trim());
-      console.log("analyze-sale-voice: Parsed sale:", JSON.stringify(parsed.sale).substring(0, 100));
+      console.log("analyze-sale-voice: Parsed sales count:", parsed.sales?.length || 0);
     } catch (parseError) {
       console.error("analyze-sale-voice: Failed to parse AI response:", content);
       parsed = { 
-        sale: null, 
+        sales: [], 
         suggestions: ["L'analyse n'a pas pu extraire la vente. Réessayez avec une dictée plus claire."] 
       };
+    }
+
+    // Ensure sales is always an array
+    if (!Array.isArray(parsed.sales)) {
+      // Handle legacy single sale format for backward compatibility
+      if (parsed.sale) {
+        const legacySale = parsed.sale;
+        parsed.sales = [{
+          ...legacySale,
+          client_match: {
+            status: legacySale.client_id ? "found" : (legacySale.client_name ? "not_found" : "found"),
+            client_id: legacySale.client_id,
+            client_name: legacySale.client_name || null,
+            candidates: []
+          }
+        }];
+        delete parsed.sale;
+      } else {
+        parsed.sales = [];
+      }
     }
 
     return new Response(JSON.stringify(parsed), {

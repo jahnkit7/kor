@@ -21,6 +21,7 @@ interface ClientsState {
   loading: boolean;
   refetch: () => Promise<void>;
   addClient: (client: { name: string; phone: string }) => Promise<Client | null>;
+  quickCreateClient: (name: string) => Promise<Client | null>;
   updateClient: (id: string, updates: Partial<Client>) => Promise<void>;
   deleteClient: (id: string) => Promise<void>;
   toggleRisky: (id: string) => Promise<void>;
@@ -115,9 +116,41 @@ export function useClients(): ClientsState {
     } catch (error) {
       console.error("Error adding client:", error);
       toast.error("Erreur lors de l'ajout du client");
+    return null;
+  }
+}, [user]);
+
+const quickCreateClient = useCallback(async (name: string): Promise<Client | null> => {
+  if (!user || !isSupabaseConfigured()) return null;
+
+  try {
+    const supabase = await getSupabaseClient();
+    const { data, error } = await supabase
+      .from("clients")
+      .insert({
+        name: name.trim(),
+        phone: "", // Empty phone for quick create
+        user_id: user.id,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error quick creating client:", error);
+      toast.error("Erreur lors de la création du client");
       return null;
     }
-  }, [user]);
+
+    const newClient = { ...data, total_debt: 0 };
+    setClients(prev => [newClient, ...prev]);
+    toast.success(`Client "${name}" créé`);
+    return newClient;
+  } catch (error) {
+    console.error("Error quick creating client:", error);
+    toast.error("Erreur lors de la création du client");
+    return null;
+  }
+}, [user]);
 
   const updateClient = useCallback(async (id: string, updates: Partial<Client>) => {
     if (!user || !isSupabaseConfigured()) return;
@@ -185,6 +218,7 @@ export function useClients(): ClientsState {
     loading,
     refetch: fetchClients,
     addClient,
+    quickCreateClient,
     updateClient,
     deleteClient,
     toggleRisky,
