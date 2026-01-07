@@ -87,13 +87,14 @@ interface VoiceSaleInputProps {
   }) => Promise<void>;
   onCancel: () => void;
   onCreateClient?: (name: string) => Promise<Client | null>;
+  onFinish?: () => void;
 }
 
 const isSpeechRecognitionSupported = () => {
   return typeof window !== 'undefined' && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 };
 
-export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }: VoiceSaleInputProps) {
+export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient, onFinish }: VoiceSaleInputProps) {
   const { toast } = useToast();
   const { isOnline } = useNetworkStatus();
 
@@ -699,6 +700,11 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }
         title: "Ventes enregistrées",
         description: `${parsedSales.length} vente${parsedSales.length > 1 ? 's' : ''} ajoutée${parsedSales.length > 1 ? 's' : ''}`
       });
+      
+      // Call onFinish to close and redirect
+      if (onFinish) {
+        onFinish();
+      }
     } catch (error) {
       console.error("Error saving sales:", error);
       toast({ title: "Erreur", description: "Impossible d'enregistrer les ventes", variant: "destructive" });

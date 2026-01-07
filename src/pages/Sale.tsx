@@ -18,12 +18,13 @@ const Sale = () => {
   const { clients, loading: clientsLoading, quickCreateClient } = useClients();
   const { addSale, sales, loading: salesLoading } = useSales();
   
-  // Recent sales (last 10)
-  const recentSales = useMemo(() => {
-    return sales.slice(0, 10);
-  }, [sales]);
-  
   const [showRecentSales, setShowRecentSales] = useState(false);
+  const [showAllSales, setShowAllSales] = useState(false);
+  
+  // Displayed sales (limited or all)
+  const displayedSales = useMemo(() => {
+    return showAllSales ? sales : sales.slice(0, 10);
+  }, [sales, showAllSales]);
 
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
@@ -133,6 +134,7 @@ const Sale = () => {
           onComplete={handleVoiceSaleComplete}
           onCancel={() => setShowVoiceInput(false)}
           onCreateClient={quickCreateClient}
+          onFinish={handleVoiceSalesFinished}
         />
       </div>
     );
@@ -214,7 +216,7 @@ const Sale = () => {
         </div>
 
         {/* Recent Sales History */}
-        {recentSales.length > 0 && (
+        {sales.length > 0 && (
           <div className="mb-4">
             <button
               onClick={() => setShowRecentSales(!showRecentSales)}
@@ -225,49 +227,63 @@ const Sale = () => {
                 Ventes récentes
               </span>
               <span className="flex items-center gap-2 text-muted-foreground">
-                <Badge variant="secondary">{recentSales.length}</Badge>
+                <Badge variant="secondary">{sales.length}</Badge>
                 {showRecentSales ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               </span>
             </button>
             
             {showRecentSales && (
-              <ScrollArea className="max-h-48 mt-2">
-                <div className="space-y-2">
-                  {recentSales.map((sale) => (
-                    <Card key={sale.id} className="bg-card/50">
-                      <CardContent className="p-3 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className={cn(
-                            "w-8 h-8 rounded-full flex items-center justify-center",
-                            sale.type === "cash" ? "bg-cash/20" : "bg-credit/20"
-                          )}>
-                            {sale.type === "cash" ? (
-                              <Wallet className="w-4 h-4 text-cash" />
-                            ) : (
-                              <CreditCard className="w-4 h-4 text-credit" />
-                            )}
+              <>
+                <ScrollArea className={cn("mt-2", showAllSales ? "max-h-[60vh]" : "max-h-48")}>
+                  <div className="space-y-2">
+                    {displayedSales.map((sale) => (
+                      <Card key={sale.id} className="bg-card/50">
+                        <CardContent className="p-3 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={cn(
+                              "w-8 h-8 rounded-full flex items-center justify-center",
+                              sale.type === "cash" ? "bg-cash/20" : "bg-credit/20"
+                            )}>
+                              {sale.type === "cash" ? (
+                                <Wallet className="w-4 h-4 text-cash" />
+                              ) : (
+                                <CreditCard className="w-4 h-4 text-credit" />
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-semibold text-sm">
+                                {formatMoney(String(sale.amount))} CFA
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {sale.client_name || "Vente anonyme"}
+                                {sale.note && ` • ${sale.note}`}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-semibold text-sm">
-                              {formatMoney(String(sale.amount))} CFA
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {sale.client_name || "Vente anonyme"}
-                              {sale.note && ` • ${sale.note}`}
-                            </p>
-                          </div>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(sale.created_at).toLocaleTimeString("fr-FR", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </ScrollArea>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(sale.created_at).toLocaleTimeString("fr-FR", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </ScrollArea>
+                
+                {/* Show all / Show less button */}
+                {sales.length > 10 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full mt-2 text-muted-foreground"
+                    onClick={() => setShowAllSales(!showAllSales)}
+                  >
+                    {showAllSales ? "Afficher moins" : `Afficher tout (${sales.length})`}
+                  </Button>
+                )}
+              </>
             )}
           </div>
         )}
