@@ -686,19 +686,35 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient, 
     setIsSubmitting(true);
 
     try {
-      // First, auto-create clients for all sales with "not_found" status that have a client name
+      // First, auto-create clients for all sales that need it
       const updatedSales = [...parsedSales];
       
       for (let i = 0; i < updatedSales.length; i++) {
         const sale = updatedSales[i];
         
-        // Auto-create client if: not_found status, has a name, and not already resolved
-        if (
-          sale.client_match.status === "not_found" &&
+        // Robust check: auto-create client if:
+        // - Has a client name detected
+        // - No resolved_client_id yet
+        // - No existing client_id from AI match
+        // - Status is NOT ambiguous (ambiguous = user must choose)
+        const needsClientCreation = 
           sale.client_match.client_name &&
           !sale.resolved_client_id &&
-          onCreateClient
-        ) {
+          !sale.client_match.client_id &&
+          sale.client_match.status !== "ambiguous";
+        
+        if (needsClientCreation) {
+          if (!onCreateClient) {
+            toast({
+              title: "Erreur",
+              description: `Impossible de créer le client "${sale.client_match.client_name}". Reconnectez-vous.`,
+              variant: "destructive"
+            });
+            setStep("validate");
+            setIsSubmitting(false);
+            return;
+          }
+          
           const newClient = await onCreateClient(sale.client_match.client_name);
           if (newClient) {
             updatedSales[i] = {
@@ -711,6 +727,15 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient, 
                 client_id: newClient.id,
               }
             };
+          } else {
+            toast({
+              title: "Erreur",
+              description: `Impossible de créer le client "${sale.client_match.client_name}". Réessayez.`,
+              variant: "destructive"
+            });
+            setStep("validate");
+            setIsSubmitting(false);
+            return;
           }
         }
       }
