@@ -83,6 +83,7 @@ interface VoiceSaleInputProps {
   onComplete: (sale: {
     type: "cash" | "credit";
     amount: number;
+    paid?: number;
     note?: string;
     client_id?: string;
   }) => Promise<void>;
@@ -746,6 +747,7 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient, 
         await onComplete({
           type: sale.type,
           amount: sale.amount,
+          paid: sale.paid || 0,
           note: sale.note || undefined,
           client_id: sale.resolved_client_id || undefined,
         });

@@ -19,7 +19,7 @@ interface SalesState {
   sales: Sale[];
   loading: boolean;
   refetch: () => Promise<void>;
-  addSale: (sale: { type: "cash" | "credit"; amount: number; note?: string; client_id?: string }) => Promise<Sale | null>;
+  addSale: (sale: { type: "cash" | "credit"; amount: number; paid?: number; note?: string; client_id?: string }) => Promise<Sale | null>;
   deleteSale: (id: string) => Promise<void>;
   getTodayStats: () => { total: number; cash: number; credit: number };
   getPeriodStats: (period: "day" | "week" | "month") => { total: number; cash: number; credit: number };
@@ -73,6 +73,7 @@ export function useSales(): SalesState {
   const addSale = useCallback(async (saleData: { 
     type: "cash" | "credit"; 
     amount: number; 
+    paid?: number;
     note?: string; 
     client_id?: string 
   }): Promise<Sale | null> => {
@@ -100,18 +101,32 @@ export function useSales(): SalesState {
 
       // Create debt record for credit sales
       if (saleData.type === "credit" && saleData.client_id) {
-        const { error: debtError } = await supabase
+        const paidAmount = saleData.paid || 0;
+        
+        const { data: debtData, error: debtError } = await supabase
           .from("debts")
           .insert({
             client_id: saleData.client_id,
             amount: saleData.amount,
-            paid: 0,
+            paid: paidAmount,
             user_id: user.id,
-          });
+          })
+          .select()
+          .single();
 
         if (debtError) {
           console.error("Error creating debt:", debtError);
           // Sale was created but debt wasn't - log but don't fail
+        }
+
+        // If there was a partial payment, record it
+        if (!debtError && debtData && paidAmount > 0) {
+          await supabase.from("payments").insert({
+            debt_id: debtData.id,
+            client_id: saleData.client_id,
+            amount: paidAmount,
+            user_id: user.id,
+          });
         }
       }
 
