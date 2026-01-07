@@ -505,6 +505,33 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }
     );
   }, [clients, clientSearchQuery]);
 
+  // Calculate totals for summary - MUST be before any early returns
+  const totals = useMemo(() => {
+    let totalCash = 0;
+    let totalCredit = 0;
+    let totalPaid = 0;
+    let totalRemaining = 0;
+    
+    parsedSales.forEach(sale => {
+      if (sale.type === "cash") {
+        totalCash += sale.amount;
+        totalPaid += sale.amount;
+      } else {
+        totalCredit += sale.amount;
+        totalPaid += sale.paid;
+        totalRemaining += sale.remaining;
+      }
+    });
+    
+    return {
+      total: totalCash + totalCredit,
+      cash: totalCash,
+      credit: totalCredit,
+      paid: totalPaid,
+      remaining: totalRemaining
+    };
+  }, [parsedSales]);
+
   const handleEditSaleConfirm = async () => {
     if (editSaleIndex === null) return;
     
@@ -837,32 +864,6 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }
     );
   }
 
-  // Calculate totals for summary
-  const totals = useMemo(() => {
-    let totalCash = 0;
-    let totalCredit = 0;
-    let totalPaid = 0;
-    let totalRemaining = 0;
-    
-    parsedSales.forEach(sale => {
-      if (sale.type === "cash") {
-        totalCash += sale.amount;
-        totalPaid += sale.amount;
-      } else {
-        totalCredit += sale.amount;
-        totalPaid += sale.paid;
-        totalRemaining += sale.remaining;
-      }
-    });
-    
-    return {
-      total: totalCash + totalCredit,
-      cash: totalCash,
-      credit: totalCredit,
-      paid: totalPaid,
-      remaining: totalRemaining
-    };
-  }, [parsedSales]);
 
   // Validate step - Multi-sale view
   if (step === "validate" && parsedSales.length > 0) {
