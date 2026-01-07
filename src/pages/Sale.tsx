@@ -13,7 +13,7 @@ const Sale = () => {
   const { type } = useParams<{ type: "cash" | "credit" }>();
   const isCash = type === "cash";
 
-  const { clients, loading: clientsLoading } = useClients();
+  const { clients, loading: clientsLoading, quickCreateClient } = useClients();
   const { addSale } = useSales();
 
   const [amount, setAmount] = useState("");
@@ -87,13 +87,15 @@ const Sale = () => {
     note?: string;
     client_id?: string;
   }) => {
-    const created = await addSale(saleData);
-    if (created) {
-      setShowSuccess(true);
-      setTimeout(() => {
-        navigate("/dashboard");
-      }, 1000);
-    }
+    await addSale(saleData);
+    // Don't navigate immediately - let VoiceSaleInput handle multiple sales
+  };
+
+  const handleVoiceSalesFinished = () => {
+    setShowSuccess(true);
+    setTimeout(() => {
+      navigate("/dashboard");
+    }, 1000);
   };
 
   const quickAmounts = [1000, 2000, 5000, 10000, 25000, 50000];
@@ -121,6 +123,7 @@ const Sale = () => {
           clients={clients}
           onComplete={handleVoiceSaleComplete}
           onCancel={() => setShowVoiceInput(false)}
+          onCreateClient={quickCreateClient}
         />
       </div>
     );
