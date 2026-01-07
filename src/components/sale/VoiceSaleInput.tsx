@@ -7,7 +7,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Mic, Square, Loader2, Check, X, Edit2, User, Wallet, CreditCard, AlertTriangle, UserPlus, Users, History, RotateCcw, Pencil } from "lucide-react";
+import { Mic, Square, Loader2, Check, X, Edit2, User, Wallet, CreditCard, AlertTriangle, UserPlus, Users, History, RotateCcw, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNetworkStatus } from "@/hooks/use-network-status";
 import { supabase } from "@/integrations/supabase/client";
@@ -110,9 +110,11 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }
   const [disambiguationSaleIndex, setDisambiguationSaleIndex] = useState<number | null>(null);
   const [selectedCandidate, setSelectedCandidate] = useState<string>(""); // "id" or "create" or "anonymous"
   
-  // Edit amount state
-  const [editAmountSaleIndex, setEditAmountSaleIndex] = useState<number | null>(null);
-  const [editAmountValue, setEditAmountValue] = useState("");
+  // Edit sale state (full edit: amount, type, client)
+  const [editSaleIndex, setEditSaleIndex] = useState<number | null>(null);
+  const [editAmount, setEditAmount] = useState("");
+  const [editType, setEditType] = useState<"cash" | "credit">("cash");
+  const [editClientId, setEditClientId] = useState<string | null>(null);
   
   // History state
   const [showHistory, setShowHistory] = useState(false);
@@ -408,38 +410,66 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }
     setSelectedCandidate("");
   };
 
-  const openEditAmount = (index: number) => {
-    setEditAmountSaleIndex(index);
-    setEditAmountValue(String(parsedSales[index].amount));
+  const openEditSale = (index: number) => {
+    const sale = parsedSales[index];
+    setEditSaleIndex(index);
+    setEditAmount(String(sale.amount));
+    setEditType(sale.type);
+    setEditClientId(sale.resolved_client_id || sale.client_match.client_id || null);
   };
 
-  const handleEditAmountConfirm = () => {
-    if (editAmountSaleIndex === null) return;
+  const handleEditSaleConfirm = () => {
+    if (editSaleIndex === null) return;
     
-    const newAmount = parseInt(editAmountValue) || 0;
+    const newAmount = parseInt(editAmount) || 0;
     if (newAmount <= 0) {
       toast({ title: "Montant invalide", variant: "destructive" });
       return;
     }
 
     const updatedSales = [...parsedSales];
-    const sale = updatedSales[editAmountSaleIndex];
+    const sale = updatedSales[editSaleIndex];
     
-    // Recalculate paid/remaining for credit sales
-    const remaining = sale.type === "credit" ? Math.max(0, newAmount - sale.paid) : 0;
-    const paid = sale.type === "cash" ? newAmount : sale.paid;
+    // Recalculate paid/remaining based on new type
+    const paid = editType === "cash" ? newAmount : sale.paid;
+    const remaining = editType === "credit" ? Math.max(0, newAmount - paid) : 0;
     
-    updatedSales[editAmountSaleIndex] = {
+    // Get client name if client changed
+    const clientName = editClientId 
+      ? clients.find(c => c.id === editClientId)?.name || null
+      : null;
+    
+    updatedSales[editSaleIndex] = {
       ...sale,
+      type: editType,
       amount: newAmount,
       paid: paid,
-      remaining: remaining
+      remaining: remaining,
+      resolved_client_id: editClientId,
+      resolved_client_name: clientName,
+      client_match: {
+        ...sale.client_match,
+        status: editClientId ? "found" : "not_found",
+        client_id: editClientId,
+      }
     };
 
     setParsedSales(updatedSales);
-    setEditAmountSaleIndex(null);
-    setEditAmountValue("");
-    toast({ title: "Montant modifié" });
+    setEditSaleIndex(null);
+    setEditAmount("");
+    toast({ title: "Vente modifiée" });
+  };
+
+  const deleteSale = (index: number) => {
+    const updatedSales = parsedSales.filter((_, i) => i !== index);
+    setParsedSales(updatedSales);
+    
+    if (updatedSales.length === 0) {
+      setStep("record");
+      toast({ title: "Toutes les ventes ont été supprimées" });
+    } else {
+      toast({ title: "Vente supprimée" });
+    }
   };
 
   const replayFromHistory = (transcript: string) => {
@@ -733,7 +763,7 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          openEditAmount(index);
+                          openEditSale(index);
                         }}
                         className="flex items-center gap-1 font-bold hover:text-primary transition-colors group"
                       >
@@ -776,17 +806,28 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-1 shrink-0">
                     <Button 
                       size="icon" 
                       variant="ghost" 
                       className="h-8 w-8"
                       onClick={(e) => {
                         e.stopPropagation();
-                        openEditAmount(index);
+                        openEditSale(index);
                       }}
                     >
                       <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button 
+                      size="icon" 
+                      variant="ghost" 
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteSale(index);
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4" />
                     </Button>
                     {status === "needs_action" && (
                       <Button size="sm" variant="outline">
@@ -891,38 +932,97 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }
           </DialogContent>
         </Dialog>
 
-        {/* Edit Amount Dialog */}
-        <Dialog open={editAmountSaleIndex !== null} onOpenChange={(open) => !open && setEditAmountSaleIndex(null)}>
+        {/* Edit Sale Dialog */}
+        <Dialog open={editSaleIndex !== null} onOpenChange={(open) => !open && setEditSaleIndex(null)}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Modifier le montant</DialogTitle>
+              <DialogTitle>Modifier la vente</DialogTitle>
             </DialogHeader>
 
             <div className="space-y-4">
+              {/* Type toggle */}
               <div className="space-y-2">
-                <Label htmlFor="amount">Nouveau montant (CFA)</Label>
+                <Label>Type de vente</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={editType === "cash" ? "default" : "outline"}
+                    className={cn("flex-1", editType === "cash" && "bg-cash hover:bg-cash/90")}
+                    onClick={() => setEditType("cash")}
+                  >
+                    <Wallet className="w-4 h-4 mr-2" />
+                    Cash
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={editType === "credit" ? "default" : "outline"}
+                    className={cn("flex-1", editType === "credit" && "bg-credit hover:bg-credit/90")}
+                    onClick={() => setEditType("credit")}
+                  >
+                    <CreditCard className="w-4 h-4 mr-2" />
+                    Crédit
+                  </Button>
+                </div>
+              </div>
+
+              {/* Amount */}
+              <div className="space-y-2">
+                <Label htmlFor="edit-amount">Montant (CFA)</Label>
                 <Input
-                  id="amount"
+                  id="edit-amount"
                   type="number"
-                  value={editAmountValue}
-                  onChange={(e) => setEditAmountValue(e.target.value)}
+                  value={editAmount}
+                  onChange={(e) => setEditAmount(e.target.value)}
                   placeholder="Ex: 15000"
                   className="text-lg"
                 />
               </div>
 
-              {editAmountSaleIndex !== null && parsedSales[editAmountSaleIndex]?.type === "credit" && (
-                <p className="text-sm text-muted-foreground">
-                  Montant payé: {formatMoney(parsedSales[editAmountSaleIndex].paid)} CFA
-                </p>
-              )}
+              {/* Client selection */}
+              <div className="space-y-2">
+                <Label>Client</Label>
+                <ScrollArea className="h-32 border rounded-lg">
+                  <div className="p-2 space-y-1">
+                    <button
+                      type="button"
+                      className={cn(
+                        "w-full text-left px-3 py-2 rounded-md text-sm transition-colors",
+                        editClientId === null ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
+                      )}
+                      onClick={() => setEditClientId(null)}
+                    >
+                      <span className="flex items-center gap-2">
+                        <X className="w-4 h-4" />
+                        Vente anonyme
+                      </span>
+                    </button>
+                    {clients.map((client) => (
+                      <button
+                        key={client.id}
+                        type="button"
+                        className={cn(
+                          "w-full text-left px-3 py-2 rounded-md text-sm transition-colors",
+                          editClientId === client.id ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
+                        )}
+                        onClick={() => setEditClientId(client.id)}
+                      >
+                        <span className="flex items-center gap-2">
+                          <User className="w-4 h-4" />
+                          {client.name}
+                          {client.phone && <span className="text-xs opacity-70">({client.phone})</span>}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
             </div>
 
             <div className="flex gap-3 pt-2">
-              <Button variant="outline" onClick={() => setEditAmountSaleIndex(null)} className="flex-1">
+              <Button variant="outline" onClick={() => setEditSaleIndex(null)} className="flex-1">
                 Annuler
               </Button>
-              <Button onClick={handleEditAmountConfirm} className="flex-1">
+              <Button onClick={handleEditSaleConfirm} className="flex-1">
                 Valider
               </Button>
             </div>
