@@ -2,19 +2,28 @@ import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Check, User, MessageSquare, Mic } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ArrowLeft, Check, User, MessageSquare, Mic, ChevronDown, ChevronUp, Wallet, CreditCard, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { useClients } from "@/hooks/use-clients";
 import { useSales } from "@/hooks/use-sales";
 import { VoiceSaleInput } from "@/components/sale/VoiceSaleInput";
-
+import { cn } from "@/lib/utils";
 const Sale = () => {
   const navigate = useNavigate();
   const { type } = useParams<{ type: "cash" | "credit" }>();
   const isCash = type === "cash";
 
   const { clients, loading: clientsLoading, quickCreateClient } = useClients();
-  const { addSale } = useSales();
+  const { addSale, sales, loading: salesLoading } = useSales();
+  
+  // Recent sales (last 10)
+  const recentSales = useMemo(() => {
+    return sales.slice(0, 10);
+  }, [sales]);
+  
+  const [showRecentSales, setShowRecentSales] = useState(false);
 
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
@@ -203,6 +212,65 @@ const Sale = () => {
             </Button>
           ))}
         </div>
+
+        {/* Recent Sales History */}
+        {recentSales.length > 0 && (
+          <div className="mb-4">
+            <button
+              onClick={() => setShowRecentSales(!showRecentSales)}
+              className="w-full flex items-center justify-between px-4 py-3 bg-secondary/50 rounded-xl text-sm font-medium"
+            >
+              <span className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-muted-foreground" />
+                Ventes récentes
+              </span>
+              <span className="flex items-center gap-2 text-muted-foreground">
+                <Badge variant="secondary">{recentSales.length}</Badge>
+                {showRecentSales ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </span>
+            </button>
+            
+            {showRecentSales && (
+              <ScrollArea className="max-h-48 mt-2">
+                <div className="space-y-2">
+                  {recentSales.map((sale) => (
+                    <Card key={sale.id} className="bg-card/50">
+                      <CardContent className="p-3 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={cn(
+                            "w-8 h-8 rounded-full flex items-center justify-center",
+                            sale.type === "cash" ? "bg-cash/20" : "bg-credit/20"
+                          )}>
+                            {sale.type === "cash" ? (
+                              <Wallet className="w-4 h-4 text-cash" />
+                            ) : (
+                              <CreditCard className="w-4 h-4 text-credit" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-sm">
+                              {formatMoney(String(sale.amount))} CFA
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {sale.client_name || "Vente anonyme"}
+                              {sale.note && ` • ${sale.note}`}
+                            </p>
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(sale.created_at).toLocaleTimeString("fr-FR", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </ScrollArea>
+            )}
+          </div>
+        )}
 
         {/* Client Selection (Credit only) */}
         {!isCash && (

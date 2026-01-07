@@ -123,6 +123,10 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }
   const [editNewClientName, setEditNewClientName] = useState("");
   const [clientSearchQuery, setClientSearchQuery] = useState("");
   
+  // Voice search for client
+  const [isVoiceSearching, setIsVoiceSearching] = useState(false);
+  const voiceSearchRecognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  
   // Delete confirmation state
   const [deleteSaleIndex, setDeleteSaleIndex] = useState<number | null>(null);
   
@@ -132,6 +136,58 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }
   
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Voice search functions
+  const startVoiceSearch = useCallback(async () => {
+    if (!isSpeechRecognitionSupported()) {
+      toast({ title: "Reconnaissance vocale non supportée", variant: "destructive" });
+      return;
+    }
+    
+    try {
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      toast({ title: "Accès au microphone refusé", variant: "destructive" });
+      return;
+    }
+    
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.lang = "fr-FR";
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    
+    recognition.onstart = () => {
+      setIsVoiceSearching(true);
+    };
+    
+    recognition.onresult = (event) => {
+      let transcript = "";
+      for (let i = 0; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+      }
+      setClientSearchQuery(transcript.trim());
+    };
+    
+    recognition.onerror = () => {
+      setIsVoiceSearching(false);
+    };
+    
+    recognition.onend = () => {
+      setIsVoiceSearching(false);
+    };
+    
+    voiceSearchRecognitionRef.current = recognition;
+    recognition.start();
+  }, [toast]);
+  
+  const stopVoiceSearch = useCallback(() => {
+    if (voiceSearchRecognitionRef.current) {
+      voiceSearchRecognitionRef.current.stop();
+      voiceSearchRecognitionRef.current = null;
+    }
+    setIsVoiceSearching(false);
+  }, []);
 
   // Load voice history on mount
   useEffect(() => {
@@ -1169,17 +1225,41 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }
                 {/* Client search and list - only if not creating new */}
                 {!editCreateNewClient && (
                   <>
-                    {/* Search bar */}
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        type="text"
-                        value={clientSearchQuery}
-                        onChange={(e) => setClientSearchQuery(e.target.value)}
-                        placeholder="Rechercher un client..."
-                        className="pl-10"
-                      />
+                    {/* Search bar with voice search */}
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          type="text"
+                          value={clientSearchQuery}
+                          onChange={(e) => setClientSearchQuery(e.target.value)}
+                          placeholder="Rechercher un client..."
+                          className="pl-10 pr-3"
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant={isVoiceSearching ? "destructive" : "outline"}
+                        size="icon"
+                        onClick={isVoiceSearching ? stopVoiceSearch : startVoiceSearch}
+                        className={cn(
+                          "shrink-0",
+                          isVoiceSearching && "animate-pulse"
+                        )}
+                      >
+                        {isVoiceSearching ? (
+                          <Square className="w-4 h-4" />
+                        ) : (
+                          <Mic className="w-4 h-4" />
+                        )}
+                      </Button>
                     </div>
+                    
+                    {isVoiceSearching && (
+                      <p className="text-xs text-primary animate-pulse text-center">
+                        🎤 Dites le nom du client...
+                      </p>
+                    )}
                     
                     <ScrollArea className="h-32 border rounded-lg">
                       <div className="p-2 space-y-1">
