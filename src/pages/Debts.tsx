@@ -148,59 +148,56 @@ const Debts = () => {
                 className="cursor-pointer hover:shadow-lg transition-shadow animate-fade-in"
                 onClick={() => navigate(`/debts/${debt.client_id}`)}
               >
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-4">
-                    <div className="relative">
-                      <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center shrink-0">
-                        <User className="w-6 h-6 text-muted-foreground" />
+                <CardContent className="p-3">
+                  {/* Ligne 1: Avatar + Nom + Chevron */}
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="relative shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+                        <User className="w-5 h-5 text-muted-foreground" />
                       </div>
-                      {/* Warning badge positioned on avatar */}
                       <div className="absolute -top-1 -right-1">
                         <ClientWarningBadge isRisky={debt.isRisky} />
                       </div>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <p className="font-bold text-foreground">{debt.name}</p>
-                          <p className="text-sm text-muted-foreground flex items-center gap-1">
-                            <Phone className="w-3 h-3" />
-                            {debt.phone || "Pas de téléphone"}
-                          </p>
-                        </div>
-                        <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
-                      </div>
-                      
-                      <div className="flex items-center justify-between mt-3">
-                        <div className="flex items-center gap-2">
-                          <p className="text-money-sm text-debt">
-                            {formatMoney(debt.totalAmount)} <span className="text-xs">CFA</span>
-                          </p>
-                          <WhatsAppShare
-                            type="debt"
-                            data={{
-                              clientName: debt.name,
-                              clientPhone: debt.phone,
-                              amount: debt.totalAmount,
-                            }}
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 text-xs px-2"
-                          />
-                        </div>
-                        
-                        {debt.daysOverdue > 0 ? (
-                          <span className={`text-xs font-semibold px-2 py-1 rounded-full flex items-center gap-1 ${getOverdueColor(debt.daysOverdue)}`}>
-                            <AlertCircle className="w-3 h-3" />
-                            {debt.daysOverdue}j
-                          </span>
-                        ) : (
-                          <span className="text-xs font-semibold px-2 py-1 rounded-full bg-success/10 text-success flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            Nouveau
-                          </span>
-                        )}
-                      </div>
+                      <p className="font-bold text-foreground truncate">{debt.name}</p>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Phone className="w-3 h-3 shrink-0" />
+                        <span className="truncate">{debt.phone || "Pas de téléphone"}</span>
+                      </p>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
+                  </div>
+                  
+                  {/* Ligne 2: Montant + Actions */}
+                  <div className="flex items-center justify-between pl-13">
+                    <p className="text-base font-bold text-debt">
+                      {formatMoney(debt.totalAmount)} <span className="text-xs font-normal">CFA</span>
+                    </p>
+                    
+                    <div className="flex items-center gap-2">
+                      <WhatsAppShare
+                        type="debt"
+                        data={{
+                          clientName: debt.name,
+                          clientPhone: debt.phone,
+                          amount: debt.totalAmount,
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs px-2"
+                      />
+                      {debt.daysOverdue > 0 ? (
+                        <span className={`text-xs font-semibold px-2 py-1 rounded-full flex items-center gap-1 whitespace-nowrap ${getOverdueColor(debt.daysOverdue)}`}>
+                          <AlertCircle className="w-3 h-3 shrink-0" />
+                          {debt.daysOverdue}j
+                        </span>
+                      ) : (
+                        <span className="text-xs font-semibold px-2 py-1 rounded-full bg-success/10 text-success flex items-center gap-1 whitespace-nowrap">
+                          <Clock className="w-3 h-3 shrink-0" />
+                          Nouveau
+                        </span>
+                      )}
                     </div>
                   </div>
                 </CardContent>
