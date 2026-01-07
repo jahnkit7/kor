@@ -102,7 +102,7 @@ const Clients = () => {
               <Card
                 key={client.id}
                 className="cursor-pointer hover:shadow-lg transition-shadow animate-fade-in"
-                onClick={() => client.total_debt && client.total_debt > 0 ? navigate(`/debts/${client.id}`) : undefined}
+                onClick={() => navigate(`/clients/${client.id}`)}
               >
                 <CardContent className="p-4">
                   <div className="flex items-center gap-4">
@@ -151,9 +151,7 @@ const Clients = () => {
                         </button>
                       )}
                       
-                      {client.total_debt && client.total_debt > 0 && (
-                        <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                      )}
+                      <ChevronRight className="w-5 h-5 text-muted-foreground" />
                     </div>
                   </div>
                 </CardContent>

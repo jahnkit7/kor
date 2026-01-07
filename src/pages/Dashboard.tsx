@@ -207,14 +207,12 @@ const Dashboard = () => {
       <div className="px-5 mt-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold">Activité récente</h2>
-          {canViewReports && (
-            <button 
-              className="text-sm text-primary font-semibold"
-              onClick={() => navigate("/reports")}
-            >
-              Voir tout
-            </button>
-          )}
+          <button 
+            className="text-sm text-primary font-semibold"
+            onClick={() => navigate("/sales/history")}
+          >
+            Voir tout
+          </button>
         </div>
         
         <div className="space-y-3">
