@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Shield, Wallet, Users, TrendingUp } from "lucide-react";
+import { ArrowRight, Shield, Mic, Users, TrendingUp } from "lucide-react";
 import { Onboarding } from "@/components/Onboarding";
 
-const ONBOARDING_KEY = "caisse_onboarding_completed";
+const ONBOARDING_KEY = "dekon_onboarding_completed";
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -53,27 +53,27 @@ const Landing = () => {
           {/* Logo */}
           <div className="mb-8">
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-accent shadow-glow mb-4">
-              <Wallet className="w-10 h-10" />
+              <Mic className="w-10 h-10" />
             </div>
             <h1 className="text-4xl font-extrabold tracking-tight">
-              CAISSE<span className="text-accent">+</span>
+              DÉK<span className="text-accent">ON</span>
             </h1>
             <p className="text-lg opacity-90 mt-2 font-medium">
-              Votre caisse digitale
+              L'OS du commerce africain
             </p>
           </div>
 
           {/* Value Proposition */}
           <p className="text-xl font-semibold mb-8 leading-relaxed">
-            Gérez vos ventes et vos dettes en toute simplicité
+            Parle, c'est vendu. Même sans internet.
           </p>
 
           {/* Features */}
           <div className="grid grid-cols-2 gap-4 mb-10">
-            <FeatureItem icon={Wallet} text="Ventes Cash" />
+            <FeatureItem icon={Mic} text="Dictée vocale" />
             <FeatureItem icon={Users} text="Suivi Dettes" />
             <FeatureItem icon={TrendingUp} text="Rapports" />
-            <FeatureItem icon={Shield} text="Sécurisé" />
+            <FeatureItem icon={Shield} text="Hors ligne" />
           </div>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Wallet, Users, CloudOff, ChevronRight, X } from "lucide-react";
+import { Mic, Users, CloudOff, ChevronRight, X } from "lucide-react";
 
 interface OnboardingProps {
   onComplete: () => void;
@@ -8,10 +8,10 @@ interface OnboardingProps {
 
 const slides = [
   {
-    icon: Wallet,
-    title: "Ton argent, clair.",
-    description: "Suis tes ventes cash et crédit en un clin d'œil.",
-    color: "bg-cash/10 text-cash",
+    icon: Mic,
+    title: "Parle, c'est vendu.",
+    description: "Dicte tes ventes comme tu parles au marché.",
+    color: "bg-primary/10 text-primary",
   },
   {
     icon: Users,
@@ -21,9 +21,9 @@ const slides = [
   },
   {
     icon: CloudOff,
-    title: "Même sans internet.",
-    description: "Tout fonctionne hors ligne. Pas de souci.",
-    color: "bg-primary/10 text-primary",
+    title: "Même sans réseau.",
+    description: "Tout fonctionne hors ligne. Comme au marché.",
+    color: "bg-cash/10 text-cash",
   },
 ];
 

@@ -1,7 +1,7 @@
 {
-  "name": "CAISSE+ - Gestionnaire de Vente & Caisse",
-  "short_name": "CAISSE+",
-  "description": "Gérez vos ventes, stocks et dettes en toute simplicité, même hors ligne",
+  "name": "DÉKON - L'OS du commerce africain",
+  "short_name": "DÉKON",
+  "description": "Gérez vos ventes par la voix, même hors ligne. Conçu pour les marchés africains.",
   "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",

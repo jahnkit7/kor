@@ -133,7 +133,7 @@ const Auth = () => {
     setIsLoading(true);
 
     // Use phone as fake email for Supabase auth
-    const fakeEmail = `${selectedCountry.prefix.replace("+", "")}${phone}@caisse.local`;
+    const fakeEmail = `${selectedCountry.prefix.replace("+", "")}${phone}@dekon.local`;
     // Generate more secure password using PIN + phone as salt
     const password = generateSecurePassword(pin, phone, selectedCountry.prefix);
 
