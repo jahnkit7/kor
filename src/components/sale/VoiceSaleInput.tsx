@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import { Mic, Square, Loader2, Check, X, Edit2, User, Wallet, CreditCard, AlertTriangle, UserPlus, Users, History, RotateCcw, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNetworkStatus } from "@/hooks/use-network-status";
@@ -110,11 +111,12 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }
   const [disambiguationSaleIndex, setDisambiguationSaleIndex] = useState<number | null>(null);
   const [selectedCandidate, setSelectedCandidate] = useState<string>(""); // "id" or "create" or "anonymous"
   
-  // Edit sale state (full edit: amount, type, client)
+  // Edit sale state (full edit: amount, type, client, paid)
   const [editSaleIndex, setEditSaleIndex] = useState<number | null>(null);
   const [editAmount, setEditAmount] = useState("");
   const [editType, setEditType] = useState<"cash" | "credit">("cash");
   const [editClientId, setEditClientId] = useState<string | null>(null);
+  const [editPaid, setEditPaid] = useState("");
   
   // History state
   const [showHistory, setShowHistory] = useState(false);
@@ -416,14 +418,22 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }
     setEditAmount(String(sale.amount));
     setEditType(sale.type);
     setEditClientId(sale.resolved_client_id || sale.client_match.client_id || null);
+    setEditPaid(String(sale.paid));
   };
 
   const handleEditSaleConfirm = () => {
     if (editSaleIndex === null) return;
     
     const newAmount = parseInt(editAmount) || 0;
+    const newPaid = parseInt(editPaid) || 0;
+    
     if (newAmount <= 0) {
       toast({ title: "Montant invalide", variant: "destructive" });
+      return;
+    }
+
+    if (editType === "credit" && newPaid > newAmount) {
+      toast({ title: "Le montant payé ne peut pas dépasser le total", variant: "destructive" });
       return;
     }
 
@@ -431,7 +441,7 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }
     const sale = updatedSales[editSaleIndex];
     
     // Recalculate paid/remaining based on new type
-    const paid = editType === "cash" ? newAmount : sale.paid;
+    const paid = editType === "cash" ? newAmount : Math.min(newPaid, newAmount);
     const remaining = editType === "credit" ? Math.max(0, newAmount - paid) : 0;
     
     // Get client name if client changed
@@ -457,6 +467,7 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }
     setParsedSales(updatedSales);
     setEditSaleIndex(null);
     setEditAmount("");
+    setEditPaid("");
     toast({ title: "Vente modifiée" });
   };
 
@@ -716,6 +727,33 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }
     );
   }
 
+  // Calculate totals for summary
+  const totals = useMemo(() => {
+    let totalCash = 0;
+    let totalCredit = 0;
+    let totalPaid = 0;
+    let totalRemaining = 0;
+    
+    parsedSales.forEach(sale => {
+      if (sale.type === "cash") {
+        totalCash += sale.amount;
+        totalPaid += sale.amount;
+      } else {
+        totalCredit += sale.amount;
+        totalPaid += sale.paid;
+        totalRemaining += sale.remaining;
+      }
+    });
+    
+    return {
+      total: totalCash + totalCredit,
+      cash: totalCash,
+      credit: totalCredit,
+      paid: totalPaid,
+      remaining: totalRemaining
+    };
+  }, [parsedSales]);
+
   // Validate step - Multi-sale view
   if (step === "validate" && parsedSales.length > 0) {
     const currentSale = disambiguationSaleIndex !== null ? parsedSales[disambiguationSaleIndex] : null;
@@ -850,6 +888,48 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }
           </div>
         )}
 
+        {/* Summary */}
+        <Card className="p-4 bg-secondary/30">
+          <div className="space-y-2">
+            <div className="flex justify-between text-lg font-bold">
+              <span>Total</span>
+              <span>{formatMoney(totals.total)} CFA</span>
+            </div>
+            
+            <Separator />
+            
+            <div className="flex justify-between text-sm">
+              <span className="flex items-center gap-2">
+                <Wallet className="w-4 h-4 text-cash" />
+                Cash
+              </span>
+              <span className="text-cash font-medium">{formatMoney(totals.cash)} CFA</span>
+            </div>
+            
+            <div className="flex justify-between text-sm">
+              <span className="flex items-center gap-2">
+                <CreditCard className="w-4 h-4 text-credit" />
+                Crédit
+              </span>
+              <span className="text-credit font-medium">{formatMoney(totals.credit)} CFA</span>
+            </div>
+            
+            {totals.remaining > 0 && (
+              <>
+                <Separator />
+                <div className="flex justify-between text-sm">
+                  <span>Encaissé maintenant</span>
+                  <span className="font-medium text-success">{formatMoney(totals.paid)} CFA</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>Restant à payer</span>
+                  <span className="font-medium text-amber-600">{formatMoney(totals.remaining)} CFA</span>
+                </div>
+              </>
+            )}
+          </div>
+        </Card>
+
         {/* Action buttons */}
         <div className="grid grid-cols-2 gap-3 pt-2">
           <Button variant="outline" onClick={() => setStep("record")} disabled={isSubmitting}>
@@ -967,7 +1047,7 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }
 
               {/* Amount */}
               <div className="space-y-2">
-                <Label htmlFor="edit-amount">Montant (CFA)</Label>
+                <Label htmlFor="edit-amount">Montant total (CFA)</Label>
                 <Input
                   id="edit-amount"
                   type="number"
@@ -977,6 +1057,24 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }
                   className="text-lg"
                 />
               </div>
+
+              {/* Paid amount - only for credit */}
+              {editType === "credit" && (
+                <div className="space-y-2">
+                  <Label htmlFor="edit-paid">Montant payé (CFA)</Label>
+                  <Input
+                    id="edit-paid"
+                    type="number"
+                    value={editPaid}
+                    onChange={(e) => setEditPaid(e.target.value)}
+                    placeholder="Montant déjà payé"
+                    className="text-lg"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Restant : {formatMoney(Math.max(0, (parseInt(editAmount) || 0) - (parseInt(editPaid) || 0)))} CFA
+                  </p>
+                </div>
+              )}
 
               {/* Client selection */}
               <div className="space-y-2">
