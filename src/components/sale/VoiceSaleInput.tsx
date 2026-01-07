@@ -5,11 +5,16 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Mic, Square, Loader2, Check, X, Edit2, User, Wallet, CreditCard, AlertTriangle, UserPlus, Users } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Mic, Square, Loader2, Check, X, Edit2, User, Wallet, CreditCard, AlertTriangle, UserPlus, Users, History, RotateCcw, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNetworkStatus } from "@/hooks/use-network-status";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+
+// Voice history storage key
+const VOICE_HISTORY_KEY = "voice_sale_history";
 
 // TypeScript declarations for Web Speech API
 interface SpeechRecognitionEvent extends Event {
@@ -105,8 +110,28 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }
   const [disambiguationSaleIndex, setDisambiguationSaleIndex] = useState<number | null>(null);
   const [selectedCandidate, setSelectedCandidate] = useState<string>(""); // "id" or "create" or "anonymous"
   
+  // Edit amount state
+  const [editAmountSaleIndex, setEditAmountSaleIndex] = useState<number | null>(null);
+  const [editAmountValue, setEditAmountValue] = useState("");
+  
+  // History state
+  const [showHistory, setShowHistory] = useState(false);
+  const [voiceHistory, setVoiceHistory] = useState<Array<{ transcript: string; date: string }>>([]);
+  
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Load voice history on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(VOICE_HISTORY_KEY);
+      if (stored) {
+        setVoiceHistory(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.error("Error loading voice history:", e);
+    }
+  }, []);
 
   useEffect(() => {
     setIsSupported(isSpeechRecognitionSupported());
@@ -264,7 +289,7 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }
     analyzeTranscript(trimmedTranscript);
   }, [transcript, stopTimer]);
 
-  const analyzeTranscript = useCallback(async (text: string) => {
+  const analyzeTranscript = useCallback(async (text: string, saveToHistory = true) => {
     if (!isOnline) {
       setErrorMessage("Connexion internet requise pour l'analyse vocale des ventes.");
       setLastTranscript(text);
@@ -276,6 +301,18 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }
     setErrorMessage(null);
     setLastTranscript(text);
     setCanRetry(false);
+
+    // Save to history
+    if (saveToHistory) {
+      try {
+        const newEntry = { transcript: text, date: new Date().toISOString() };
+        const updated = [newEntry, ...voiceHistory.filter(h => h.transcript !== text)].slice(0, 10);
+        setVoiceHistory(updated);
+        localStorage.setItem(VOICE_HISTORY_KEY, JSON.stringify(updated));
+      } catch (e) {
+        console.error("Error saving to history:", e);
+      }
+    }
 
     try {
       console.log("VoiceSaleInput: Starting analysis for transcript:", text.substring(0, 50));
@@ -354,7 +391,7 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }
       setCanRetry(true);
       toast({ title: "Erreur d'analyse", description: errorMsg, variant: "destructive" });
     }
-  }, [clients, isOnline, toast]);
+  }, [clients, isOnline, toast, voiceHistory]);
 
   const getSaleStatus = (sale: ParsedSale): "ready" | "needs_action" => {
     if (sale.client_match.status === "found") return "ready";
@@ -369,6 +406,51 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }
   const openDisambiguation = (index: number) => {
     setDisambiguationSaleIndex(index);
     setSelectedCandidate("");
+  };
+
+  const openEditAmount = (index: number) => {
+    setEditAmountSaleIndex(index);
+    setEditAmountValue(String(parsedSales[index].amount));
+  };
+
+  const handleEditAmountConfirm = () => {
+    if (editAmountSaleIndex === null) return;
+    
+    const newAmount = parseInt(editAmountValue) || 0;
+    if (newAmount <= 0) {
+      toast({ title: "Montant invalide", variant: "destructive" });
+      return;
+    }
+
+    const updatedSales = [...parsedSales];
+    const sale = updatedSales[editAmountSaleIndex];
+    
+    // Recalculate paid/remaining for credit sales
+    const remaining = sale.type === "credit" ? Math.max(0, newAmount - sale.paid) : 0;
+    const paid = sale.type === "cash" ? newAmount : sale.paid;
+    
+    updatedSales[editAmountSaleIndex] = {
+      ...sale,
+      amount: newAmount,
+      paid: paid,
+      remaining: remaining
+    };
+
+    setParsedSales(updatedSales);
+    setEditAmountSaleIndex(null);
+    setEditAmountValue("");
+    toast({ title: "Montant modifié" });
+  };
+
+  const replayFromHistory = (transcript: string) => {
+    setShowHistory(false);
+    analyzeTranscript(transcript, false);
+  };
+
+  const clearHistory = () => {
+    setVoiceHistory([]);
+    localStorage.removeItem(VOICE_HISTORY_KEY);
+    toast({ title: "Historique effacé" });
   };
 
   const handleDisambiguationConfirm = async () => {
@@ -523,10 +605,70 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }
           </div>
         </div>
 
+        {/* History button */}
+        {voiceHistory.length > 0 && (
+          <Button 
+            variant="outline" 
+            onClick={() => setShowHistory(true)} 
+            className="w-full"
+          >
+            <History className="w-4 h-4 mr-2" />
+            Historique ({voiceHistory.length})
+          </Button>
+        )}
+
         {/* Cancel button */}
         <Button variant="ghost" onClick={onCancel} className="w-full">
           Annuler
         </Button>
+
+        {/* History Dialog */}
+        <Dialog open={showHistory} onOpenChange={setShowHistory}>
+          <DialogContent className="max-h-[80vh]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <History className="w-5 h-5" />
+                Dictées récentes
+              </DialogTitle>
+            </DialogHeader>
+            
+            <ScrollArea className="max-h-[50vh]">
+              <div className="space-y-2 pr-4">
+                {voiceHistory.map((entry, idx) => (
+                  <Card 
+                    key={idx} 
+                    className="p-3 hover:bg-secondary/50 cursor-pointer transition-colors"
+                    onClick={() => replayFromHistory(entry.transcript)}
+                  >
+                    <div className="flex items-start gap-3">
+                      <RotateCcw className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm line-clamp-2">{entry.transcript}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {new Date(entry.date).toLocaleDateString("fr-FR", {
+                            day: "numeric",
+                            month: "short",
+                            hour: "2-digit",
+                            minute: "2-digit"
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </ScrollArea>
+
+            <div className="flex gap-3 pt-2">
+              <Button variant="outline" onClick={clearHistory} className="flex-1 text-destructive">
+                Effacer tout
+              </Button>
+              <Button variant="outline" onClick={() => setShowHistory(false)} className="flex-1">
+                Fermer
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
@@ -588,7 +730,16 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }
                         {sale.type === "cash" ? <Wallet className="w-3 h-3 mr-1" /> : <CreditCard className="w-3 h-3 mr-1" />}
                         {sale.type === "cash" ? "Cash" : "Crédit"}
                       </Badge>
-                      <span className="font-bold">{formatMoney(sale.amount)} CFA</span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openEditAmount(index);
+                        }}
+                        className="flex items-center gap-1 font-bold hover:text-primary transition-colors group"
+                      >
+                        {formatMoney(sale.amount)} CFA
+                        <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </button>
                     </div>
 
                     {/* Client info */}
@@ -625,11 +776,24 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }
                     )}
                   </div>
 
-                  {status === "needs_action" && (
-                    <Button size="sm" variant="outline" className="shrink-0">
-                      Résoudre
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button 
+                      size="icon" 
+                      variant="ghost" 
+                      className="h-8 w-8"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEditAmount(index);
+                      }}
+                    >
+                      <Pencil className="w-4 h-4" />
                     </Button>
-                  )}
+                    {status === "needs_action" && (
+                      <Button size="sm" variant="outline">
+                        Résoudre
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </Card>
             );
@@ -721,6 +885,44 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }
                 Annuler
               </Button>
               <Button onClick={handleDisambiguationConfirm} disabled={!selectedCandidate} className="flex-1">
+                Valider
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Amount Dialog */}
+        <Dialog open={editAmountSaleIndex !== null} onOpenChange={(open) => !open && setEditAmountSaleIndex(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Modifier le montant</DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="amount">Nouveau montant (CFA)</Label>
+                <Input
+                  id="amount"
+                  type="number"
+                  value={editAmountValue}
+                  onChange={(e) => setEditAmountValue(e.target.value)}
+                  placeholder="Ex: 15000"
+                  className="text-lg"
+                />
+              </div>
+
+              {editAmountSaleIndex !== null && parsedSales[editAmountSaleIndex]?.type === "credit" && (
+                <p className="text-sm text-muted-foreground">
+                  Montant payé: {formatMoney(parsedSales[editAmountSaleIndex].paid)} CFA
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <Button variant="outline" onClick={() => setEditAmountSaleIndex(null)} className="flex-1">
+                Annuler
+              </Button>
+              <Button onClick={handleEditAmountConfirm} className="flex-1">
                 Valider
               </Button>
             </div>
