@@ -8,7 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Mic, Square, Loader2, Check, X, Edit2, User, Wallet, CreditCard, AlertTriangle, UserPlus, Users, History, RotateCcw, Pencil, Trash2 } from "lucide-react";
+import { Mic, Square, Loader2, Check, X, Edit2, User, Wallet, CreditCard, AlertTriangle, UserPlus, Users, History, RotateCcw, Pencil, Trash2, Search } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useNetworkStatus } from "@/hooks/use-network-status";
 import { supabase } from "@/integrations/supabase/client";
@@ -117,6 +119,12 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }
   const [editType, setEditType] = useState<"cash" | "credit">("cash");
   const [editClientId, setEditClientId] = useState<string | null>(null);
   const [editPaid, setEditPaid] = useState("");
+  const [editCreateNewClient, setEditCreateNewClient] = useState(false);
+  const [editNewClientName, setEditNewClientName] = useState("");
+  const [clientSearchQuery, setClientSearchQuery] = useState("");
+  
+  // Delete confirmation state
+  const [deleteSaleIndex, setDeleteSaleIndex] = useState<number | null>(null);
   
   // History state
   const [showHistory, setShowHistory] = useState(false);
@@ -419,9 +427,29 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }
     setEditType(sale.type);
     setEditClientId(sale.resolved_client_id || sale.client_match.client_id || null);
     setEditPaid(String(sale.paid));
+    setClientSearchQuery("");
+    
+    // Pre-fill for new client creation if client was not found
+    if (sale.client_match.status === "not_found" && sale.client_match.client_name && !sale.resolved_client_id) {
+      setEditCreateNewClient(true);
+      setEditNewClientName(sale.client_match.client_name);
+    } else {
+      setEditCreateNewClient(false);
+      setEditNewClientName("");
+    }
   };
+  
+  // Filtered clients for search
+  const filteredClients = useMemo(() => {
+    if (!clientSearchQuery.trim()) return clients;
+    const query = clientSearchQuery.toLowerCase();
+    return clients.filter(c => 
+      c.name.toLowerCase().includes(query) || 
+      c.phone?.toLowerCase().includes(query)
+    );
+  }, [clients, clientSearchQuery]);
 
-  const handleEditSaleConfirm = () => {
+  const handleEditSaleConfirm = async () => {
     if (editSaleIndex === null) return;
     
     const newAmount = parseInt(editAmount) || 0;
@@ -437,6 +465,12 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }
       return;
     }
 
+    // Validate new client name if creating
+    if (editCreateNewClient && !editNewClientName.trim()) {
+      toast({ title: "Nom du client requis", variant: "destructive" });
+      return;
+    }
+
     const updatedSales = [...parsedSales];
     const sale = updatedSales[editSaleIndex];
     
@@ -444,10 +478,20 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }
     const paid = editType === "cash" ? newAmount : Math.min(newPaid, newAmount);
     const remaining = editType === "credit" ? Math.max(0, newAmount - paid) : 0;
     
-    // Get client name if client changed
-    const clientName = editClientId 
-      ? clients.find(c => c.id === editClientId)?.name || null
-      : null;
+    let finalClientId: string | null = editClientId;
+    let finalClientName: string | null = null;
+    
+    // Create new client if switch is enabled
+    if (editCreateNewClient && editNewClientName.trim() && onCreateClient) {
+      const newClient = await onCreateClient(editNewClientName.trim());
+      if (newClient) {
+        finalClientId = newClient.id;
+        finalClientName = newClient.name;
+        toast({ title: `Client "${newClient.name}" créé` });
+      }
+    } else if (editClientId) {
+      finalClientName = clients.find(c => c.id === editClientId)?.name || null;
+    }
     
     updatedSales[editSaleIndex] = {
       ...sale,
@@ -455,12 +499,12 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }
       amount: newAmount,
       paid: paid,
       remaining: remaining,
-      resolved_client_id: editClientId,
-      resolved_client_name: clientName,
+      resolved_client_id: finalClientId,
+      resolved_client_name: finalClientName,
       client_match: {
         ...sale.client_match,
-        status: editClientId ? "found" : "not_found",
-        client_id: editClientId,
+        status: finalClientId ? "found" : "not_found",
+        client_id: finalClientId,
       }
     };
 
@@ -468,12 +512,22 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }
     setEditSaleIndex(null);
     setEditAmount("");
     setEditPaid("");
+    setEditCreateNewClient(false);
+    setEditNewClientName("");
+    setClientSearchQuery("");
     toast({ title: "Vente modifiée" });
   };
 
-  const deleteSale = (index: number) => {
-    const updatedSales = parsedSales.filter((_, i) => i !== index);
+  const confirmDeleteSale = (index: number) => {
+    setDeleteSaleIndex(index);
+  };
+  
+  const handleDeleteConfirm = () => {
+    if (deleteSaleIndex === null) return;
+    
+    const updatedSales = parsedSales.filter((_, i) => i !== deleteSaleIndex);
     setParsedSales(updatedSales);
+    setDeleteSaleIndex(null);
     
     if (updatedSales.length === 0) {
       setStep("record");
@@ -862,7 +916,7 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }
                       className="h-8 w-8 text-destructive hover:text-destructive"
                       onClick={(e) => {
                         e.stopPropagation();
-                        deleteSale(index);
+                        confirmDeleteSale(index);
                       }}
                     >
                       <Trash2 className="w-4 h-4" />
@@ -1077,42 +1131,97 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }
               )}
 
               {/* Client selection */}
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <Label>Client</Label>
-                <ScrollArea className="h-32 border rounded-lg">
-                  <div className="p-2 space-y-1">
-                    <button
-                      type="button"
-                      className={cn(
-                        "w-full text-left px-3 py-2 rounded-md text-sm transition-colors",
-                        editClientId === null ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
-                      )}
-                      onClick={() => setEditClientId(null)}
-                    >
-                      <span className="flex items-center gap-2">
-                        <X className="w-4 h-4" />
-                        Vente anonyme
-                      </span>
-                    </button>
-                    {clients.map((client) => (
-                      <button
-                        key={client.id}
-                        type="button"
-                        className={cn(
-                          "w-full text-left px-3 py-2 rounded-md text-sm transition-colors",
-                          editClientId === client.id ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
-                        )}
-                        onClick={() => setEditClientId(client.id)}
-                      >
-                        <span className="flex items-center gap-2">
-                          <User className="w-4 h-4" />
-                          {client.name}
-                          {client.phone && <span className="text-xs opacity-70">({client.phone})</span>}
-                        </span>
-                      </button>
-                    ))}
+                
+                {/* Create new client switch */}
+                {onCreateClient && (
+                  <div className="flex items-center justify-between p-3 border rounded-lg bg-secondary/30">
+                    <div className="flex items-center gap-2">
+                      <UserPlus className="w-4 h-4 text-primary" />
+                      <span className="text-sm font-medium">Créer un nouveau client</span>
+                    </div>
+                    <Switch
+                      checked={editCreateNewClient}
+                      onCheckedChange={(checked) => {
+                        setEditCreateNewClient(checked);
+                        if (checked) {
+                          setEditClientId(null);
+                        }
+                      }}
+                    />
                   </div>
-                </ScrollArea>
+                )}
+                
+                {/* New client name input */}
+                {editCreateNewClient && (
+                  <div className="space-y-2">
+                    <Input
+                      type="text"
+                      value={editNewClientName}
+                      onChange={(e) => setEditNewClientName(e.target.value)}
+                      placeholder="Nom du nouveau client"
+                      className="text-lg"
+                    />
+                  </div>
+                )}
+                
+                {/* Client search and list - only if not creating new */}
+                {!editCreateNewClient && (
+                  <>
+                    {/* Search bar */}
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        type="text"
+                        value={clientSearchQuery}
+                        onChange={(e) => setClientSearchQuery(e.target.value)}
+                        placeholder="Rechercher un client..."
+                        className="pl-10"
+                      />
+                    </div>
+                    
+                    <ScrollArea className="h-32 border rounded-lg">
+                      <div className="p-2 space-y-1">
+                        <button
+                          type="button"
+                          className={cn(
+                            "w-full text-left px-3 py-2 rounded-md text-sm transition-colors",
+                            editClientId === null && !editCreateNewClient ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
+                          )}
+                          onClick={() => setEditClientId(null)}
+                        >
+                          <span className="flex items-center gap-2">
+                            <X className="w-4 h-4" />
+                            Vente anonyme
+                          </span>
+                        </button>
+                        {filteredClients.map((client) => (
+                          <button
+                            key={client.id}
+                            type="button"
+                            className={cn(
+                              "w-full text-left px-3 py-2 rounded-md text-sm transition-colors",
+                              editClientId === client.id ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
+                            )}
+                            onClick={() => setEditClientId(client.id)}
+                          >
+                            <span className="flex items-center gap-2">
+                              <User className="w-4 h-4" />
+                              {client.name}
+                              {client.phone && <span className="text-xs opacity-70">({client.phone})</span>}
+                            </span>
+                          </button>
+                        ))}
+                        {filteredClients.length === 0 && clientSearchQuery && (
+                          <p className="text-sm text-muted-foreground text-center py-2">
+                            Aucun client trouvé
+                          </p>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </>
+                )}
               </div>
             </div>
 
@@ -1126,6 +1235,35 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient }
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteSaleIndex !== null} onOpenChange={(open) => !open && setDeleteSaleIndex(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Supprimer cette vente ?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {deleteSaleIndex !== null && parsedSales[deleteSaleIndex] && (
+                  <>
+                    Êtes-vous sûr de vouloir supprimer cette vente de{" "}
+                    <span className="font-semibold">
+                      {formatMoney(parsedSales[deleteSaleIndex].amount)} CFA
+                    </span>
+                    {parsedSales[deleteSaleIndex].resolved_client_name && (
+                      <> pour <span className="font-semibold">{parsedSales[deleteSaleIndex].resolved_client_name}</span></>
+                    )}
+                    {" "}?
+                  </>
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Annuler</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Supprimer
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     );
   }
