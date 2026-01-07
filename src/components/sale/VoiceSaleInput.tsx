@@ -114,7 +114,7 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient, 
   const [disambiguationSaleIndex, setDisambiguationSaleIndex] = useState<number | null>(null);
   const [selectedCandidate, setSelectedCandidate] = useState<string>(""); // "id" or "create" or "anonymous"
   
-  // Edit sale state (full edit: amount, type, client, paid)
+  // Edit sale state (full edit: amount, type, client, paid, products, note)
   const [editSaleIndex, setEditSaleIndex] = useState<number | null>(null);
   const [editAmount, setEditAmount] = useState("");
   const [editType, setEditType] = useState<"cash" | "credit">("cash");
@@ -123,6 +123,8 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient, 
   const [editCreateNewClient, setEditCreateNewClient] = useState(false);
   const [editNewClientName, setEditNewClientName] = useState("");
   const [clientSearchQuery, setClientSearchQuery] = useState("");
+  const [editProducts, setEditProducts] = useState<Array<{ name: string; quantity: number; unit_price: number }>>([]);
+  const [editNote, setEditNote] = useState("");
   
   // Voice search for client
   const [isVoiceSearching, setIsVoiceSearching] = useState(false);
@@ -485,6 +487,8 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient, 
     setEditClientId(sale.resolved_client_id || sale.client_match.client_id || null);
     setEditPaid(String(sale.paid));
     setClientSearchQuery("");
+    setEditProducts(sale.products ? [...sale.products] : []);
+    setEditNote(sale.note || "");
     
     // Pre-fill for new client creation if client was not found
     if (sale.client_match.status === "not_found" && sale.client_match.client_name && !sale.resolved_client_id) {
@@ -585,6 +589,8 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient, 
       remaining: remaining,
       resolved_client_id: finalClientId,
       resolved_client_name: finalClientName,
+      products: editProducts,
+      note: editNote || null,
       client_match: {
         ...sale.client_match,
         status: finalClientId ? "found" : "not_found",
@@ -599,6 +605,8 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient, 
     setEditCreateNewClient(false);
     setEditNewClientName("");
     setClientSearchQuery("");
+    setEditProducts([]);
+    setEditNote("");
     toast({ title: "Vente modifiée" });
   };
 
@@ -674,20 +682,41 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient, 
   };
 
   const handleConfirmAll = async () => {
-    if (!allSalesReady()) {
-      toast({
-        title: "Ventes incomplètes",
-        description: "Résolvez tous les clients avant de confirmer",
-        variant: "destructive"
-      });
-      return;
-    }
-
     setStep("saving");
     setIsSubmitting(true);
 
     try {
-      for (const sale of parsedSales) {
+      // First, auto-create clients for all sales with "not_found" status that have a client name
+      const updatedSales = [...parsedSales];
+      
+      for (let i = 0; i < updatedSales.length; i++) {
+        const sale = updatedSales[i];
+        
+        // Auto-create client if: not_found status, has a name, and not already resolved
+        if (
+          sale.client_match.status === "not_found" &&
+          sale.client_match.client_name &&
+          !sale.resolved_client_id &&
+          onCreateClient
+        ) {
+          const newClient = await onCreateClient(sale.client_match.client_name);
+          if (newClient) {
+            updatedSales[i] = {
+              ...sale,
+              resolved_client_id: newClient.id,
+              resolved_client_name: newClient.name,
+              client_match: {
+                ...sale.client_match,
+                status: "found",
+                client_id: newClient.id,
+              }
+            };
+          }
+        }
+      }
+      
+      // Now save all sales
+      for (const sale of updatedSales) {
         await onComplete({
           type: sale.type,
           amount: sale.amount,
@@ -698,7 +727,7 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient, 
       
       toast({
         title: "Ventes enregistrées",
-        description: `${parsedSales.length} vente${parsedSales.length > 1 ? 's' : ''} ajoutée${parsedSales.length > 1 ? 's' : ''}`
+        description: `${updatedSales.length} vente${updatedSales.length > 1 ? 's' : ''} ajoutée${updatedSales.length > 1 ? 's' : ''}`
       });
       
       // Call onFinish to close and redirect
@@ -1055,7 +1084,7 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient, 
           </Button>
           <Button 
             onClick={handleConfirmAll} 
-            disabled={isSubmitting || !allSalesReady()}
+            disabled={isSubmitting}
             className="bg-success hover:bg-success/90"
           >
             {isSubmitting ? (
@@ -1160,6 +1189,72 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient, 
                     Crédit
                   </Button>
                 </div>
+              </div>
+
+              {/* Products */}
+              {editProducts.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Produits détectés</Label>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {editProducts.map((product, idx) => (
+                      <div key={idx} className="p-3 border rounded-lg bg-secondary/30 space-y-2">
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Nom du produit</Label>
+                          <Input
+                            value={product.name}
+                            onChange={(e) => {
+                              const updated = [...editProducts];
+                              updated[idx] = { ...updated[idx], name: e.target.value };
+                              setEditProducts(updated);
+                            }}
+                            placeholder="Nom du produit"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">Quantité</Label>
+                            <Input
+                              type="number"
+                              value={product.quantity}
+                              onChange={(e) => {
+                                const updated = [...editProducts];
+                                updated[idx] = { ...updated[idx], quantity: parseInt(e.target.value) || 0 };
+                                setEditProducts(updated);
+                              }}
+                              min={1}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">Prix unit.</Label>
+                            <Input
+                              type="number"
+                              value={product.unit_price}
+                              onChange={(e) => {
+                                const updated = [...editProducts];
+                                updated[idx] = { ...updated[idx], unit_price: parseInt(e.target.value) || 0 };
+                                setEditProducts(updated);
+                              }}
+                            />
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground text-right">
+                          = {formatMoney(product.quantity * product.unit_price)} CFA
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Note */}
+              <div className="space-y-2">
+                <Label htmlFor="edit-note">Note / Description</Label>
+                <Input
+                  id="edit-note"
+                  value={editNote}
+                  onChange={(e) => setEditNote(e.target.value)}
+                  placeholder="Note optionnelle..."
+                />
               </div>
 
               {/* Amount */}
