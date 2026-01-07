@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 interface WhatsAppShareProps {
-  type: "debt" | "sales";
+  type: "debt" | "sales" | "reminder";
   data: {
     clientName?: string;
     clientPhone?: string;
@@ -13,28 +13,57 @@ interface WhatsAppShareProps {
     creditSales?: number;
     date?: string;
     shopName?: string;
+    daysOverdue?: number;
   };
-  variant?: "default" | "outline" | "secondary" | "ghost";
+  variant?: "default" | "outline" | "secondary" | "ghost" | "destructive";
   size?: "default" | "sm" | "lg" | "icon";
   className?: string;
+  iconOnly?: boolean;
 }
 
-export function WhatsAppShare({ type, data, variant = "outline", size = "sm", className }: WhatsAppShareProps) {
+export function WhatsAppShare({ 
+  type, 
+  data, 
+  variant = "outline", 
+  size = "sm", 
+  className,
+  iconOnly = false
+}: WhatsAppShareProps) {
   const formatMoney = (amount: number) => {
     return new Intl.NumberFormat("fr-FR").format(amount);
   };
 
   const generateDebtMessage = () => {
-    const { clientName, amount, shopName = "CAISSE+" } = data;
+    const { clientName, amount, shopName = "CAISSE+", daysOverdue } = data;
+    
+    let urgencyText = "";
+    if (daysOverdue && daysOverdue >= 30) {
+      urgencyText = "\n\n⚠️ Ce crédit date de plus d'un mois.";
+    } else if (daysOverdue && daysOverdue >= 7) {
+      urgencyText = "\n\n📅 Ce crédit date de plus d'une semaine.";
+    }
+    
     return `Bonjour ${clientName} 👋
 
 Ceci est un rappel amical de ${shopName}.
 
-💰 Montant dû: ${formatMoney(amount || 0)} CFA
+💰 Montant dû: ${formatMoney(amount || 0)} CFA${urgencyText}
 
 Merci de régulariser votre situation dès que possible.
 
 Cordialement,
+${shopName}`;
+  };
+
+  const generateReminderMessage = () => {
+    const { clientName, amount, shopName = "CAISSE+" } = data;
+    return `Bonjour ${clientName} 👋
+
+Juste un petit rappel de ${shopName} concernant votre solde de ${formatMoney(amount || 0)} CFA.
+
+Passez nous voir quand vous pouvez ! 🙏
+
+Merci,
 ${shopName}`;
   };
 
@@ -53,17 +82,27 @@ ${shopName}`;
 Généré par CAISSE+`;
   };
 
-  const handleShare = () => {
-    const message = type === "debt" ? generateDebtMessage() : generateSalesMessage();
+  const handleShare = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click
+    
+    let message: string;
+    if (type === "reminder") {
+      message = generateReminderMessage();
+    } else if (type === "debt") {
+      message = generateDebtMessage();
+    } else {
+      message = generateSalesMessage();
+    }
+    
     const encodedMessage = encodeURIComponent(message);
     
     let phoneNumber = "";
-    if (type === "debt" && data.clientPhone) {
+    if ((type === "debt" || type === "reminder") && data.clientPhone) {
       // Clean phone number (remove spaces, dashes)
       phoneNumber = data.clientPhone.replace(/[\s-]/g, "");
       // Add country code if not present
       if (!phoneNumber.startsWith("+")) {
-        phoneNumber = "+221" + phoneNumber; // Default to Senegal
+        phoneNumber = "+228" + phoneNumber; // Default to Togo
       }
     }
 
@@ -75,6 +114,19 @@ Généré par CAISSE+`;
     toast.success("Ouverture de WhatsApp...");
   };
 
+  if (iconOnly) {
+    return (
+      <Button
+        variant={variant}
+        size="icon"
+        onClick={handleShare}
+        className={className}
+      >
+        <MessageCircle className="w-4 h-4" />
+      </Button>
+    );
+  }
+
   return (
     <Button
       variant={variant}
@@ -83,7 +135,7 @@ Généré par CAISSE+`;
       className={className}
     >
       <MessageCircle className="w-4 h-4 mr-2" />
-      WhatsApp
+      Rappeler
     </Button>
   );
 }
