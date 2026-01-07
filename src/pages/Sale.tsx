@@ -2,10 +2,11 @@ import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Check, User, MessageSquare } from "lucide-react";
+import { ArrowLeft, Check, User, MessageSquare, Mic } from "lucide-react";
 import { toast } from "sonner";
 import { useClients } from "@/hooks/use-clients";
 import { useSales } from "@/hooks/use-sales";
+import { VoiceSaleInput } from "@/components/sale/VoiceSaleInput";
 
 const Sale = () => {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ const Sale = () => {
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showVoiceInput, setShowVoiceInput] = useState(false);
 
   const selectedClientName = useMemo(
     () => clients.find((c) => c.id === selectedClient)?.name,
@@ -79,7 +81,50 @@ const Sale = () => {
     }
   };
 
+  const handleVoiceSaleComplete = async (saleData: {
+    type: "cash" | "credit";
+    amount: number;
+    note?: string;
+    client_id?: string;
+  }) => {
+    const created = await addSale(saleData);
+    if (created) {
+      setShowSuccess(true);
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 1000);
+    }
+  };
+
   const quickAmounts = [1000, 2000, 5000, 10000, 25000, 50000];
+
+  // Voice input mode
+  if (showVoiceInput) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className={`${isCash ? "gradient-cash" : "gradient-credit"} px-4 py-4 text-primary-foreground`}>
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-primary-foreground hover:bg-primary-foreground/10"
+              onClick={() => setShowVoiceInput(false)}
+            >
+              <ArrowLeft className="w-6 h-6" />
+            </Button>
+            <h1 className="text-xl font-bold">
+              {isCash ? "Vente Cash" : "Vente Crédit"} - Dictée
+            </h1>
+          </div>
+        </div>
+        <VoiceSaleInput
+          clients={clients}
+          onComplete={handleVoiceSaleComplete}
+          onCancel={() => setShowVoiceInput(false)}
+        />
+      </div>
+    );
+  }
 
   if (showSuccess) {
     return (
@@ -104,18 +149,30 @@ const Sale = () => {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <div className={`${isCash ? "gradient-cash" : "gradient-credit"} px-4 py-4 text-primary-foreground`}>
-        <div className="flex items-center gap-4 mb-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-primary-foreground hover:bg-primary-foreground/10"
+              onClick={() => navigate(-1)}
+            >
+              <ArrowLeft className="w-6 h-6" />
+            </Button>
+            <h1 className="text-xl font-bold">
+              {isCash ? "Vente Cash" : "Vente Crédit"}
+            </h1>
+          </div>
+          
+          {/* Voice button */}
           <Button
             variant="ghost"
             size="icon"
             className="text-primary-foreground hover:bg-primary-foreground/10"
-            onClick={() => navigate(-1)}
+            onClick={() => setShowVoiceInput(true)}
           >
-            <ArrowLeft className="w-6 h-6" />
+            <Mic className="w-6 h-6" />
           </Button>
-          <h1 className="text-xl font-bold">
-            {isCash ? "Vente Cash" : "Vente Crédit"}
-          </h1>
         </div>
 
         {/* Amount Display */}
