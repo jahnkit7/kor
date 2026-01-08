@@ -57,12 +57,19 @@ export function useMerchantProfile() {
     try {
       const { data, error } = await supabase
         .from("merchant_profiles")
-        .select("*")
+        .select(`
+          *,
+          profiles:user_id (
+            shop_name,
+            owner_name,
+            phone
+          )
+        `)
         .eq("user_id", user.id)
         .maybeSingle();
 
       if (error) throw error;
-      setProfile(data);
+      setProfile(data as unknown as MerchantProfile);
     } catch (error) {
       console.error("Error fetching merchant profile:", error);
     } finally {

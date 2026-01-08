@@ -153,6 +153,54 @@ export type Database = {
           },
         ]
       }
+      merchant_offers: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          expires_at: string | null
+          id: string
+          is_promo: boolean | null
+          price: number | null
+          product_name: string
+          promo_label: string | null
+          quantity: number | null
+          status: string | null
+          unit: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_promo?: boolean | null
+          price?: number | null
+          product_name: string
+          promo_label?: string | null
+          quantity?: number | null
+          status?: string | null
+          unit?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_promo?: boolean | null
+          price?: number | null
+          product_name?: string
+          promo_label?: string | null
+          quantity?: number | null
+          status?: string | null
+          unit?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       merchant_profiles: {
         Row: {
           created_at: string
