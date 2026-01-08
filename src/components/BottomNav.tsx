@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, CreditCard, Users, BarChart3, Settings } from "lucide-react";
+import { Home, CreditCard, Users, Radio, Settings } from "lucide-react";
 import { usePermissions } from "@/hooks/use-role";
 
 const BottomNav = () => {
@@ -10,8 +10,8 @@ const BottomNav = () => {
   const navItems = [
     { icon: Home, label: "Accueil", path: "/dashboard", show: true },
     { icon: CreditCard, label: "Dettes", path: "/debts", show: true },
+    { icon: Radio, label: "Réseau", path: "/network", show: true },
     { icon: Users, label: "Clients", path: "/clients", show: true },
-    { icon: BarChart3, label: "Rapports", path: "/reports", show: canViewReports },
     { icon: Settings, label: "Réglages", path: "/settings", show: true },
   ];
 

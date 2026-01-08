@@ -10,6 +10,7 @@ import {
   BarChart3,
   Users,
   ArrowUpRight,
+  Radio,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { RoleBadge } from "@/components/RoleBadge";
@@ -168,21 +169,35 @@ const ModernDashboard = ({
           </Button>
         </div>
 
-        {/* Clients Quick Access */}
-        <div 
-          className="mt-4 bg-secondary rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:bg-secondary/80 transition-colors"
-          onClick={() => navigate("/clients")}
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Users className="w-5 h-5 text-primary" />
+        {/* Network & Clients Quick Access */}
+        <div className="grid grid-cols-2 gap-3 mt-4">
+          <div 
+            className="bg-gradient-to-br from-[hsl(280_60%_55%)] to-[hsl(300_60%_45%)] rounded-2xl p-4 text-white cursor-pointer hover:opacity-95 transition-opacity"
+            onClick={() => navigate("/network")}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                <Radio className="w-5 h-5" />
+              </div>
+              <ArrowUpRight className="w-5 h-5 opacity-70" />
             </div>
-            <div>
-              <p className="font-semibold text-foreground">Gérer les clients</p>
-              <p className="text-xs text-muted-foreground">Voir tous les clients</p>
-            </div>
+            <p className="font-semibold text-sm">Réseau DÉKON</p>
+            <p className="text-xs opacity-70">Marchands & demandes</p>
           </div>
-          <ArrowUpRight className="w-5 h-5 text-muted-foreground" />
+
+          <div 
+            className="bg-secondary rounded-2xl p-4 cursor-pointer hover:bg-secondary/80 transition-colors"
+            onClick={() => navigate("/clients")}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Users className="w-5 h-5 text-primary" />
+              </div>
+              <ArrowUpRight className="w-5 h-5 text-muted-foreground" />
+            </div>
+            <p className="font-semibold text-foreground text-sm">Clients</p>
+            <p className="text-xs text-muted-foreground">Gérer les clients</p>
+          </div>
         </div>
 
         {/* Recent Activity - Modern List */}
