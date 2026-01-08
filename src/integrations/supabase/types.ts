@@ -123,6 +123,7 @@ export type Database = {
           location_lat: number | null
           location_lng: number | null
           location_name: string | null
+          market_address: string | null
           merchant_type: string
           specialties: string[] | null
           updated_at: string
@@ -135,6 +136,7 @@ export type Database = {
           location_lat?: number | null
           location_lng?: number | null
           location_name?: string | null
+          market_address?: string | null
           merchant_type?: string
           specialties?: string[] | null
           updated_at?: string
@@ -147,6 +149,7 @@ export type Database = {
           location_lat?: number | null
           location_lng?: number | null
           location_name?: string | null
+          market_address?: string | null
           merchant_type?: string
           specialties?: string[] | null
           updated_at?: string
@@ -464,6 +467,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_trust_score_data: { Args: { target_user_id: string }; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

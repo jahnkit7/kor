@@ -12,17 +12,17 @@ import {
   Package, 
   Plus, 
   Store,
-  Search,
-  Sparkles,
   ArrowLeft,
   Loader2,
-  Radio
+  Radio,
+  Map
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { MerchantProfileSetup } from "@/components/network/MerchantProfileSetup";
 import { MerchantCard } from "@/components/network/MerchantCard";
 import { RequestCard } from "@/components/network/RequestCard";
 import { NewRequestDialog } from "@/components/network/NewRequestDialog";
+import { MerchantsMap } from "@/components/network/MerchantsMap";
 import { useMerchantProfile, useMerchants } from "@/hooks/use-merchant-profile";
 import { useProductRequests } from "@/hooks/use-product-requests";
 import { useNavigate } from "react-router-dom";
@@ -32,6 +32,7 @@ const Network = () => {
   const [activeTab, setActiveTab] = useState("requests");
   const [showProfileSheet, setShowProfileSheet] = useState(false);
   const [showNewRequest, setShowNewRequest] = useState(false);
+  const [showMap, setShowMap] = useState(false);
 
   const { profile: myMerchantProfile, loading: profileLoading, hasProfile } = useMerchantProfile();
   const { merchants, loading: merchantsLoading } = useMerchants();
@@ -161,7 +162,23 @@ const Network = () => {
           )}
 
           {activeTab === "merchants" && (
-            <div className="space-y-3">
+            <div className="space-y-4">
+              {/* Map Toggle */}
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                  {showMap ? "Carte des marchands" : "Liste des marchands"}
+                </h2>
+                <Button
+                  size="sm"
+                  variant={showMap ? "default" : "outline"}
+                  onClick={() => setShowMap(!showMap)}
+                  className="rounded-xl h-8"
+                >
+                  <Map className="w-3.5 h-3.5 mr-1.5" />
+                  {showMap ? "Liste" : "Carte"}
+                </Button>
+              </div>
+
               {merchantsLoading ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="w-6 h-6 animate-spin text-primary" />
@@ -176,17 +193,21 @@ const Network = () => {
                     onClick={() => setShowProfileSheet(true)}
                     className="mt-4 rounded-xl"
                   >
-                    <Sparkles className="w-4 h-4 mr-2" />
+                    <Store className="w-4 h-4 mr-2" />
                     Être le premier
                   </Button>
                 </div>
+              ) : showMap ? (
+                <MerchantsMap merchants={merchants} />
               ) : (
-                merchants.map((merchant) => (
-                  <MerchantCard
-                    key={merchant.id}
-                    merchant={merchant}
-                  />
-                ))
+                <div className="space-y-3">
+                  {merchants.map((merchant) => (
+                    <MerchantCard
+                      key={merchant.id}
+                      merchant={merchant}
+                    />
+                  ))}
+                </div>
               )}
             </div>
           )}
@@ -207,11 +228,11 @@ const Network = () => {
 
         {/* Profile Sheet */}
         <Sheet open={showProfileSheet} onOpenChange={setShowProfileSheet}>
-          <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl">
+          <SheetContent side="bottom" className="h-[90vh] rounded-t-3xl overflow-y-auto">
             <SheetHeader className="sr-only">
               <SheetTitle>Profil marchand</SheetTitle>
             </SheetHeader>
-            <div className="pt-2 pb-8 overflow-y-auto h-full">
+            <div className="pt-2 pb-8">
               <MerchantProfileSetup onComplete={() => setShowProfileSheet(false)} />
             </div>
           </SheetContent>
