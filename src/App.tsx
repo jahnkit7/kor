@@ -22,6 +22,7 @@ import Stock from "./pages/Stock";
 import SalesHistory from "./pages/SalesHistory";
 import EmployeeManagement from "./pages/EmployeeManagement";
 import AcceptInvite from "./pages/AcceptInvite";
+import Network from "./pages/Network";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -135,6 +136,14 @@ const App = () => (
               element={
                 <RequireProfile>
                   <EmployeeManagement />
+                </RequireProfile>
+              }
+            />
+            <Route
+              path="/network"
+              element={
+                <RequireProfile>
+                  <Network />
                 </RequireProfile>
               }
             />
