@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +10,8 @@ import {
   Eye, 
   EyeOff,
   Loader2,
-  Sparkles
+  Sparkles,
+  Navigation
 } from "lucide-react";
 import { 
   useMerchantProfile, 
@@ -18,7 +19,9 @@ import {
   SPECIALTIES,
   type MerchantProfile 
 } from "@/hooks/use-merchant-profile";
+import { MarketAddressInput } from "./MarketAddressInput";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface MerchantProfileSetupProps {
   onComplete?: () => void;
@@ -27,21 +30,28 @@ interface MerchantProfileSetupProps {
 export function MerchantProfileSetup({ onComplete }: MerchantProfileSetupProps) {
   const { profile, loading, createOrUpdateProfile, hasProfile } = useMerchantProfile();
   const [saving, setSaving] = useState(false);
+  const [gettingLocation, setGettingLocation] = useState(false);
   
-  const [merchantType, setMerchantType] = useState(profile?.merchant_type || "détaillant");
-  const [specialties, setSpecialties] = useState<string[]>(profile?.specialties || []);
-  const [locationName, setLocationName] = useState(profile?.location_name || "");
-  const [isVisible, setIsVisible] = useState(profile?.is_visible ?? true);
+  const [merchantType, setMerchantType] = useState("détaillant");
+  const [specialties, setSpecialties] = useState<string[]>([]);
+  const [locationName, setLocationName] = useState("");
+  const [locationLat, setLocationLat] = useState<number | null>(null);
+  const [locationLng, setLocationLng] = useState<number | null>(null);
+  const [marketAddress, setMarketAddress] = useState("");
+  const [isVisible, setIsVisible] = useState(true);
 
   // Update state when profile loads
-  useState(() => {
+  useEffect(() => {
     if (profile) {
       setMerchantType(profile.merchant_type);
       setSpecialties(profile.specialties || []);
       setLocationName(profile.location_name || "");
+      setLocationLat(profile.location_lat);
+      setLocationLng(profile.location_lng);
+      setMarketAddress(profile.market_address || "");
       setIsVisible(profile.is_visible);
     }
-  });
+  }, [profile]);
 
   const toggleSpecialty = (specialty: string) => {
     setSpecialties(prev => 
@@ -51,12 +61,33 @@ export function MerchantProfileSetup({ onComplete }: MerchantProfileSetupProps) 
     );
   };
 
+  const getGPSLocation = () => {
+    setGettingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocationLat(position.coords.latitude);
+        setLocationLng(position.coords.longitude);
+        toast.success("Position GPS enregistrée !");
+        setGettingLocation(false);
+      },
+      (error) => {
+        console.error("Geolocation error:", error);
+        toast.error("Impossible d'obtenir votre position");
+        setGettingLocation(false);
+      },
+      { enableHighAccuracy: true }
+    );
+  };
+
   const handleSave = async () => {
     setSaving(true);
     const result = await createOrUpdateProfile({
       merchant_type: merchantType,
       specialties,
       location_name: locationName || null,
+      location_lat: locationLat,
+      location_lng: locationLng,
+      market_address: marketAddress || null,
       is_visible: isVisible,
     });
     setSaving(false);
@@ -98,7 +129,7 @@ export function MerchantProfileSetup({ onComplete }: MerchantProfileSetupProps) 
               key={type.value}
               onClick={() => setMerchantType(type.value)}
               className={cn(
-                "p-3 rounded-xl border-2 transition-all text-left",
+                "p-3 rounded-xl border-2 transition-all text-left relative",
                 merchantType === type.value
                   ? "border-primary bg-primary/5"
                   : "border-border bg-card hover:border-primary/50"
@@ -143,10 +174,10 @@ export function MerchantProfileSetup({ onComplete }: MerchantProfileSetupProps) 
         </div>
       </div>
 
-      {/* Location */}
+      {/* Location Name */}
       <div className="space-y-2">
         <Label htmlFor="location" className="text-sm font-semibold text-foreground">
-          Localisation
+          Quartier / Ville
         </Label>
         <div className="relative">
           <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -154,11 +185,45 @@ export function MerchantProfileSetup({ onComplete }: MerchantProfileSetupProps) 
             id="location"
             value={locationName}
             onChange={(e) => setLocationName(e.target.value)}
-            placeholder="Ex: Marché Dékon, Lomé"
+            placeholder="Ex: Lomé, Hédzranawoé"
             className="pl-10 h-12 rounded-xl"
           />
         </div>
       </div>
+
+      {/* GPS Location */}
+      <div className="space-y-2">
+        <Label className="text-sm font-semibold text-foreground">
+          Position GPS <span className="text-muted-foreground font-normal">(pour la carte)</span>
+        </Label>
+        <div className="flex items-center gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={getGPSLocation}
+            disabled={gettingLocation}
+            className="h-12 rounded-xl flex-1"
+          >
+            {gettingLocation ? (
+              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+            ) : (
+              <Navigation className="w-4 h-4 mr-2" />
+            )}
+            {locationLat ? "Mettre à jour ma position" : "Enregistrer ma position"}
+          </Button>
+        </div>
+        {locationLat && locationLng && (
+          <p className="text-xs text-primary font-medium">
+            ✓ Position enregistrée ({locationLat.toFixed(4)}, {locationLng.toFixed(4)})
+          </p>
+        )}
+      </div>
+
+      {/* Market Address */}
+      <MarketAddressInput 
+        value={marketAddress} 
+        onChange={setMarketAddress} 
+      />
 
       {/* Visibility Toggle */}
       <div className="flex items-center justify-between p-4 bg-secondary rounded-xl">

@@ -11,6 +11,7 @@ export interface MerchantProfile {
   location_name: string | null;
   location_lat: number | null;
   location_lng: number | null;
+  market_address: string | null;
   is_visible: boolean;
   created_at: string;
   updated_at: string;
