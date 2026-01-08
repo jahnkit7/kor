@@ -44,36 +44,31 @@ serve(async (req) => {
       );
     }
 
-    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
 
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
+    // Use getClaims instead of getUser for better compatibility with signing-keys
+    const { data: claimsData, error: authError } = await supabaseClient.auth.getClaims(token);
 
-    if (authError) {
-      console.error("analyze-stock-voice: Auth error:", authError.message, authError.status);
-      
-      // Distinguish between different auth errors
-      if (authError.message?.includes("expired") || authError.message?.includes("invalid")) {
-        return new Response(
-          JSON.stringify({ error: "Token expiré ou invalide. Veuillez vous reconnecter." }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      
+    if (authError || !claimsData?.claims) {
+      console.error("analyze-stock-voice: Auth error:", authError?.message || "No claims");
       return new Response(
-        JSON.stringify({ error: `Erreur d'authentification: ${authError.message}` }),
+        JSON.stringify({ error: "Token expiré ou invalide. Veuillez vous reconnecter." }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    if (!user) {
-      console.error("analyze-stock-voice: No user found for token");
+    const userId = claimsData.claims.sub;
+    if (!userId) {
+      console.error("analyze-stock-voice: No user ID in claims");
       return new Response(
         JSON.stringify({ error: "Utilisateur non trouvé. Veuillez vous reconnecter." }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log("analyze-stock-voice: User authenticated:", user.id);
+    console.log("analyze-stock-voice: User authenticated:", userId);
 
     const body = await req.json();
     const { transcript } = body;

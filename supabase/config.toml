@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.analyze-sale-voice]
 verify_jwt = false
+
+[functions.analyze-request-voice]
+verify_jwt = false
