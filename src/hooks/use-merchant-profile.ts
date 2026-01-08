@@ -15,6 +15,11 @@ export interface MerchantProfile {
   is_visible: boolean;
   created_at: string;
   updated_at: string;
+  profiles?: {
+    shop_name: string;
+    owner_name: string | null;
+    phone: string | null;
+  } | null;
 }
 
 export const MERCHANT_TYPES = [
@@ -132,12 +137,19 @@ export function useMerchants() {
     try {
       const { data, error } = await supabase
         .from("merchant_profiles")
-        .select("*")
+        .select(`
+          *,
+          profiles:user_id (
+            shop_name,
+            owner_name,
+            phone
+          )
+        `)
         .eq("is_visible", true)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setMerchants(data || []);
+      setMerchants((data as unknown as MerchantProfile[]) || []);
     } catch (error) {
       console.error("Error fetching merchants:", error);
     } finally {

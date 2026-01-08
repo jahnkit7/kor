@@ -115,6 +115,44 @@ export type Database = {
         }
         Relationships: []
       }
+      merchant_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_read: boolean
+          receiver_id: string
+          request_id: string | null
+          sender_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          receiver_id: string
+          request_id?: string | null
+          sender_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          receiver_id?: string
+          request_id?: string | null
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merchant_messages_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "product_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       merchant_profiles: {
         Row: {
           created_at: string

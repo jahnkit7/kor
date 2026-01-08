@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
@@ -15,7 +15,8 @@ import {
   ArrowLeft,
   Loader2,
   Radio,
-  Map
+  Map,
+  MessageCircle
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { MerchantProfileSetup } from "@/components/network/MerchantProfileSetup";
@@ -23,9 +24,13 @@ import { MerchantCard } from "@/components/network/MerchantCard";
 import { RequestCard } from "@/components/network/RequestCard";
 import { NewRequestDialog } from "@/components/network/NewRequestDialog";
 import { MerchantsMap } from "@/components/network/MerchantsMap";
+import { MerchantFilters, type MerchantFiltersState } from "@/components/network/MerchantFilters";
+import { MerchantChat } from "@/components/network/MerchantChat";
 import { useMerchantProfile, useMerchants } from "@/hooks/use-merchant-profile";
 import { useProductRequests } from "@/hooks/use-product-requests";
+import { useMerchantMessages } from "@/hooks/use-merchant-messages";
 import { useNavigate } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
 
 const Network = () => {
   const navigate = useNavigate();
@@ -33,10 +38,81 @@ const Network = () => {
   const [showProfileSheet, setShowProfileSheet] = useState(false);
   const [showNewRequest, setShowNewRequest] = useState(false);
   const [showMap, setShowMap] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+  const [chatPartner, setChatPartner] = useState<{ id: string; name: string; requestId?: string; requestName?: string } | null>(null);
+  const [filters, setFilters] = useState<MerchantFiltersState>({
+    search: "",
+    specialty: null,
+    merchantType: null,
+    location: null,
+  });
 
   const { profile: myMerchantProfile, loading: profileLoading, hasProfile } = useMerchantProfile();
   const { merchants, loading: merchantsLoading } = useMerchants();
   const { requests, myRequests, loading: requestsLoading, fulfillRequest, cancelRequest } = useProductRequests();
+  const { conversations } = useMerchantMessages();
+
+  // Extract unique locations for filter
+  const locations = useMemo(() => {
+    const locs = new Set<string>();
+    merchants.forEach((m) => {
+      if (m.location_name) locs.add(m.location_name);
+      if (m.market_address) locs.add(m.market_address);
+    });
+    return Array.from(locs).filter(Boolean);
+  }, [merchants]);
+
+  // Filter merchants
+  const filteredMerchants = useMemo(() => {
+    return merchants.filter((m) => {
+      // Search filter
+      if (filters.search) {
+        const search = filters.search.toLowerCase();
+        const matchesSearch =
+          m.profiles?.shop_name?.toLowerCase().includes(search) ||
+          m.profiles?.owner_name?.toLowerCase().includes(search) ||
+          m.specialties?.some((s) => s.toLowerCase().includes(search)) ||
+          m.location_name?.toLowerCase().includes(search) ||
+          m.market_address?.toLowerCase().includes(search);
+        if (!matchesSearch) return false;
+      }
+
+      // Type filter
+      if (filters.merchantType && m.merchant_type !== filters.merchantType) {
+        return false;
+      }
+
+      // Specialty filter
+      if (filters.specialty && !m.specialties?.includes(filters.specialty)) {
+        return false;
+      }
+
+      // Location filter
+      if (filters.location) {
+        const matchesLocation =
+          m.location_name === filters.location ||
+          m.market_address === filters.location;
+        if (!matchesLocation) return false;
+      }
+
+      return true;
+    });
+  }, [merchants, filters]);
+
+  // Count unread messages
+  const unreadCount = useMemo(() => {
+    return conversations.reduce((sum, c) => sum + c.unreadCount, 0);
+  }, [conversations]);
+
+  const handleContact = (request: typeof requests[0]) => {
+    setChatPartner({
+      id: request.user_id,
+      name: "Marchand", // Will be fetched in chat
+      requestId: request.id,
+      requestName: request.product_name,
+    });
+    setShowChat(true);
+  };
 
   const handleFulfill = async (requestId: string) => {
     await fulfillRequest(requestId);
@@ -69,15 +145,31 @@ const Network = () => {
                 </div>
               </div>
               
-              <Button
-                size="sm"
-                variant={hasProfile ? "outline" : "default"}
-                onClick={() => setShowProfileSheet(true)}
-                className="rounded-xl h-9"
-              >
-                <Store className="w-4 h-4 mr-1.5" />
-                {hasProfile ? "Mon profil" : "Rejoindre"}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowChat(true)}
+                  className="rounded-xl h-9 relative"
+                >
+                  <MessageCircle className="w-4 h-4 mr-1.5" />
+                  Messages
+                  {unreadCount > 0 && (
+                    <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                      {unreadCount}
+                    </Badge>
+                  )}
+                </Button>
+                <Button
+                  size="sm"
+                  variant={hasProfile ? "outline" : "default"}
+                  onClick={() => setShowProfileSheet(true)}
+                  className="rounded-xl h-9"
+                >
+                  <Store className="w-4 h-4 mr-1.5" />
+                  {hasProfile ? "Profil" : "Rejoindre"}
+                </Button>
+              </div>
             </div>
 
             {/* Tabs */}
@@ -150,9 +242,7 @@ const Network = () => {
                         key={req.id}
                         request={req}
                         onFulfill={() => handleFulfill(req.id)}
-                        onContact={() => {
-                          // TODO: Implement contact
-                        }}
+                        onContact={() => handleContact(req)}
                       />
                     ))}
                   </div>
@@ -163,10 +253,17 @@ const Network = () => {
 
           {activeTab === "merchants" && (
             <div className="space-y-4">
+              {/* Filters */}
+              <MerchantFilters
+                filters={filters}
+                onFiltersChange={setFilters}
+                locations={locations}
+              />
+
               {/* Map Toggle */}
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                  {showMap ? "Carte des marchands" : "Liste des marchands"}
+                  {showMap ? "Carte" : "Liste"} ({filteredMerchants.length})
                 </h2>
                 <Button
                   size="sm"
@@ -183,28 +280,41 @@ const Network = () => {
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="w-6 h-6 animate-spin text-primary" />
                 </div>
-              ) : merchants.length === 0 ? (
+              ) : filteredMerchants.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="w-16 h-16 rounded-2xl bg-secondary mx-auto flex items-center justify-center mb-4">
                     <Users className="w-8 h-8 text-muted-foreground" />
                   </div>
-                  <p className="text-muted-foreground">Aucun marchand inscrit</p>
-                  <Button
-                    onClick={() => setShowProfileSheet(true)}
-                    className="mt-4 rounded-xl"
-                  >
-                    <Store className="w-4 h-4 mr-2" />
-                    Être le premier
-                  </Button>
+                  {merchants.length === 0 ? (
+                    <>
+                      <p className="text-muted-foreground">Aucun marchand inscrit</p>
+                      <Button
+                        onClick={() => setShowProfileSheet(true)}
+                        className="mt-4 rounded-xl"
+                      >
+                        <Store className="w-4 h-4 mr-2" />
+                        Être le premier
+                      </Button>
+                    </>
+                  ) : (
+                    <p className="text-muted-foreground">Aucun résultat pour ces filtres</p>
+                  )}
                 </div>
               ) : showMap ? (
-                <MerchantsMap merchants={merchants} />
+                <MerchantsMap merchants={filteredMerchants} />
               ) : (
                 <div className="space-y-3">
-                  {merchants.map((merchant) => (
+                  {filteredMerchants.map((merchant) => (
                     <MerchantCard
                       key={merchant.id}
                       merchant={merchant}
+                      onContact={() => {
+                        setChatPartner({
+                          id: merchant.user_id,
+                          name: merchant.profiles?.shop_name || "Marchand",
+                        });
+                        setShowChat(true);
+                      }}
                     />
                   ))}
                 </div>
@@ -242,6 +352,16 @@ const Network = () => {
         <NewRequestDialog 
           open={showNewRequest} 
           onOpenChange={setShowNewRequest} 
+        />
+
+        {/* Chat */}
+        <MerchantChat
+          open={showChat}
+          onOpenChange={setShowChat}
+          initialPartnerId={chatPartner?.id}
+          initialPartnerName={chatPartner?.name}
+          requestId={chatPartner?.requestId}
+          requestName={chatPartner?.requestName}
         />
       </div>
     </AppLayout>

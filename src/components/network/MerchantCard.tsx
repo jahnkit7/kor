@@ -1,10 +1,12 @@
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { 
   MapPin, 
   Store,
   ChevronRight,
   Building2,
-  Copy
+  Copy,
+  MessageCircle
 } from "lucide-react";
 import { 
   type MerchantProfile, 
@@ -18,9 +20,10 @@ import { toast } from "sonner";
 interface MerchantCardProps {
   merchant: MerchantProfile;
   onClick?: () => void;
+  onContact?: () => void;
 }
 
-export function MerchantCard({ merchant, onClick }: MerchantCardProps) {
+export function MerchantCard({ merchant, onClick, onContact }: MerchantCardProps) {
   const merchantType = MERCHANT_TYPES.find(t => t.value === merchant.merchant_type);
   
   const specialtyLabels = merchant.specialties
@@ -88,7 +91,7 @@ export function MerchantCard({ merchant, onClick }: MerchantCardProps) {
 
       {/* Specialties */}
       {specialtyLabels.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1.5 mb-3">
           {specialtyLabels.map((specialty) => (
             <div
               key={specialty!.value}
@@ -104,6 +107,22 @@ export function MerchantCard({ merchant, onClick }: MerchantCardProps) {
             </div>
           )}
         </div>
+      )}
+
+      {/* Contact Button */}
+      {onContact && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            onContact();
+          }}
+          className="w-full rounded-xl text-xs h-9"
+        >
+          <MessageCircle className="w-3.5 h-3.5 mr-1.5" />
+          Contacter
+        </Button>
       )}
     </div>
   );
