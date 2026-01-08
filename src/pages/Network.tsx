@@ -14,22 +14,25 @@ import {
   Store,
   ArrowLeft,
   Loader2,
-  Radio,
   Map,
   MessageCircle,
   RefreshCw,
-  Sparkles
+  Tag
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { MerchantProfileSetup } from "@/components/network/MerchantProfileSetup";
 import { MerchantCard } from "@/components/network/MerchantCard";
 import { RequestCard } from "@/components/network/RequestCard";
+import { OfferCard } from "@/components/network/OfferCard";
 import { NewRequestDialog } from "@/components/network/NewRequestDialog";
+import { NewOfferDialog } from "@/components/network/NewOfferDialog";
 import { MerchantsMap } from "@/components/network/MerchantsMap";
 import { MerchantFilters, type MerchantFiltersState } from "@/components/network/MerchantFilters";
 import { MerchantChat } from "@/components/network/MerchantChat";
+import { MyActivity } from "@/components/network/MyActivity";
 import { useMerchantProfile, useMerchants } from "@/hooks/use-merchant-profile";
 import { useProductRequests } from "@/hooks/use-product-requests";
+import { useMerchantOffers } from "@/hooks/use-merchant-offers";
 import { useMerchantMessages } from "@/hooks/use-merchant-messages";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +44,7 @@ const Network = () => {
   const [activeTab, setActiveTab] = useState("requests");
   const [showProfileSheet, setShowProfileSheet] = useState(false);
   const [showNewRequest, setShowNewRequest] = useState(false);
+  const [showNewOffer, setShowNewOffer] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -55,6 +59,7 @@ const Network = () => {
   const { profile: myMerchantProfile, loading: profileLoading, hasProfile } = useMerchantProfile();
   const { merchants, loading: merchantsLoading, refetch: refetchMerchants } = useMerchants();
   const { requests, myRequests, loading: requestsLoading, fulfillRequest, cancelRequest, refetch: refetchRequests } = useProductRequests();
+  const { offers, myOffers, loading: offersLoading, cancelOffer, markAsSold, refetch: refetchOffers } = useMerchantOffers();
   const { conversations } = useMerchantMessages();
 
   // Extract unique locations for filter
@@ -112,6 +117,7 @@ const Network = () => {
       await Promise.all([
         refetchRequests(),
         refetchMerchants(),
+        refetchOffers(),
       ]);
       toast.success("Données actualisées");
     } catch (error) {
@@ -121,12 +127,12 @@ const Network = () => {
     }
   };
 
-  const handleContact = (request: typeof requests[0]) => {
+  const handleContact = (userId: string, name: string, requestId?: string, productName?: string) => {
     setChatPartner({
-      id: request.user_id,
-      name: "Marchand",
-      requestId: request.id,
-      requestName: request.product_name,
+      id: userId,
+      name,
+      requestId,
+      requestName: productName,
     });
     setShowChat(true);
   };
@@ -155,14 +161,13 @@ const Network = () => {
                   <ArrowLeft className="w-4 h-4" />
                 </button>
                 <div className="min-w-0">
-                  <h1 className="text-lg font-bold text-foreground flex items-center gap-1.5 truncate">
-                    <Radio className="w-4 h-4 text-primary flex-shrink-0" />
-                    <span className="truncate">Réseau</span>
+                  <h1 className="text-lg font-bold text-foreground truncate">
+                    Réseau DÉKON
                   </h1>
                 </div>
               </div>
               
-              {/* Action buttons - icons only on mobile */}
+              {/* Action buttons */}
               <div className="flex items-center gap-1.5 flex-shrink-0">
                 <Button
                   size="icon"
@@ -200,22 +205,29 @@ const Network = () => {
               </div>
             </div>
 
-            {/* Tabs */}
+            {/* Tabs - 3 onglets */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="w-full h-10 p-1 bg-secondary rounded-xl">
                 <TabsTrigger 
                   value="requests" 
-                  className="flex-1 rounded-lg text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                  className="flex-1 rounded-lg text-xs sm:text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm"
                 >
-                  <Package className="w-4 h-4 mr-1.5" />
-                  Demandes
+                  <Package className="w-4 h-4 sm:mr-1.5" />
+                  <span className="hidden sm:inline">Demandes</span>
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="offers" 
+                  className="flex-1 rounded-lg text-xs sm:text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                >
+                  <Tag className="w-4 h-4 sm:mr-1.5" />
+                  <span className="hidden sm:inline">Offres</span>
                 </TabsTrigger>
                 <TabsTrigger 
                   value="merchants" 
-                  className="flex-1 rounded-lg text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                  className="flex-1 rounded-lg text-xs sm:text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm"
                 >
-                  <Users className="w-4 h-4 mr-1.5" />
-                  Marchands
+                  <Users className="w-4 h-4 sm:mr-1.5" />
+                  <span className="hidden sm:inline">Marchands</span>
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -224,13 +236,28 @@ const Network = () => {
 
         {/* Content */}
         <div className="px-4 py-4">
+          {/* My Activity Section (if has profile) */}
+          {hasProfile && myMerchantProfile && (
+            <MyActivity
+              profile={myMerchantProfile.profiles || null}
+              myRequests={myRequests}
+              myOffers={myOffers}
+              unreadMessages={unreadCount}
+              onViewRequests={() => setActiveTab("requests")}
+              onViewOffers={() => setActiveTab("offers")}
+              onViewMessages={() => setShowChat(true)}
+              onOpenProfile={() => setShowProfileSheet(true)}
+            />
+          )}
+
+          {/* DEMANDES TAB */}
           {activeTab === "requests" && (
             <div className="space-y-5">
               {/* My Requests Section */}
               {myRequests.length > 0 && (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-primary" />
+                    <Package className="w-4 h-4 text-primary" />
                     <h2 className="text-sm font-semibold text-foreground">
                       Mes demandes
                     </h2>
@@ -254,7 +281,7 @@ const Network = () => {
               {/* Network Requests */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <Radio className="w-4 h-4 text-muted-foreground" />
+                  <Package className="w-4 h-4 text-muted-foreground" />
                   <h2 className="text-sm font-semibold text-foreground">
                     Demandes du réseau
                   </h2>
@@ -265,19 +292,16 @@ const Network = () => {
                 
                 {requestsLoading ? (
                   <div className="flex items-center justify-center py-16">
-                    <div className="text-center">
-                      <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
-                      <p className="text-sm text-muted-foreground mt-3">Chargement...</p>
-                    </div>
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
                   </div>
                 ) : requests.length === 0 ? (
-                  <div className="text-center py-16">
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/10 to-accent/10 mx-auto flex items-center justify-center mb-4">
-                      <Package className="w-8 h-8 text-primary" />
+                  <div className="text-center py-12">
+                    <div className="w-14 h-14 rounded-2xl bg-primary/10 mx-auto flex items-center justify-center mb-4">
+                      <Package className="w-7 h-7 text-primary" />
                     </div>
                     <p className="font-medium text-foreground">Aucune demande</p>
                     <p className="text-sm text-muted-foreground mt-1 max-w-[200px] mx-auto">
-                      Soyez le premier à publier une demande de produit !
+                      Publiez votre recherche de produit !
                     </p>
                     <Button
                       onClick={() => setShowNewRequest(true)}
@@ -293,8 +317,7 @@ const Network = () => {
                       <RequestCard
                         key={req.id}
                         request={req}
-                        onFulfill={() => handleFulfill(req.id)}
-                        onContact={() => handleContact(req)}
+                        onContact={() => handleContact(req.user_id, "Marchand", req.id, req.product_name)}
                       />
                     ))}
                   </div>
@@ -303,6 +326,87 @@ const Network = () => {
             </div>
           )}
 
+          {/* OFFRES TAB */}
+          {activeTab === "offers" && (
+            <div className="space-y-5">
+              {/* My Offers Section */}
+              {myOffers.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Tag className="w-4 h-4 text-accent" />
+                    <h2 className="text-sm font-semibold text-foreground">
+                      Mes offres
+                    </h2>
+                    <Badge variant="secondary" className="text-xs">
+                      {myOffers.length}
+                    </Badge>
+                  </div>
+                  <div className="space-y-2">
+                    {myOffers.map((offer) => (
+                      <OfferCard
+                        key={offer.id}
+                        offer={offer}
+                        isOwn
+                        onCancel={() => cancelOffer(offer.id)}
+                        onMarkSold={() => markAsSold(offer.id)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Network Offers */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Tag className="w-4 h-4 text-muted-foreground" />
+                  <h2 className="text-sm font-semibold text-foreground">
+                    Offres du réseau
+                  </h2>
+                  <Badge variant="outline" className="text-xs">
+                    {offers.length}
+                  </Badge>
+                </div>
+                
+                {offersLoading ? (
+                  <div className="flex items-center justify-center py-16">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  </div>
+                ) : offers.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="w-14 h-14 rounded-2xl bg-accent/10 mx-auto flex items-center justify-center mb-4">
+                      <Tag className="w-7 h-7 text-accent" />
+                    </div>
+                    <p className="font-medium text-foreground">Aucune offre</p>
+                    <p className="text-sm text-muted-foreground mt-1 max-w-[200px] mx-auto">
+                      Proposez vos produits disponibles !
+                    </p>
+                    <Button
+                      onClick={() => setShowNewOffer(true)}
+                      className="mt-4 rounded-xl"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Nouvelle offre
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {offers.map((offer) => (
+                      <OfferCard
+                        key={offer.id}
+                        offer={offer}
+                        onContact={() => handleContact(
+                          offer.user_id, 
+                          offer.profiles?.shop_name || "Marchand"
+                        )}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* MARCHANDS TAB */}
           {activeTab === "merchants" && (
             <div className="space-y-4">
               {/* Filters */}
@@ -330,21 +434,18 @@ const Network = () => {
 
               {merchantsLoading ? (
                 <div className="flex items-center justify-center py-16">
-                  <div className="text-center">
-                    <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
-                    <p className="text-sm text-muted-foreground mt-3">Chargement...</p>
-                  </div>
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
                 </div>
               ) : filteredMerchants.length === 0 ? (
-                <div className="text-center py-16">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/10 to-accent/10 mx-auto flex items-center justify-center mb-4">
-                    <Users className="w-8 h-8 text-primary" />
+                <div className="text-center py-12">
+                  <div className="w-14 h-14 rounded-2xl bg-primary/10 mx-auto flex items-center justify-center mb-4">
+                    <Users className="w-7 h-7 text-primary" />
                   </div>
                   {merchants.length === 0 ? (
                     <>
                       <p className="font-medium text-foreground">Aucun marchand</p>
-                      <p className="text-sm text-muted-foreground mt-1 max-w-[200px] mx-auto">
-                        Rejoignez le réseau et soyez le premier !
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Soyez le premier à rejoindre !
                       </p>
                       <Button
                         onClick={() => setShowProfileSheet(true)}
@@ -385,13 +486,10 @@ const Network = () => {
                     <MerchantCard
                       key={merchant.id}
                       merchant={merchant}
-                      onContact={() => {
-                        setChatPartner({
-                          id: merchant.user_id,
-                          name: merchant.profiles?.shop_name || "Marchand",
-                        });
-                        setShowChat(true);
-                      }}
+                      onContact={() => handleContact(
+                        merchant.user_id,
+                        merchant.profiles?.shop_name || "Marchand"
+                      )}
                     />
                   ))}
                 </div>
@@ -400,12 +498,13 @@ const Network = () => {
           )}
         </div>
 
-        {/* FAB - New Request */}
-        {activeTab === "requests" && requests.length > 0 && (
+        {/* FAB - Context-aware */}
+        {((activeTab === "requests" && requests.length > 0) || 
+          (activeTab === "offers" && offers.length > 0)) && (
           <div className="fixed bottom-24 right-4 z-40">
             <Button
               size="lg"
-              onClick={() => setShowNewRequest(true)}
+              onClick={() => activeTab === "requests" ? setShowNewRequest(true) : setShowNewOffer(true)}
               className="h-14 w-14 rounded-2xl shadow-lg"
             >
               <Plus className="w-6 h-6" />
@@ -432,6 +531,12 @@ const Network = () => {
         <NewRequestDialog 
           open={showNewRequest} 
           onOpenChange={setShowNewRequest} 
+        />
+
+        {/* New Offer Dialog */}
+        <NewOfferDialog 
+          open={showNewOffer} 
+          onOpenChange={setShowNewOffer} 
         />
 
         {/* Chat */}

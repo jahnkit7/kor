@@ -121,25 +121,14 @@ export function RequestCard({
               Annuler
             </Button>
           ) : (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onContact}
-                className="flex-1 rounded-xl text-xs h-9"
-              >
-                <MessageCircle className="w-3.5 h-3.5 mr-1.5" />
-                Contacter
-              </Button>
-              <Button
-                size="sm"
-                onClick={onFulfill}
-                className="flex-1 rounded-xl text-xs h-9"
-              >
-                <Check className="w-3.5 h-3.5 mr-1.5" />
-                Je fournis
-              </Button>
-            </>
+            <Button
+              size="sm"
+              onClick={onContact}
+              className="flex-1 rounded-xl text-xs h-9"
+            >
+              <MessageCircle className="w-3.5 h-3.5 mr-1.5" />
+              Contacter
+            </Button>
           )}
         </div>
       )}

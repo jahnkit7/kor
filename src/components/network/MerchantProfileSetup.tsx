@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { 
   MapPin, 
   Check, 
@@ -11,7 +12,8 @@ import {
   EyeOff,
   Loader2,
   Sparkles,
-  Navigation
+  Navigation,
+  Edit3
 } from "lucide-react";
 import { 
   useMerchantProfile, 
@@ -31,6 +33,7 @@ export function MerchantProfileSetup({ onComplete }: MerchantProfileSetupProps) 
   const { profile, loading, createOrUpdateProfile, hasProfile } = useMerchantProfile();
   const [saving, setSaving] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   
   const [merchantType, setMerchantType] = useState("détaillant");
   const [specialties, setSpecialties] = useState<string[]>([]);
@@ -39,6 +42,9 @@ export function MerchantProfileSetup({ onComplete }: MerchantProfileSetupProps) 
   const [locationLng, setLocationLng] = useState<number | null>(null);
   const [marketAddress, setMarketAddress] = useState("");
   const [isVisible, setIsVisible] = useState(true);
+
+  // Show profile summary if we have a profile and not editing
+  const showSummary = hasProfile && !isEditing;
 
   // Update state when profile loads
   useEffect(() => {
@@ -105,6 +111,99 @@ export function MerchantProfileSetup({ onComplete }: MerchantProfileSetupProps) 
     );
   }
 
+  // Profile Summary View
+  if (showSummary && profile) {
+    const typeInfo = MERCHANT_TYPES.find(t => t.value === profile.merchant_type);
+    const specialtyInfos = profile.specialties?.map(s => SPECIALTIES.find(sp => sp.value === s)).filter(Boolean) || [];
+
+    return (
+      <div className="space-y-6">
+        {/* Profile Header */}
+        <div className="text-center pb-2">
+          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-accent mx-auto flex items-center justify-center mb-4">
+            <Store className="w-10 h-10 text-primary-foreground" />
+          </div>
+          <h2 className="text-2xl font-bold text-foreground">
+            {profile.profiles?.shop_name || "Ma Boutique"}
+          </h2>
+          {profile.profiles?.owner_name && (
+            <p className="text-muted-foreground mt-1">{profile.profiles.owner_name}</p>
+          )}
+          <Badge 
+            variant={profile.is_visible ? "default" : "secondary"} 
+            className="mt-3"
+          >
+            {profile.is_visible ? (
+              <><Eye className="w-3 h-3 mr-1" /> Visible sur le réseau</>
+            ) : (
+              <><EyeOff className="w-3 h-3 mr-1" /> Profil masqué</>
+            )}
+          </Badge>
+        </div>
+
+        {/* Type */}
+        <div className="p-4 bg-secondary rounded-xl">
+          <p className="text-xs text-muted-foreground mb-1">Type de commerce</p>
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">{typeInfo?.emoji}</span>
+            <div>
+              <p className="font-semibold text-foreground">{typeInfo?.label}</p>
+              <p className="text-xs text-muted-foreground">{typeInfo?.description}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Specialties */}
+        {specialtyInfos.length > 0 && (
+          <div>
+            <p className="text-xs text-muted-foreground mb-2">Spécialités</p>
+            <div className="flex flex-wrap gap-2">
+              {specialtyInfos.map((sp) => sp && (
+                <Badge key={sp.value} variant="outline" className="text-sm py-1.5 px-3">
+                  <span className="mr-1.5">{sp.emoji}</span>
+                  {sp.label}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Location */}
+        {(profile.location_name || profile.market_address) && (
+          <div className="p-4 bg-secondary rounded-xl">
+            <p className="text-xs text-muted-foreground mb-1">Localisation</p>
+            <div className="flex items-start gap-2">
+              <MapPin className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+              <div>
+                {profile.location_name && (
+                  <p className="font-medium text-foreground">{profile.location_name}</p>
+                )}
+                {profile.market_address && (
+                  <p className="text-sm text-muted-foreground">{profile.market_address}</p>
+                )}
+                {profile.location_lat && profile.location_lng && (
+                  <p className="text-xs text-primary mt-1">
+                    ✓ Position GPS enregistrée
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Button */}
+        <Button
+          onClick={() => setIsEditing(true)}
+          variant="outline"
+          className="w-full h-12 rounded-xl"
+        >
+          <Edit3 className="w-4 h-4 mr-2" />
+          Modifier mon profil
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -113,7 +212,7 @@ export function MerchantProfileSetup({ onComplete }: MerchantProfileSetupProps) 
           <Store className="w-8 h-8 text-primary-foreground" />
         </div>
         <h2 className="text-xl font-bold text-foreground">
-          {hasProfile ? "Mon profil marchand" : "Rejoindre le réseau"}
+          {hasProfile ? "Modifier mon profil" : "Rejoindre le réseau"}
         </h2>
         <p className="text-sm text-muted-foreground mt-1">
           Connectez-vous avec d'autres marchands
@@ -243,19 +342,31 @@ export function MerchantProfileSetup({ onComplete }: MerchantProfileSetupProps) 
         <Switch checked={isVisible} onCheckedChange={setIsVisible} />
       </div>
 
-      {/* Save Button */}
-      <Button
-        onClick={handleSave}
-        disabled={saving || specialties.length === 0}
-        className="w-full h-14 rounded-2xl text-base font-semibold"
-      >
-        {saving ? (
-          <Loader2 className="w-5 h-5 animate-spin mr-2" />
-        ) : (
-          <Sparkles className="w-5 h-5 mr-2" />
+      {/* Action Buttons */}
+      <div className="space-y-2">
+        <Button
+          onClick={handleSave}
+          disabled={saving || specialties.length === 0}
+          className="w-full h-14 rounded-2xl text-base font-semibold"
+        >
+          {saving ? (
+            <Loader2 className="w-5 h-5 animate-spin mr-2" />
+          ) : (
+            <Sparkles className="w-5 h-5 mr-2" />
+          )}
+          {hasProfile ? "Mettre à jour" : "Rejoindre le réseau"}
+        </Button>
+        
+        {hasProfile && (
+          <Button
+            onClick={() => setIsEditing(false)}
+            variant="ghost"
+            className="w-full h-12 rounded-xl"
+          >
+            Annuler
+          </Button>
         )}
-        {hasProfile ? "Mettre à jour" : "Rejoindre le réseau"}
-      </Button>
+      </div>
     </div>
   );
 }
