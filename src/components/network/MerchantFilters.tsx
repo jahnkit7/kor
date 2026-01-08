@@ -16,7 +16,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Filter, Search, X, MapPin } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Filter, Search, X, MapPin, SlidersHorizontal } from "lucide-react";
 
 const SPECIALTIES = [
   "Alimentation",
@@ -84,6 +85,7 @@ export function MerchantFilters({
       merchantType: null,
       location: null,
     });
+    setIsOpen(false);
   };
 
   const toggleSpecialty = (specialty: string) => {
@@ -91,16 +93,16 @@ export function MerchantFilters({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {/* Search bar */}
       <div className="flex gap-2">
-        <div className="relative flex-1">
+        <div className="relative flex-1 min-w-0">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Rechercher un marchand..."
+            placeholder="Rechercher..."
             value={filters.search}
             onChange={(e) => handleSearchChange(e.target.value)}
-            className="pl-9"
+            className="pl-9 h-10 rounded-xl"
           />
           {filters.search && (
             <button
@@ -113,123 +115,127 @@ export function MerchantFilters({
         </div>
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
           <SheetTrigger asChild>
-            <Button variant="outline" className="relative">
-              <Filter className="h-4 w-4" />
+            <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl relative flex-shrink-0">
+              <SlidersHorizontal className="h-4 w-4" />
               {activeFiltersCount > 0 && (
-                <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-medium">
                   {activeFiltersCount}
                 </span>
               )}
             </Button>
           </SheetTrigger>
-          <SheetContent>
-            <SheetHeader>
-              <SheetTitle>Filtres</SheetTitle>
+          <SheetContent side="bottom" className="h-[70vh] max-h-[70vh] rounded-t-3xl flex flex-col p-0">
+            <SheetHeader className="px-5 pt-5 pb-3 border-b border-border flex-shrink-0">
+              <SheetTitle className="text-left">Filtres</SheetTitle>
             </SheetHeader>
-            <div className="space-y-6 mt-6">
-              {/* Type de marchand */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Type de marchand</label>
-                <Select
-                  value={filters.merchantType || "all"}
-                  onValueChange={handleTypeChange}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Tous les types" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tous les types</SelectItem>
-                    {MERCHANT_TYPES.map((type) => (
-                      <SelectItem key={type.value} value={type.value}>
-                        {type.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <ScrollArea className="flex-1 min-h-0">
+              <div className="px-5 py-4 space-y-6">
+                {/* Type de marchand */}
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold">Type de marchand</label>
+                  <Select
+                    value={filters.merchantType || "all"}
+                    onValueChange={handleTypeChange}
+                  >
+                    <SelectTrigger className="h-11 rounded-xl">
+                      <SelectValue placeholder="Tous les types" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tous les types</SelectItem>
+                      {MERCHANT_TYPES.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              {/* Localisation */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
-                  Localisation
-                </label>
-                <Select
-                  value={filters.location || "all"}
-                  onValueChange={handleLocationChange}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Toutes les localisations" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Toutes</SelectItem>
-                    {locations.map((loc) => (
-                      <SelectItem key={loc} value={loc}>
-                        {loc}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                {/* Localisation */}
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    Localisation
+                  </label>
+                  <Select
+                    value={filters.location || "all"}
+                    onValueChange={handleLocationChange}
+                  >
+                    <SelectTrigger className="h-11 rounded-xl">
+                      <SelectValue placeholder="Toutes les localisations" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Toutes</SelectItem>
+                      {locations.map((loc) => (
+                        <SelectItem key={loc} value={loc}>
+                          <span className="truncate">{loc}</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              {/* Spécialités */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Spécialités</label>
-                <div className="flex flex-wrap gap-2">
-                  {SPECIALTIES.map((specialty) => (
-                    <Badge
-                      key={specialty}
-                      variant={
-                        filters.specialty === specialty ? "default" : "outline"
-                      }
-                      className="cursor-pointer"
-                      onClick={() => toggleSpecialty(specialty)}
-                    >
-                      {specialty}
-                    </Badge>
-                  ))}
+                {/* Spécialités */}
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold">Spécialités</label>
+                  <div className="flex flex-wrap gap-2">
+                    {SPECIALTIES.map((specialty) => (
+                      <Badge
+                        key={specialty}
+                        variant={filters.specialty === specialty ? "default" : "outline"}
+                        className="cursor-pointer px-3 py-1.5 rounded-lg text-sm"
+                        onClick={() => toggleSpecialty(specialty)}
+                      >
+                        {specialty}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
               </div>
-
-              {/* Clear filters button */}
-              {activeFiltersCount > 0 && (
+            </ScrollArea>
+            
+            {/* Footer */}
+            {activeFiltersCount > 0 && (
+              <div className="flex-shrink-0 p-5 border-t border-border bg-background pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
                 <Button
                   variant="outline"
-                  className="w-full"
+                  className="w-full h-11 rounded-xl"
                   onClick={clearAllFilters}
                 >
-                  Effacer les filtres
+                  Effacer les filtres ({activeFiltersCount})
                 </Button>
-              )}
-            </div>
+              </div>
+            )}
           </SheetContent>
         </Sheet>
       </div>
 
-      {/* Active filters display */}
+      {/* Active filters display - horizontal scroll */}
       {(filters.specialty || filters.merchantType || filters.location) && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
           {filters.merchantType && (
-            <Badge variant="secondary" className="gap-1">
-              {MERCHANT_TYPES.find((t) => t.value === filters.merchantType)?.label}
-              <button onClick={() => handleTypeChange(null)}>
+            <Badge variant="secondary" className="gap-1 flex-shrink-0 rounded-lg">
+              <span className="truncate max-w-[100px]">
+                {MERCHANT_TYPES.find((t) => t.value === filters.merchantType)?.label}
+              </span>
+              <button onClick={() => handleTypeChange(null)} className="ml-0.5">
                 <X className="h-3 w-3" />
               </button>
             </Badge>
           )}
           {filters.location && (
-            <Badge variant="secondary" className="gap-1">
-              <MapPin className="h-3 w-3" />
-              {filters.location}
-              <button onClick={() => handleLocationChange(null)}>
+            <Badge variant="secondary" className="gap-1 flex-shrink-0 rounded-lg">
+              <MapPin className="h-3 w-3 flex-shrink-0" />
+              <span className="truncate max-w-[100px]">{filters.location}</span>
+              <button onClick={() => handleLocationChange(null)} className="ml-0.5">
                 <X className="h-3 w-3" />
               </button>
             </Badge>
           )}
           {filters.specialty && (
-            <Badge variant="secondary" className="gap-1">
-              {filters.specialty}
-              <button onClick={() => handleSpecialtyChange(null)}>
+            <Badge variant="secondary" className="gap-1 flex-shrink-0 rounded-lg">
+              <span className="truncate max-w-[100px]">{filters.specialty}</span>
+              <button onClick={() => handleSpecialtyChange(null)} className="ml-0.5">
                 <X className="h-3 w-3" />
               </button>
             </Badge>

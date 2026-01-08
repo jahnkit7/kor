@@ -15,19 +15,23 @@ serve(async (req) => {
     const { transcript } = await req.json();
     
     if (!transcript) {
-      throw new Error('No transcript provided');
+      console.error('No transcript provided');
+      return new Response(
+        JSON.stringify({ error: 'No transcript provided' }), 
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    console.log('Analyzing product request transcript:', transcript);
+    console.log('Analyzing product request transcript:', transcript.substring(0, 100));
 
-    const response = await fetch('https://ai.lovable.dev/api/openai/v1/chat/completions', {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${Deno.env.get('LOVABLE_API_KEY')}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'google/gemini-2.5-flash',
         messages: [
           {
             role: 'system',
@@ -40,7 +44,7 @@ Extrais les informations suivantes de la transcription:
 - max_price: le budget maximum en FCFA (nombre entier, optionnel)
 - notes: détails supplémentaires ou précisions (optionnel)
 
-Réponds UNIQUEMENT en JSON valide, sans markdown, avec cette structure:
+Réponds UNIQUEMENT en JSON valide, sans markdown ni backticks, avec cette structure:
 {
   "product_name": "string",
   "quantity": number | null,
@@ -59,36 +63,70 @@ Exemples:
             content: transcript
           }
         ],
-        temperature: 0.3,
-        max_tokens: 300,
+        max_completion_tokens: 300,
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('AI API error:', errorText);
-      throw new Error(`AI API error: ${errorText}`);
+      console.error('AI API error:', response.status, errorText);
+      return new Response(
+        JSON.stringify({ 
+          error: 'AI service error',
+          product_name: '',
+          quantity: null,
+          unit: null,
+          max_price: null,
+          notes: null 
+        }), 
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const data = await response.json();
-    const content = data.choices[0].message.content;
+    const content = data.choices?.[0]?.message?.content || '';
     
-    console.log('AI response:', content);
+    console.log('AI raw response:', content.substring(0, 200));
 
     // Parse the JSON response
     let parsed;
     try {
-      parsed = JSON.parse(content);
+      // Remove potential markdown code blocks
+      const cleanContent = content.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+      parsed = JSON.parse(cleanContent);
     } catch (e) {
-      console.error('Failed to parse AI response:', content);
+      console.error('Failed to parse AI response directly:', e);
       // Try to extract JSON from response
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      const jsonMatch = content.match(/\{[\s\S]*?\}/);
       if (jsonMatch) {
-        parsed = JSON.parse(jsonMatch[0]);
+        try {
+          parsed = JSON.parse(jsonMatch[0]);
+        } catch (e2) {
+          console.error('Failed to extract JSON:', e2);
+          // Return default with product name from transcript
+          const words = transcript.split(' ').slice(0, 3).join(' ');
+          parsed = {
+            product_name: words || 'Produit',
+            quantity: null,
+            unit: null,
+            max_price: null,
+            notes: transcript
+          };
+        }
       } else {
-        throw new Error('Failed to parse AI response');
+        // Return default
+        const words = transcript.split(' ').slice(0, 3).join(' ');
+        parsed = {
+          product_name: words || 'Produit',
+          quantity: null,
+          unit: null,
+          max_price: null,
+          notes: transcript
+        };
       }
     }
+
+    console.log('Parsed result:', JSON.stringify(parsed));
 
     return new Response(JSON.stringify(parsed), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -97,9 +135,16 @@ Exemples:
   } catch (error) {
     console.error('Error in analyze-request-voice:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(JSON.stringify({ error: message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({ 
+        error: message,
+        product_name: '',
+        quantity: null,
+        unit: null,
+        max_price: null,
+        notes: null
+      }), 
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 });
