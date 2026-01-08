@@ -153,6 +153,72 @@ export type Database = {
           },
         ]
       }
+      merchant_negotiations: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          offer_id: string | null
+          product_name: string
+          proposed_price: number | null
+          proposed_quantity: number | null
+          proposed_total: number | null
+          proposed_unit: string | null
+          proposer_id: string
+          request_id: string | null
+          responder_id: string
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          offer_id?: string | null
+          product_name: string
+          proposed_price?: number | null
+          proposed_quantity?: number | null
+          proposed_total?: number | null
+          proposed_unit?: string | null
+          proposer_id: string
+          request_id?: string | null
+          responder_id: string
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          offer_id?: string | null
+          product_name?: string
+          proposed_price?: number | null
+          proposed_quantity?: number | null
+          proposed_total?: number | null
+          proposed_unit?: string | null
+          proposer_id?: string
+          request_id?: string | null
+          responder_id?: string
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merchant_negotiations_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "merchant_offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merchant_negotiations_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "product_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       merchant_offers: {
         Row: {
           created_at: string | null

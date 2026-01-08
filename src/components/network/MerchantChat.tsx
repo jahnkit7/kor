@@ -4,13 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Send, ArrowLeft, MessageCircle, X } from "lucide-react";
+import { Send, ArrowLeft, MessageCircle, X, Handshake, Plus } from "lucide-react";
 import { useMerchantMessages, Conversation } from "@/hooks/use-merchant-messages";
+import { useNegotiations, Negotiation } from "@/hooks/use-negotiations";
 import { useAuth } from "@/hooks/use-auth";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { NegotiationCard } from "./NegotiationCard";
+import { ProposalDialog } from "./ProposalDialog";
 
 interface MerchantChatProps {
   open: boolean;
@@ -39,6 +42,8 @@ export function MerchantChat({
       : null
   );
   const [message, setMessage] = useState("");
+  const [showProposal, setShowProposal] = useState(false);
+  const [counterNegotiation, setCounterNegotiation] = useState<Negotiation | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -49,12 +54,25 @@ export function MerchantChat({
     sendMessage,
   } = useMerchantMessages(selectedPartner?.id, requestId);
 
+  const {
+    negotiations,
+    createProposal,
+    respondToProposal,
+    markAsCompleted
+  } = useNegotiations(selectedPartner?.id);
+
+  // Filter negotiations for current conversation
+  const conversationNegotiations = negotiations.filter(n => 
+    (n.proposer_id === selectedPartner?.id || n.responder_id === selectedPartner?.id) &&
+    (n.proposer_id === user?.id || n.responder_id === user?.id)
+  );
+
   // Scroll to bottom when messages change
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, conversationNegotiations]);
 
   // Reset selection when dialog opens with initial values
   useEffect(() => {
@@ -81,6 +99,53 @@ export function MerchantChat({
   const handleClose = () => {
     setSelectedPartner(null);
     onOpenChange(false);
+  };
+
+  const handleCreateProposal = async (data: {
+    productName: string;
+    quantity?: number;
+    unit?: string;
+    price?: number;
+    total?: number;
+    notes?: string;
+  }) => {
+    if (!selectedPartner) return;
+    
+    await createProposal({
+      responderId: selectedPartner.id,
+      productName: data.productName,
+      quantity: data.quantity,
+      unit: data.unit,
+      price: data.price,
+      total: data.total,
+      notes: data.notes,
+      requestId: requestId
+    });
+  };
+
+  const handleCounter = (negotiation: Negotiation) => {
+    setCounterNegotiation(negotiation);
+    setShowProposal(true);
+  };
+
+  const handleCounterSubmit = async (data: {
+    productName: string;
+    quantity?: number;
+    unit?: string;
+    price?: number;
+    total?: number;
+    notes?: string;
+  }) => {
+    if (!counterNegotiation) return;
+    
+    await respondToProposal(counterNegotiation.id, "counter", {
+      quantity: data.quantity,
+      price: data.price,
+      total: data.total,
+      notes: data.notes
+    });
+    
+    setCounterNegotiation(null);
   };
 
   const renderConversationsList = () => (
@@ -159,12 +224,47 @@ export function MerchantChat({
             </p>
           )}
         </div>
+        {/* Propose deal button */}
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setShowProposal(true)}
+          className="rounded-xl h-9 px-3"
+        >
+          <Handshake className="w-4 h-4 mr-1.5" />
+          <span className="hidden sm:inline">Proposer</span>
+        </Button>
       </div>
 
-      {/* Messages */}
+      {/* Messages & Negotiations */}
       <ScrollArea className="flex-1 min-h-0" ref={scrollRef}>
         <div className="p-4 space-y-3">
-          {messages.length === 0 ? (
+          {/* Active negotiations at top */}
+          {conversationNegotiations.filter(n => 
+            n.status === "pending" || n.status === "accepted"
+          ).length > 0 && (
+            <div className="space-y-2 mb-4">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Propositions en cours
+              </p>
+              {conversationNegotiations
+                .filter(n => n.status === "pending" || n.status === "accepted")
+                .map(neg => (
+                  <NegotiationCard
+                    key={neg.id}
+                    negotiation={neg}
+                    partnerName={selectedPartner?.name || ""}
+                    onAccept={() => respondToProposal(neg.id, "accepted")}
+                    onReject={() => respondToProposal(neg.id, "rejected")}
+                    onCounter={() => handleCounter(neg)}
+                    onComplete={() => markAsCompleted(neg.id)}
+                  />
+                ))}
+            </div>
+          )}
+
+          {/* Messages */}
+          {messages.length === 0 && conversationNegotiations.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground text-sm">
               Démarrez la conversation
             </div>
@@ -222,6 +322,25 @@ export function MerchantChat({
           </Button>
         </div>
       </div>
+
+      {/* Proposal Dialog */}
+      <ProposalDialog
+        open={showProposal}
+        onOpenChange={(open) => {
+          setShowProposal(open);
+          if (!open) setCounterNegotiation(null);
+        }}
+        partnerName={selectedPartner?.name || ""}
+        productName={counterNegotiation?.product_name || requestName}
+        onSubmit={counterNegotiation ? handleCounterSubmit : handleCreateProposal}
+        isCounter={!!counterNegotiation}
+        initialData={counterNegotiation ? {
+          quantity: counterNegotiation.proposed_quantity || undefined,
+          unit: counterNegotiation.proposed_unit || undefined,
+          price: counterNegotiation.proposed_price || undefined,
+          total: counterNegotiation.proposed_total || undefined,
+        } : undefined}
+      />
     </div>
   );
 
