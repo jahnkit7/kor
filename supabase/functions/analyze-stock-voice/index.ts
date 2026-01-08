@@ -48,25 +48,18 @@ serve(async (req) => {
       global: { headers: { Authorization: authHeader } }
     });
 
-    // Use getClaims instead of getUser for better compatibility with signing-keys
-    const { data: claimsData, error: authError } = await supabaseClient.auth.getClaims(token);
+    // Use getUser with the client that has Authorization header set
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
 
-    if (authError || !claimsData?.claims) {
-      console.error("analyze-stock-voice: Auth error:", authError?.message || "No claims");
+    if (authError || !user) {
+      console.error("analyze-stock-voice: Auth error:", authError?.message || "No user");
       return new Response(
         JSON.stringify({ error: "Token expiré ou invalide. Veuillez vous reconnecter." }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const userId = claimsData.claims.sub;
-    if (!userId) {
-      console.error("analyze-stock-voice: No user ID in claims");
-      return new Response(
-        JSON.stringify({ error: "Utilisateur non trouvé. Veuillez vous reconnecter." }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const userId = user.id;
 
     console.log("analyze-stock-voice: User authenticated:", userId);
 
