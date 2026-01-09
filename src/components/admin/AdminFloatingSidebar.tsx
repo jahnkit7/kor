@@ -11,7 +11,8 @@ import {
   FileText,
   Sparkles,
   ArrowLeft,
-  Zap
+  Zap,
+  BarChart2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +26,7 @@ const modules = [
 
 const features = [
   { to: "/admin/features", icon: ToggleLeft, label: "Features" },
+  { to: "/admin/feature-analytics", icon: BarChart2, label: "Analytics" },
   { to: "/admin/commissions", icon: Percent, label: "Commissions" },
 ];
 

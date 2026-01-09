@@ -267,6 +267,33 @@ export type Database = {
         }
         Relationships: []
       }
+      feature_usage: {
+        Row: {
+          action: string
+          created_at: string
+          feature_key: string
+          id: string
+          metadata: Json | null
+          user_id: string
+        }
+        Insert: {
+          action?: string
+          created_at?: string
+          feature_key: string
+          id?: string
+          metadata?: Json | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          feature_key?: string
+          id?: string
+          metadata?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       merchant_messages: {
         Row: {
           content: string

@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { OfflineProvider } from "./contexts/OfflineContext";
+import { FeatureNotificationsProvider } from "./contexts/FeatureNotificationsContext";
 import { PWAStatus } from "./components/PWAStatus";
 import { RequireProfile } from "./components/RequireProfile";
 import Landing from "./pages/Landing";
@@ -35,15 +36,17 @@ import AdminFeatures from "./pages/admin/AdminFeatures";
 import AdminSupport from "./pages/admin/AdminSupport";
 import AdminLogs from "./pages/admin/AdminLogs";
 import AdminCommissions from "./pages/admin/AdminCommissions";
+import AdminFeatureAnalytics from "./pages/admin/AdminFeatureAnalytics";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <OfflineProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
+      <FeatureNotificationsProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
         <PWAStatus />
         <BrowserRouter>
           <Routes>
@@ -167,6 +170,7 @@ const App = () => (
             <Route path="/admin/geography" element={<AdminGeography />} />
             <Route path="/admin/features" element={<AdminFeatures />} />
             <Route path="/admin/commissions" element={<AdminCommissions />} />
+            <Route path="/admin/feature-analytics" element={<AdminFeatureAnalytics />} />
             <Route path="/admin/support" element={<AdminSupport />} />
             <Route path="/admin/logs" element={<AdminLogs />} />
 
@@ -174,6 +178,7 @@ const App = () => (
           </Routes>
         </BrowserRouter>
       </TooltipProvider>
+      </FeatureNotificationsProvider>
     </OfflineProvider>
   </QueryClientProvider>
 );
