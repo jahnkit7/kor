@@ -34,6 +34,7 @@ import AdminGeography from "./pages/admin/AdminGeography";
 import AdminFeatures from "./pages/admin/AdminFeatures";
 import AdminSupport from "./pages/admin/AdminSupport";
 import AdminLogs from "./pages/admin/AdminLogs";
+import AdminCommissions from "./pages/admin/AdminCommissions";
 
 const queryClient = new QueryClient();
 
@@ -165,6 +166,7 @@ const App = () => (
             <Route path="/admin/codes" element={<AdminCodes />} />
             <Route path="/admin/geography" element={<AdminGeography />} />
             <Route path="/admin/features" element={<AdminFeatures />} />
+            <Route path="/admin/commissions" element={<AdminCommissions />} />
             <Route path="/admin/support" element={<AdminSupport />} />
             <Route path="/admin/logs" element={<AdminLogs />} />
 
