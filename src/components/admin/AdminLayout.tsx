@@ -1,6 +1,6 @@
 import { ReactNode, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { AdminSidebar } from "./AdminSidebar";
+import { AdminFloatingSidebar } from "./AdminFloatingSidebar";
 import { AdminMobileNav } from "./AdminMobileNav";
 import { useAdmin } from "@/hooks/use-admin";
 import { Loader2 } from "lucide-react";
@@ -43,12 +43,15 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <AdminSidebar />
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
+      {/* Floating Sidebar - Desktop */}
+      <AdminFloatingSidebar />
+      
+      {/* Mobile Navigation */}
       <AdminMobileNav />
       
-      {/* Main content */}
-      <main className="lg:pl-64 min-h-screen">
+      {/* Main content - offset for floating sidebar */}
+      <main className="lg:pl-80 min-h-screen">
         <div className="p-4 lg:p-8 pb-24 lg:pb-8">
           {children}
         </div>

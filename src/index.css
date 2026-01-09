@@ -64,6 +64,11 @@
     --shadow-card: 0 1px 3px 0 hsl(160 84% 20% / 0.05), 0 1px 2px -1px hsl(160 84% 20% / 0.05);
     --shadow-button: 0 1px 2px 0 hsl(160 84% 20% / 0.1);
     --shadow-glow: 0 0 12px hsl(25 95% 53% / 0.2);
+    
+    /* Admin specific */
+    --admin-sidebar-bg: 0 0% 100% / 0.8;
+    --admin-float-shadow: 0 8px 32px -8px hsl(160 84% 20% / 0.15);
+    --admin-card-radius: 1.5rem;
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
