@@ -10,14 +10,25 @@ interface AdminLayoutProps {
 }
 
 export function AdminLayout({ children }: AdminLayoutProps) {
-  const { isAdmin, loading } = useAdmin();
+  const { isAdmin, loading, user } = useAdmin();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && !isAdmin) {
-      navigate("/");
+    // Wait until everything is loaded
+    if (loading) return;
+
+    // Not logged in -> auth page
+    if (!user) {
+      navigate("/auth");
+      return;
     }
-  }, [isAdmin, loading, navigate]);
+
+    // Logged in but not admin -> dashboard
+    if (!isAdmin) {
+      navigate("/dashboard");
+      return;
+    }
+  }, [isAdmin, loading, user, navigate]);
 
   if (loading) {
     return (
@@ -27,7 +38,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     );
   }
 
-  if (!isAdmin) {
+  if (!user || !isAdmin) {
     return null;
   }
 
