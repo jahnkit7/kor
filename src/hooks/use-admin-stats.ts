@@ -187,7 +187,11 @@ export function useAdminFeatureFlags() {
         .order("feature_key");
 
       if (error) throw error;
-      return data;
+      // Ensure depends_on is always an array
+      return data?.map(f => ({
+        ...f,
+        depends_on: f.depends_on || [],
+      }));
     },
   });
 }

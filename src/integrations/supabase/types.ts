@@ -228,6 +228,7 @@ export type Database = {
       feature_flags: {
         Row: {
           created_at: string
+          depends_on: string[] | null
           description: string | null
           disabled_countries: string[] | null
           enabled_for_users: string[] | null
@@ -240,6 +241,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          depends_on?: string[] | null
           description?: string | null
           disabled_countries?: string[] | null
           enabled_for_users?: string[] | null
@@ -252,6 +254,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          depends_on?: string[] | null
           description?: string | null
           disabled_countries?: string[] | null
           enabled_for_users?: string[] | null
