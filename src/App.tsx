@@ -25,6 +25,16 @@ import AcceptInvite from "./pages/AcceptInvite";
 import Network from "./pages/Network";
 import NotFound from "./pages/NotFound";
 
+// Admin pages
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminSubscriptions from "./pages/admin/AdminSubscriptions";
+import AdminCodes from "./pages/admin/AdminCodes";
+import AdminGeography from "./pages/admin/AdminGeography";
+import AdminFeatures from "./pages/admin/AdminFeatures";
+import AdminSupport from "./pages/admin/AdminSupport";
+import AdminLogs from "./pages/admin/AdminLogs";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -147,6 +157,17 @@ const App = () => (
                 </RequireProfile>
               }
             />
+
+            {/* Admin routes */}
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
+            <Route path="/admin/codes" element={<AdminCodes />} />
+            <Route path="/admin/geography" element={<AdminGeography />} />
+            <Route path="/admin/features" element={<AdminFeatures />} />
+            <Route path="/admin/support" element={<AdminSupport />} />
+            <Route path="/admin/logs" element={<AdminLogs />} />
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

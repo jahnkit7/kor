@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "./use-auth";
 import { isSupabaseConfigured, getSupabaseClient } from "@/lib/supabase";
 
-type AppRole = "owner" | "employee";
+type AppRole = "owner" | "employee" | "admin";
 
 interface RoleState {
   role: AppRole;
