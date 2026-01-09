@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_logs: {
+        Row: {
+          action: string
+          admin_id: string
+          created_at: string
+          details: Json | null
+          id: string
+          ip_address: string | null
+          target_id: string | null
+          target_type: string | null
+        }
+        Insert: {
+          action: string
+          admin_id: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Update: {
+          action?: string
+          admin_id?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           created_at: string
@@ -44,6 +77,83 @@ export type Database = {
           photo?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      commissions: {
+        Row: {
+          applies_to: string
+          country_id: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          type: string
+          updated_at: string
+          value: number
+        }
+        Insert: {
+          applies_to: string
+          country_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          type: string
+          updated_at?: string
+          value: number
+        }
+        Update: {
+          applies_to?: string
+          country_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          type?: string
+          updated_at?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commissions_country_id_fkey"
+            columns: ["country_id"]
+            isOneToOne: false
+            referencedRelation: "countries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      countries: {
+        Row: {
+          code: string
+          created_at: string
+          currency: string
+          id: string
+          is_active: boolean
+          name: string
+          phone_prefix: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          currency?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          phone_prefix: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          currency?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          phone_prefix?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -112,6 +222,45 @@ export type Database = {
           invite_code?: string | null
           owner_user_id?: string
           status?: string
+        }
+        Relationships: []
+      }
+      feature_flags: {
+        Row: {
+          created_at: string
+          description: string | null
+          disabled_countries: string[] | null
+          enabled_for_users: string[] | null
+          feature_key: string
+          id: string
+          is_globally_enabled: boolean
+          min_plan_required: string | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          disabled_countries?: string[] | null
+          enabled_for_users?: string[] | null
+          feature_key: string
+          id?: string
+          is_globally_enabled?: boolean
+          min_plan_required?: string | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          disabled_countries?: string[] | null
+          enabled_for_users?: string[] | null
+          feature_key?: string
+          id?: string
+          is_globally_enabled?: boolean
+          min_plan_required?: string | null
+          name?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -450,6 +599,91 @@ export type Database = {
         }
         Relationships: []
       }
+      recharge_codes: {
+        Row: {
+          batch_name: string | null
+          code: string
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          id: string
+          is_used: boolean
+          plan_id: string
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          batch_name?: string | null
+          code: string
+          created_at?: string
+          created_by: string
+          expires_at?: string | null
+          id?: string
+          is_used?: boolean
+          plan_id: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          batch_name?: string | null
+          code?: string
+          created_at?: string
+          created_by?: string
+          expires_at?: string | null
+          id?: string
+          is_used?: boolean
+          plan_id?: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recharge_codes_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      regions: {
+        Row: {
+          country_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          launch_date: string | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          country_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          launch_date?: string | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          country_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          launch_date?: string | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "regions_country_id_fkey"
+            columns: ["country_id"]
+            isOneToOne: false
+            referencedRelation: "countries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales: {
         Row: {
           amount: number
@@ -557,6 +791,65 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_plans: {
+        Row: {
+          country_id: string | null
+          created_at: string
+          currency: string
+          description: string | null
+          duration_days: number
+          features: Json
+          id: string
+          is_active: boolean
+          max_clients: number | null
+          max_sales_per_day: number | null
+          name: string
+          price: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          country_id?: string | null
+          created_at?: string
+          currency?: string
+          description?: string | null
+          duration_days: number
+          features?: Json
+          id?: string
+          is_active?: boolean
+          max_clients?: number | null
+          max_sales_per_day?: number | null
+          name: string
+          price: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          country_id?: string | null
+          created_at?: string
+          currency?: string
+          description?: string | null
+          duration_days?: number
+          features?: Json
+          id?: string
+          is_active?: boolean
+          max_clients?: number | null
+          max_sales_per_day?: number | null
+          name?: string
+          price?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_plans_country_id_fkey"
+            columns: ["country_id"]
+            isOneToOne: false
+            referencedRelation: "countries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscriptions: {
         Row: {
           created_at: string
@@ -588,6 +881,42 @@ export type Database = {
           plan?: string
           trial_ends_at?: string
           trial_started_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      support_tickets: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          id: string
+          messages: Json
+          priority: string
+          status: string
+          subject: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          id?: string
+          messages?: Json
+          priority?: string
+          status?: string
+          subject: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          id?: string
+          messages?: Json
+          priority?: string
+          status?: string
+          subject?: string
           updated_at?: string
           user_id?: string
         }
