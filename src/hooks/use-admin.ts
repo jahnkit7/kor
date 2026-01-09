@@ -5,17 +5,23 @@ import { supabase } from "@/integrations/supabase/client";
 interface AdminState {
   isAdmin: boolean;
   loading: boolean;
+  user: ReturnType<typeof useAuth>["user"];
 }
 
 export function useAdmin(): AdminState {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
+    // Wait for auth to be ready
+    if (authLoading) {
+      return;
+    }
+
     if (!user) {
       setIsAdmin(false);
-      setLoading(false);
+      setChecking(false);
       return;
     }
 
@@ -38,12 +44,15 @@ export function useAdmin(): AdminState {
         console.error("Error checking admin role:", error);
         setIsAdmin(false);
       } finally {
-        setLoading(false);
+        setChecking(false);
       }
     };
 
     checkAdminRole();
-  }, [user]);
+  }, [user, authLoading]);
 
-  return { isAdmin, loading };
+  // Loading is true while auth is loading OR while checking role
+  const loading = authLoading || checking;
+
+  return { isAdmin, loading, user };
 }
