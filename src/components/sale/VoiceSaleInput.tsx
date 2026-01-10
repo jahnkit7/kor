@@ -72,21 +72,31 @@ interface ParsedSale {
   paid: number;
   remaining: number;
   client_match: ClientMatch;
-  products: Array<{ name: string; quantity: number; unit_price: number }>;
+  products: Array<{ name: string; quantity: number; unit_price: number; stock_item_id?: string | null }>;
   note: string | null;
   // Resolved client info (set after disambiguation)
   resolved_client_id?: string | null;
   resolved_client_name?: string | null;
 }
 
+interface StockItem {
+  id: string;
+  name: string;
+  quantity: number;
+  unit_price: number;
+  model?: string | null;
+}
+
 interface VoiceSaleInputProps {
   clients: Client[];
+  stockItems?: StockItem[];
   onComplete: (sale: {
     type: "cash" | "credit";
     amount: number;
     paid?: number;
     note?: string;
     client_id?: string;
+    items?: Array<{ stock_item_id?: string | null; product_name: string; quantity: number; unit_price: number }>;
   }) => Promise<void>;
   onCancel: () => void;
   onCreateClient?: (name: string) => Promise<Client | null>;
@@ -97,7 +107,7 @@ const isSpeechRecognitionSupported = () => {
   return typeof window !== 'undefined' && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 };
 
-export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient, onFinish }: VoiceSaleInputProps) {
+export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCreateClient, onFinish }: VoiceSaleInputProps) {
   const { toast } = useToast();
   const { isOnline } = useNetworkStatus();
   const { trackFeature } = useFeatureTracking();
@@ -409,8 +419,17 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient, 
       // Include phone for disambiguation
       const clientsForAI = clients.map(c => ({ id: c.id, name: c.name, phone: c.phone }));
 
+      // Include stock items for product matching
+      const stockForAI = stockItems?.map(s => ({ 
+        id: s.id, 
+        name: s.name, 
+        quantity: s.quantity, 
+        unit_price: s.unit_price,
+        model: s.model 
+      })) || [];
+
       const { data, error } = await supabase.functions.invoke("analyze-sale-voice", {
-        body: { transcript: text, clients: clientsForAI },
+        body: { transcript: text, clients: clientsForAI, stockItems: stockForAI },
       });
 
       console.log("VoiceSaleInput: Edge function response:", { hasData: !!data, error: error?.message });
@@ -751,12 +770,21 @@ export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient, 
       
       // Now save all sales
       for (const sale of updatedSales) {
+        // Prepare sale items for stock deduction
+        const saleItems = sale.products?.map(product => ({
+          stock_item_id: product.stock_item_id || null,
+          product_name: product.name,
+          quantity: product.quantity,
+          unit_price: product.unit_price,
+        })) || [];
+
         await onComplete({
           type: sale.type,
           amount: sale.amount,
           paid: sale.paid || 0,
           note: sale.note || undefined,
           client_id: sale.resolved_client_id || undefined,
+          items: saleItems.length > 0 ? saleItems : undefined,
         });
       }
       

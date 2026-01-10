@@ -9,7 +9,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { ArrowLeft, Check, User, MessageSquare, Mic, ChevronDown, ChevronUp, Wallet, CreditCard, Clock, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { useClients } from "@/hooks/use-clients";
-import { useSales } from "@/hooks/use-sales";
+import { useSales, SaleItem } from "@/hooks/use-sales";
+import { useStock } from "@/hooks/use-stock";
 import { VoiceSaleInput } from "@/components/sale/VoiceSaleInput";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +33,7 @@ const Sale = () => {
 
   const { clients, loading: clientsLoading, quickCreateClient } = useClients();
   const { addSale, sales, loading: salesLoading } = useSales();
+  const { items: stockItems, loading: stockLoading } = useStock();
 
   // Track page view
   useEffect(() => {
@@ -116,6 +118,7 @@ const Sale = () => {
     amount: number;
     note?: string;
     client_id?: string;
+    items?: SaleItem[];
   }) => {
     await addSale(saleData);
     // Don't navigate immediately - let VoiceSaleInput handle multiple sales
@@ -151,6 +154,7 @@ const Sale = () => {
         </div>
         <VoiceSaleInput
           clients={clients}
+          stockItems={stockItems}
           onComplete={handleVoiceSaleComplete}
           onCancel={() => setShowVoiceInput(false)}
           onCreateClient={quickCreateClient}

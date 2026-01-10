@@ -38,7 +38,7 @@ import {
 const COLORS = ["hsl(var(--primary))", "hsl(var(--secondary))", "hsl(var(--accent))", "#10b981", "#f59e0b"];
 
 function formatCurrency(value: number) {
-  return new Intl.NumberFormat("fr-FR").format(value) + " F";
+  return new Intl.NumberFormat("fr-FR").format(value) + " FCFA";
 }
 
 function StatCard({ 

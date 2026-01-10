@@ -115,7 +115,6 @@ export function useAdminCommissionBalances() {
       const { data, error } = await supabase
         .from("commission_balances")
         .select("*")
-        .gt("balance", 0)
         .order("balance", { ascending: false });
 
       if (error) throw error;
