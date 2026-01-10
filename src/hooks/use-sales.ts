@@ -4,6 +4,7 @@ import { useNetworkStatus } from "./use-network-status";
 import { isSupabaseConfigured, getSupabaseClient } from "@/lib/supabase";
 import * as localDB from "@/lib/db";
 import { toast } from "sonner";
+import { withTimeout } from "@/lib/promise-utils";
 
 export interface Sale {
   id: string;
@@ -51,8 +52,8 @@ export function useSales(): SalesState {
 
   const fetchSales = useCallback(async () => {
     try {
-      // 1. Always load local data first for instant display
-      const localSales = await localDB.getSales();
+      // 1. Always load local data first for instant display (with timeout protection)
+      const localSales = await withTimeout(localDB.getSales(), 2000, []);
       const mappedLocalSales: Sale[] = localSales.map(s => ({
         id: s.id,
         type: s.type,
