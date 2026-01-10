@@ -387,25 +387,27 @@ const Auth = () => {
         <div className="flex-1 flex flex-col justify-center">
           {step === "phone" ? (
             <div className="space-y-4">
-              {/* Champ unifié : Pays + Numéro */}
+              {/* Champ unifié : Drapeau + Code + Numéro */}
               <div className="bg-[#f5f7fa] rounded-2xl px-4 py-4">
-                <button 
-                  onClick={() => setShowCountryPicker(!showCountryPicker)}
-                  className="w-full flex items-center gap-3"
-                >
-                  <span className="text-2xl">{selectedCountry.flag}</span>
-                  <span className="text-[#2d3748] font-semibold text-sm">{selectedCountry.name}</span>
-                  <span className="text-[#718096] text-sm">{selectedCountry.prefix}</span>
-                  <ChevronDown className={`w-4 h-4 text-[#718096] transition-transform ${showCountryPicker ? "rotate-180" : ""}`} />
+                <div className="w-full flex items-center">
+                  {/* Sélecteur pays (compact) */}
+                  <button 
+                    onClick={() => setShowCountryPicker(!showCountryPicker)}
+                    className="flex items-center gap-2 shrink-0"
+                  >
+                    <span className="text-2xl">{selectedCountry.flag}</span>
+                    <span className="text-[#718096] text-sm">{selectedCountry.prefix}</span>
+                    <ChevronDown className={`w-4 h-4 text-[#718096] transition-transform ${showCountryPicker ? "rotate-180" : ""}`} />
+                  </button>
                   
                   {/* Séparateur */}
-                  <div className="h-6 w-px bg-[#e2e8f0] mx-2" />
+                  <div className="h-6 w-px bg-[#e2e8f0] mx-4" />
                   
-                  {/* Numéro */}
-                  <div className="flex-1 text-left text-[#2d3748] text-lg font-semibold">
+                  {/* Numéro (plus large) */}
+                  <div className="flex-1 text-[#2d3748] text-xl font-semibold tracking-wider">
                     {phone ? formatPhone(phone) : <span className="text-[#a0aec0]">XX XX XX XX</span>}
                   </div>
-                </button>
+                </div>
               </div>
 
               {/* Country Picker Dropdown */}
