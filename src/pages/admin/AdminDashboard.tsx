@@ -108,9 +108,11 @@ export default function AdminDashboard() {
             ))}
           </div>
         ) : (
-          <BentoGrid columns={4}>
-            {/* Revenue - Large Card */}
-            <BentoCard size="2x1" gradient glow>
+          <>
+          {/* Ligne 1: Revenus (40%) - Utilisateurs (30%) - Commissions (30%) */}
+          <div className="grid grid-cols-1 md:grid-cols-10 gap-4">
+            {/* Revenue - Large Card (40% = 4/10) */}
+            <BentoCard size="2x1" gradient glow className="md:col-span-4">
               <div className="h-full flex flex-col justify-between">
                 <BentoCardHeader
                   icon={<TrendingUp className="w-5 h-5" />}
@@ -131,8 +133,8 @@ export default function AdminDashboard() {
               </div>
             </BentoCard>
 
-            {/* Users */}
-            <BentoCard onClick={() => navigate("/admin/users")}>
+            {/* Users (30% = 3/10) */}
+            <BentoCard onClick={() => navigate("/admin/users")} className="md:col-span-3">
               <BentoCardHeader
                 icon={<Users className="w-5 h-5" />}
                 title="Utilisateurs"
@@ -145,19 +147,22 @@ export default function AdminDashboard() {
               />
             </BentoCard>
 
-            {/* Tickets */}
-            <BentoCard onClick={() => navigate("/admin/support")}>
+            {/* Commissions (30% = 3/10) */}
+            <BentoCard onClick={() => navigate("/admin/commissions")} className="md:col-span-3">
               <BentoCardHeader
-                icon={<MessageSquare className="w-5 h-5" />}
-                title="Tickets"
+                icon={<Percent className="w-5 h-5" />}
+                title="Commissions"
               />
               <BentoCardValue
-                value={stats?.openTickets || 0}
-                label="tickets ouverts"
-                trend={stats?.openTickets && stats.openTickets > 5 ? "down" : "neutral"}
+                value={formatCFA(commissionStats?.totalAmount || 0)}
+                label={`+${formatCFA(commissionStats?.todayAmount || 0)} auj.`}
+                trend={commissionStats?.todayAmount && commissionStats.todayAmount > 0 ? "up" : "neutral"}
               />
             </BentoCard>
+          </div>
 
+          {/* Ligne 2: Géographie - Abonnements - Codes Prépayés - Tickets (25% chacun) */}
+          <BentoGrid columns={4}>
             {/* Countries */}
             <BentoCard onClick={() => navigate("/admin/geography")}>
               <BentoCardHeader
@@ -194,30 +199,20 @@ export default function AdminDashboard() {
               />
             </BentoCard>
 
-            {/* Commissions - New */}
-            <BentoCard size="2x1" onClick={() => navigate("/admin/commissions")}>
-              <div className="h-full flex flex-col justify-between">
-                <BentoCardHeader
-                  icon={<Percent className="w-5 h-5" />}
-                  title="Commissions"
-                  subtitle="Performance du mois"
-                />
-                <div className="flex items-end justify-between">
-                  <BentoCardValue
-                    value={formatCFA(commissionStats?.totalAmount || 0)}
-                    label="total cumulé"
-                    size="lg"
-                  />
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-primary">
-                      {formatCFA(commissionStats?.todayAmount || 0)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">aujourd'hui</p>
-                  </div>
-                </div>
-              </div>
+            {/* Tickets */}
+            <BentoCard onClick={() => navigate("/admin/support")}>
+              <BentoCardHeader
+                icon={<MessageSquare className="w-5 h-5" />}
+                title="Tickets"
+              />
+              <BentoCardValue
+                value={stats?.openTickets || 0}
+                label="tickets ouverts"
+                trend={stats?.openTickets && stats.openTickets > 5 ? "down" : "neutral"}
+              />
             </BentoCard>
           </BentoGrid>
+          </>
         )}
 
         {/* Recent Activity */}

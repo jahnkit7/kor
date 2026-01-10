@@ -73,10 +73,11 @@ const staticPlans = [
 export default function Subscriptions() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { data: currentSubscription, isLoading: subLoading } = useUserSubscription();
+  const { data: currentSubscription, isLoading: subLoading, refetch } = useUserSubscription();
   const [subscribing, setSubscribing] = useState<string | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<typeof staticPlans[0] | null>(null);
+  const [justActivated, setJustActivated] = useState(false);
 
   const handleSelectPlan = (plan: typeof staticPlans[0]) => {
     if (!user) {
@@ -117,8 +118,10 @@ export default function Subscriptions() {
 
       if (error) throw error;
 
-      toast.success(`Plan ${plan.name} activé !`);
-      setTimeout(() => navigate("/dashboard"), 500);
+      toast.success(`Plan ${plan.name} activé ! Bienvenue sur DÉKON 🎉`);
+      setJustActivated(true);
+      await refetch();
+      setTimeout(() => navigate("/dashboard"), 1500);
     } catch (error) {
       toast.error("Erreur lors de l'abonnement");
     } finally {
@@ -274,14 +277,15 @@ export default function Subscriptions() {
         })}
       </div>
 
-      {/* Skip option for existing users */}
-      {currentSubscription && (
+      {/* Skip option for existing users or after activation */}
+      {(currentSubscription || justActivated) && (
         <div className="px-4 pb-8 text-center">
           <Button
-            variant="ghost"
+            variant="default"
+            size="lg"
             onClick={() => navigate("/dashboard")}
           >
-            Retour au tableau de bord
+            {justActivated ? "Aller au tableau de bord →" : "Retour au tableau de bord"}
           </Button>
         </div>
       )}
