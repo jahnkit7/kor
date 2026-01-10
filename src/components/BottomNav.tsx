@@ -1,17 +1,18 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, CreditCard, Users, Radio, Settings, CloudOff } from "lucide-react";
+import { Home, CreditCard, Users, Radio, Settings, CloudOff, RefreshCw } from "lucide-react";
 import { usePermissions } from "@/hooks/use-role";
 import { useMerchantMessages } from "@/hooks/use-merchant-messages";
 import { useMemo } from "react";
 import { useFeatureAccess } from "@/hooks/use-feature-access";
 import { useOffline } from "@/contexts/OfflineContext";
+import { cn } from "@/lib/utils";
 
 const BottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { canViewReports } = usePermissions();
   const { conversations } = useMerchantMessages();
-  const { isOnline, pendingCount } = useOffline();
+  const { isOnline, pendingCount, isSyncing } = useOffline();
   
   // Check if network feature is globally disabled
   const { isGloballyDisabled: networkDisabled, loading: networkLoading } = useFeatureAccess("network");
@@ -34,18 +35,37 @@ const BottomNav = () => {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-      {/* Offline indicator bar */}
-      {!isOnline && (
-        <div className="absolute -top-6 left-0 right-0 flex items-center justify-center">
-          <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-500/90 text-white text-xs font-medium rounded-t-lg shadow-lg">
-            <CloudOff className="w-3 h-3" />
-            <span>Mode hors-ligne</span>
-            {pendingCount > 0 && (
-              <span className="bg-white/20 px-1.5 py-0.5 rounded text-[10px] font-bold">
-                {pendingCount}
+      {/* Sync status bar - shown when pending items exist */}
+      {pendingCount > 0 && (
+        <div 
+          className={cn(
+            "absolute -top-8 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-1.5 rounded-t-xl shadow-lg transition-all duration-300",
+            !isOnline 
+              ? "bg-amber-500 text-white" 
+              : isSyncing 
+                ? "bg-primary text-primary-foreground" 
+                : "bg-blue-500 text-white"
+          )}
+        >
+          {isSyncing ? (
+            <>
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+              <span className="text-xs font-medium">Synchronisation...</span>
+            </>
+          ) : !isOnline ? (
+            <>
+              <CloudOff className="w-3.5 h-3.5" />
+              <span className="text-xs font-medium">Hors-ligne</span>
+              <span className="bg-white/20 px-2 py-0.5 rounded-full text-[11px] font-bold">
+                {pendingCount} en attente
               </span>
-            )}
-          </div>
+            </>
+          ) : (
+            <>
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span className="text-xs font-medium">{pendingCount} à synchroniser</span>
+            </>
+          )}
         </div>
       )}
       
@@ -53,6 +73,9 @@ const BottomNav = () => {
         {visibleItems.map(({ icon: Icon, label, path, badge }) => {
           const isActive = location.pathname === path || 
             (path !== "/dashboard" && location.pathname.startsWith(path));
+          
+          // Show sync badge on settings when there are pending items
+          const showSyncBadge = path === "/settings" && pendingCount > 0;
           
           return (
             <button
@@ -71,9 +94,20 @@ const BottomNav = () => {
                     {badge > 9 ? "9+" : badge}
                   </span>
                 )}
-                {/* Sync pending indicator on Settings icon */}
-                {path === "/settings" && !isOnline && pendingCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-500 rounded-full animate-pulse" />
+                {/* Sync pending indicator - colored badge with count */}
+                {showSyncBadge && (
+                  <span 
+                    className={cn(
+                      "absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full text-[9px] font-bold flex items-center justify-center",
+                      !isOnline 
+                        ? "bg-amber-500 text-white" 
+                        : isSyncing 
+                          ? "bg-primary text-primary-foreground animate-pulse" 
+                          : "bg-blue-500 text-white"
+                    )}
+                  >
+                    {pendingCount > 99 ? "99+" : pendingCount}
+                  </span>
                 )}
               </div>
               <span className="text-[10px] font-semibold mt-1">{label}</span>
