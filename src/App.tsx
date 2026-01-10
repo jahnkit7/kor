@@ -41,6 +41,7 @@ import AdminLogs from "./pages/admin/AdminLogs";
 import AdminCommissions from "./pages/admin/AdminCommissions";
 import AdminFeatureAnalytics from "./pages/admin/AdminFeatureAnalytics";
 import AdminPromoCodes from "./pages/admin/AdminPromoCodes";
+import AdminFinancials from "./pages/admin/AdminFinancials";
 
 const queryClient = new QueryClient();
 
@@ -196,6 +197,7 @@ const App = () => (
 
             {/* Admin routes */}
             <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/financials" element={<AdminFinancials />} />
             <Route path="/admin/users" element={<AdminUsers />} />
             <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
             <Route path="/admin/codes" element={<AdminCodes />} />

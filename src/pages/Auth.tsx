@@ -33,11 +33,12 @@ const Auth = () => {
   const [searchParams] = useSearchParams();
   const { signIn, signUp, isAuthenticated, loading, configured } = useAuth();
   
-  // Récupérer le code d'invitation s'il existe
+  // Récupérer le code d'invitation ou de parrainage s'ils existent
   const inviteCode = searchParams.get("invite");
+  const refCode = searchParams.get("ref");
   
   const [step, setStep] = useState<"phone" | "pin">("phone");
-  const [isNewUser, setIsNewUser] = useState(!!inviteCode); // Par défaut nouveau si invitation
+  const [isNewUser, setIsNewUser] = useState(!!inviteCode || !!refCode); // Par défaut nouveau si invitation/parrainage
   const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
   const [showCountryPicker, setShowCountryPicker] = useState(false);
   const [phone, setPhone] = useState("");

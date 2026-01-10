@@ -4,7 +4,8 @@ import {
   Users, 
   CreditCard, 
   QrCode, 
-  MoreHorizontal
+  MoreHorizontal,
+  TrendingUp
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -13,20 +14,21 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Globe, ToggleLeft, Percent, MessageSquare, FileText } from "lucide-react";
+import { Globe, ToggleLeft, Percent, MessageSquare, FileText, Gift } from "lucide-react";
 
 const mainItems = [
   { to: "/admin", icon: LayoutDashboard, label: "Dashboard", exact: true },
+  { to: "/admin/financials", icon: TrendingUp, label: "Finances" },
   { to: "/admin/users", icon: Users, label: "Users" },
-  { to: "/admin/subscriptions", icon: CreditCard, label: "Plans" },
   { to: "/admin/codes", icon: QrCode, label: "Codes" },
 ];
 
 const moreItems = [
+  { to: "/admin/subscriptions", icon: CreditCard, label: "Abonnements" },
   { to: "/admin/geography", icon: Globe, label: "Géographie" },
   { to: "/admin/features", icon: ToggleLeft, label: "Features" },
-  { to: "/admin/commissions", icon: Percent, label: "Commissions" },
-  { to: "/admin/promo-codes", icon: QrCode, label: "Codes Promo" },
+  { to: "/admin/commissions", icon: Gift, label: "Commissions" },
+  { to: "/admin/promo-codes", icon: Percent, label: "Codes Promo" },
   { to: "/admin/support", icon: MessageSquare, label: "Support" },
   { to: "/admin/logs", icon: FileText, label: "Logs" },
 ];

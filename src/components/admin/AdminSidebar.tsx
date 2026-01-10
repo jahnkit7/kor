@@ -9,18 +9,22 @@ import {
   Percent, 
   MessageSquare, 
   FileText,
-  Settings
+  Settings,
+  TrendingUp,
+  Gift
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { to: "/admin", icon: LayoutDashboard, label: "Dashboard", exact: true },
+  { to: "/admin/financials", icon: TrendingUp, label: "Finances" },
   { to: "/admin/users", icon: Users, label: "Utilisateurs" },
   { to: "/admin/subscriptions", icon: CreditCard, label: "Abonnements" },
   { to: "/admin/codes", icon: QrCode, label: "Codes Prépayés" },
+  { to: "/admin/promo-codes", icon: Percent, label: "Codes Promo" },
   { to: "/admin/geography", icon: Globe, label: "Géographie" },
   { to: "/admin/features", icon: ToggleLeft, label: "Fonctionnalités" },
-  { to: "/admin/commissions", icon: Percent, label: "Commissions" },
+  { to: "/admin/commissions", icon: Gift, label: "Commissions" },
   { to: "/admin/support", icon: MessageSquare, label: "Support" },
   { to: "/admin/logs", icon: FileText, label: "Logs" },
 ];
