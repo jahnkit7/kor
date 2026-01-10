@@ -26,6 +26,7 @@ const moreItems = [
   { to: "/admin/geography", icon: Globe, label: "Géographie" },
   { to: "/admin/features", icon: ToggleLeft, label: "Features" },
   { to: "/admin/commissions", icon: Percent, label: "Commissions" },
+  { to: "/admin/promo-codes", icon: QrCode, label: "Codes Promo" },
   { to: "/admin/support", icon: MessageSquare, label: "Support" },
   { to: "/admin/logs", icon: FileText, label: "Logs" },
 ];

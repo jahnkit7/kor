@@ -1,7 +1,8 @@
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { BentoCard, BentoCardHeader, BentoCardValue } from "@/components/admin/BentoCard";
 import { BentoGrid } from "@/components/admin/BentoGrid";
-import { useAdminStats, useAdminLogs } from "@/hooks/use-admin-stats";
+import { useAdminStats } from "@/hooks/use-admin-stats";
+import { useActivityLogs } from "@/hooks/use-activity-logs";
 import { useCommissionStats } from "@/hooks/use-admin-commissions";
 import { 
   Users, 
@@ -12,7 +13,10 @@ import {
   Activity,
   CreditCard,
   Percent,
-  ArrowUpRight
+  ArrowUpRight,
+  ShoppingCart,
+  UserPlus,
+  Receipt
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -20,9 +24,60 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 
+const getActivityIcon = (actionType: string) => {
+  switch (actionType) {
+    case "new_sale":
+      return <ShoppingCart className="w-4 h-4" />;
+    case "user_signup":
+      return <UserPlus className="w-4 h-4" />;
+    case "new_client":
+      return <Users className="w-4 h-4" />;
+    case "subscription_change":
+      return <CreditCard className="w-4 h-4" />;
+    case "new_payment":
+      return <Receipt className="w-4 h-4" />;
+    default:
+      return <Activity className="w-4 h-4" />;
+  }
+};
+
+const getActivityLabel = (actionType: string) => {
+  switch (actionType) {
+    case "new_sale":
+      return "Nouvelle vente";
+    case "user_signup":
+      return "Inscription";
+    case "new_client":
+      return "Nouveau client";
+    case "subscription_change":
+      return "Abonnement";
+    case "new_payment":
+      return "Paiement";
+    default:
+      return actionType;
+  }
+};
+
+const getActivityDetail = (actionType: string, data: Record<string, unknown>) => {
+  switch (actionType) {
+    case "new_sale":
+      return `${data.amount?.toLocaleString() || 0} CFA (${data.type || "cash"})`;
+    case "user_signup":
+      return data.shop_name as string || "Nouvelle boutique";
+    case "new_client":
+      return data.name as string || "Client";
+    case "subscription_change":
+      return `Plan: ${data.plan || "free_trial"}`;
+    case "new_payment":
+      return `${data.amount?.toLocaleString() || 0} CFA via ${data.method || ""}`;
+    default:
+      return "";
+  }
+};
+
 export default function AdminDashboard() {
   const { data: stats, isLoading: statsLoading } = useAdminStats();
-  const { data: logs, isLoading: logsLoading } = useAdminLogs();
+  const { data: activityLogs, isLoading: logsLoading } = useActivityLogs(10);
   const { data: commissionStats } = useCommissionStats();
   const navigate = useNavigate();
 
@@ -179,20 +234,25 @@ export default function AdminDashboard() {
                   <Skeleton key={i} className="h-12 rounded-xl" />
                 ))}
               </div>
-            ) : logs && logs.length > 0 ? (
+            ) : activityLogs && activityLogs.length > 0 ? (
               <div className="space-y-2">
-                {logs.slice(0, 8).map((log) => (
+                {activityLogs.map((log) => (
                   <div
                     key={log.id}
                     className="flex items-center justify-between p-3 rounded-xl bg-secondary/30 hover:bg-secondary/50 transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <Badge variant="outline" className="text-xs font-medium">
-                        {log.action}
-                      </Badge>
-                      <span className="text-sm text-muted-foreground">
-                        {log.target_type && `${log.target_type}`}
-                      </span>
+                      <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                        {getActivityIcon(log.action_type)}
+                      </div>
+                      <div>
+                        <Badge variant="outline" className="text-xs font-medium">
+                          {getActivityLabel(log.action_type)}
+                        </Badge>
+                        <span className="text-sm text-muted-foreground ml-2">
+                          {getActivityDetail(log.action_type, log.action_data)}
+                        </span>
+                      </div>
                     </div>
                     <span className="text-xs text-muted-foreground">
                       {formatDistanceToNow(new Date(log.created_at), {

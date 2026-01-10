@@ -28,6 +28,7 @@ const features = [
   { to: "/admin/features", icon: ToggleLeft, label: "Features" },
   { to: "/admin/feature-analytics", icon: BarChart2, label: "Analytics" },
   { to: "/admin/commissions", icon: Percent, label: "Commissions" },
+  { to: "/admin/promo-codes", icon: QrCode, label: "Codes Promo" },
 ];
 
 const support = [

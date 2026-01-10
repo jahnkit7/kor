@@ -27,6 +27,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserSubscription } from "@/hooks/use-feature-access";
 import { PaymentMethodDialog } from "@/components/payment/PaymentMethodDialog";
+import { PaymentHistory } from "@/components/settings/PaymentHistory";
 import { formatDistanceToNow, format, isPast, differenceInDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
@@ -374,10 +375,15 @@ export function SubscriptionManagement() {
           open={paymentOpen}
           onOpenChange={setPaymentOpen}
           planName={selectedPlan.name}
+          planId={selectedPlan.id}
           price={selectedPlan.price}
+          subscriptionId={subscription?.id}
           onPaymentSuccess={handlePaymentSuccess}
         />
       )}
+
+      {/* Payment History */}
+      <PaymentHistory />
     </>
   );
 }
