@@ -36,7 +36,7 @@ const moreItems = [
 
 export function AdminMobileNav() {
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border safe-bottom">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#e2e8f0] safe-bottom">
       <div className="flex items-center justify-around h-16">
         {mainItems.map((item) => (
           <NavLink
@@ -46,7 +46,7 @@ export function AdminMobileNav() {
             className={({ isActive }) =>
               cn(
                 "flex flex-col items-center justify-center gap-1 px-3 py-2 min-w-[64px]",
-                isActive ? "text-primary" : "text-muted-foreground"
+                isActive ? "text-[#4f7df3]" : "text-[#718096]"
               )
             }
           >
@@ -56,7 +56,7 @@ export function AdminMobileNav() {
         ))}
         
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex flex-col items-center justify-center gap-1 px-3 py-2 min-w-[64px] text-muted-foreground">
+          <DropdownMenuTrigger className="flex flex-col items-center justify-center gap-1 px-3 py-2 min-w-[64px] text-[#718096]">
             <MoreHorizontal className="w-5 h-5" />
             <span className="text-[10px] font-medium">Plus</span>
           </DropdownMenuTrigger>

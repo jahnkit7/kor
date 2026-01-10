@@ -31,17 +31,17 @@ export function BentoCard({
     <div
       onClick={onClick}
       className={cn(
-        "group relative overflow-hidden rounded-3xl border border-border/50 bg-card p-6 transition-all duration-300",
-        "hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5",
+        "group relative overflow-hidden rounded-3xl border border-[#e2e8f0]/50 bg-white p-6 transition-all duration-300",
+        "hover:border-[#4f7df3]/30 hover:shadow-xl hover:shadow-[#4f7df3]/5",
         onClick && "cursor-pointer",
-        gradient && "bg-gradient-to-br from-card via-card to-secondary/30",
-        glow && "hover:shadow-primary/10",
+        gradient && "bg-gradient-to-br from-white via-white to-[#f8f9ff]",
+        glow && "hover:shadow-[#4f7df3]/10",
         sizeClasses[size],
         className
       )}
     >
       {/* Subtle gradient overlay on hover */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      <div className="absolute inset-0 bg-gradient-to-br from-[#4f7df3]/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
       
       {/* Content */}
       <div className="relative z-10 h-full">
@@ -64,14 +64,14 @@ export function BentoCardHeader({ icon, title, subtitle, action }: BentoCardHead
     <div className="flex items-start justify-between mb-4">
       <div className="flex items-center gap-3">
         {icon && (
-          <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+          <div className="w-10 h-10 rounded-2xl bg-[#4f7df3]/10 flex items-center justify-center text-[#4f7df3]">
             {icon}
           </div>
         )}
         <div>
-          <h3 className="font-semibold text-foreground">{title}</h3>
+          <h3 className="font-semibold text-[#2d3748]">{title}</h3>
           {subtitle && (
-            <p className="text-xs text-muted-foreground">{subtitle}</p>
+            <p className="text-xs text-[#718096]">{subtitle}</p>
           )}
         </div>
       </div>
@@ -99,11 +99,11 @@ const valueSizes = {
 export function BentoCardValue({ value, label, trend, trendValue, size = "lg" }: BentoCardValueProps) {
   return (
     <div>
-      <p className={cn("font-bold tracking-tight text-foreground", valueSizes[size])}>
+      <p className={cn("font-bold tracking-tight text-[#2d3748]", valueSizes[size])}>
         {value}
       </p>
       {label && (
-        <p className="text-sm text-muted-foreground mt-1">{label}</p>
+        <p className="text-sm text-[#718096] mt-1">{label}</p>
       )}
       {trend && trendValue && (
         <div className={cn(

@@ -18,7 +18,7 @@ interface AppLayoutProps {
 const AppLayout = ({ children, showBottomNav = true, className = "" }: AppLayoutProps) => {
   return (
     <div 
-      className={`min-h-screen min-h-[100dvh] bg-background overflow-x-hidden ${className}`}
+      className={`min-h-screen min-h-[100dvh] bg-gradient-to-b from-[#f8f9ff] via-white to-[#f8f9ff] overflow-x-hidden ${className}`}
       style={{
         paddingTop: 'env(safe-area-inset-top)',
         paddingBottom: showBottomNav ? 'calc(4rem + env(safe-area-inset-bottom))' : 'env(safe-area-inset-bottom)',
