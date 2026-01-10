@@ -102,20 +102,26 @@ const Auth = () => {
   }, []);
 
   useEffect(() => {
-    // Attendre que l'auth ET la subscription soient chargées
+    // CRITICAL FIX: Attendre que l'auth ET la subscription soient vraiment chargées
+    // subLoading est maintenant true tant que authLoading OU que la requête subscription est en cours
     if (loading || subLoading) return;
     
-    if (isAuthenticated) {
-      // Si l'utilisateur vient d'une invitation, rediriger vers la page d'acceptation
-      if (inviteCode) {
-        navigate(`/invite?code=${inviteCode}`, { replace: true });
-      } else if (!subscription) {
-        // Pas d'abonnement du tout -> page abonnement
-        navigate("/subscriptions", { replace: true });
-      } else {
-        // A un abonnement (actif ou expiré) -> dashboard
-        navigate("/dashboard", { replace: true });
-      }
+    // Ne rien faire si l'utilisateur n'est pas authentifié
+    if (!isAuthenticated) return;
+    
+    // Si l'utilisateur vient d'une invitation, rediriger vers la page d'acceptation
+    if (inviteCode) {
+      navigate(`/invite?code=${inviteCode}`, { replace: true });
+      return;
+    }
+    
+    // Maintenant qu'on est sûr que les données sont chargées, vérifier l'abonnement
+    if (!subscription) {
+      // Pas d'abonnement du tout -> page abonnement
+      navigate("/subscriptions", { replace: true });
+    } else {
+      // A un abonnement (actif ou expiré) -> dashboard
+      navigate("/dashboard", { replace: true });
     }
   }, [isAuthenticated, loading, subLoading, subscription, navigate, inviteCode]);
 
