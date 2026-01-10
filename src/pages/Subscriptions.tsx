@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -85,6 +86,7 @@ interface PlanUI {
 export default function Subscriptions() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const queryClient = useQueryClient();
   const urlRefCode = searchParams.get("ref") || localStorage.getItem("pendingReferralCode");
   
   const { user } = useAuth();
@@ -112,8 +114,18 @@ export default function Subscriptions() {
           console.log("[Subscriptions] Referral applied successfully");
           toast.success("🎁 Code de parrainage appliqué ! -10% sur votre abonnement");
           localStorage.removeItem("pendingReferralCode");
+          
+          // Refetch profile first
           await refetchProfile();
-          await refetchReferralDiscount();
+          
+          // Invalidate and refetch referral discount cache immediately
+          await queryClient.invalidateQueries({ queryKey: ['referral-discount'] });
+          
+          // Small delay then force refetch to ensure UI updates
+          setTimeout(async () => {
+            await refetchReferralDiscount();
+            console.log("[Subscriptions] Referral discount refetched");
+          }, 300);
         } else {
           console.warn("[Subscriptions] Failed to apply referral code");
         }
@@ -125,7 +137,7 @@ export default function Subscriptions() {
     };
     
     applyReferralFromUrl();
-  }, [user, urlRefCode, profile?.referred_by]);
+  }, [user, urlRefCode, profile?.referred_by, queryClient, refetchProfile, refetchReferralDiscount]);
 
   // Mapper les plans de la base de données avec la configuration UI
   const plans: PlanUI[] = useMemo(() => {
