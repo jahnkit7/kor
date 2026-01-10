@@ -68,9 +68,9 @@ export function useFeatureFlags() {
 }
 
 export function useUserSubscription() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ["user-subscription", user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
@@ -86,6 +86,17 @@ export function useUserSubscription() {
     },
     enabled: !!user?.id,
   });
+
+  // CRITICAL FIX: isLoading doit être true tant que:
+  // 1. L'auth est en cours de chargement
+  // 2. OU on a un user mais la requête subscription n'est pas encore terminée
+  // Cela évite la race condition où isLoading=false avant même que la requête ne démarre
+  const isLoading = authLoading || (!authLoading && !!user?.id && query.isLoading);
+
+  return {
+    ...query,
+    isLoading,
+  };
 }
 
 export function useFeatureAccess(featureKey: string) {
