@@ -460,3 +460,46 @@ export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: num
   console.log(`[SYNC] Complete: ${pushed} pushed, ${failed} failed`, details);
   return { pushed, failed, details };
 }
+
+// Retry failed items with tracking
+export async function retryFailedItems(userId: string): Promise<{ retried: number; stillFailed: number }> {
+  const db = await getDB();
+  let retried = 0;
+  let stillFailed = 0;
+
+  console.log("[SYNC-RETRY] Starting retry for failed items...");
+
+  // Get all unsynced items
+  const [sales, clients, debts, payments, stockItems] = await Promise.all([
+    db.getAll("sales"),
+    db.getAll("clients"),
+    db.getAll("debts"),
+    db.getAll("payments"),
+    db.getAll("stock_items"),
+  ]);
+
+  const unsyncedSales = sales.filter(s => !s.synced);
+  const unsyncedClients = clients.filter(c => !c.synced);
+  const unsyncedDebts = debts.filter(d => !d.synced);
+  const unsyncedPayments = payments.filter(p => !p.synced);
+  const unsyncedStock = stockItems.filter(s => !s.synced);
+
+  const totalUnsynced = unsyncedSales.length + unsyncedClients.length + 
+                        unsyncedDebts.length + unsyncedPayments.length + unsyncedStock.length;
+
+  if (totalUnsynced === 0) {
+    console.log("[SYNC-RETRY] No items to retry");
+    return { retried: 0, stillFailed: 0 };
+  }
+
+  console.log(`[SYNC-RETRY] Found ${totalUnsynced} unsynced items to retry`);
+
+  // Use pushUnsyncedToCloud which handles all the logic
+  const result = await pushUnsyncedToCloud(userId);
+  
+  retried = result.pushed;
+  stillFailed = result.failed;
+
+  console.log(`[SYNC-RETRY] Complete: ${retried} synced, ${stillFailed} still failed`);
+  return { retried, stillFailed };
+}
