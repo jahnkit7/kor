@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ArrowLeft, Check, User, MessageSquare, Mic, ChevronDown, ChevronUp, Wallet, CreditCard, Clock, Lock, Package } from "lucide-react";
+import { BetaBadge } from "@/components/BetaBadge";
 import { toast } from "sonner";
 import { useClients } from "@/hooks/use-clients";
 import { useSales, SaleItem } from "@/hooks/use-sales";
@@ -34,6 +35,7 @@ const Sale = () => {
     isGloballyDisabled: voiceDisabled, 
     isNotInPlan: voiceNotInPlan,
     requiredPlan: voiceRequiredPlan,
+    isBeta: voiceBeta,
   } = useFeatureAccess("voice_input");
   
   // Determine if voice button should be shown and its state
@@ -247,31 +249,42 @@ const Sale = () => {
           
           {/* Voice button - hidden if globally disabled, shows lock if not in plan */}
           {showVoiceButton && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn(
-                "text-primary-foreground",
-                voiceButtonDisabled 
-                  ? "opacity-60 cursor-not-allowed" 
-                  : "hover:bg-primary-foreground/10"
+            <div className="relative">
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "text-primary-foreground",
+                  voiceButtonDisabled 
+                    ? "opacity-60 cursor-not-allowed" 
+                    : "hover:bg-primary-foreground/10"
+                )}
+                onClick={() => {
+                  if (voiceButtonDisabled) {
+                    toast.info(`Disponible pour ${voiceRequiredPlan}`, {
+                      description: "Passez à un plan supérieur pour accéder à la saisie vocale.",
+                    });
+                  } else {
+                    setShowVoiceInput(true);
+                  }
+                }}
+              >
+                {voiceButtonDisabled ? (
+                  <Lock className="w-5 h-5" />
+                ) : (
+                  <Mic className="w-6 h-6" />
+                )}
+              </Button>
+              {/* Beta badge on voice button */}
+              {voiceBeta && !voiceButtonDisabled && (
+                <Badge 
+                  variant="beta" 
+                  className="absolute -top-2 -right-2 text-[9px] px-1.5 py-0 h-4"
+                >
+                  Bêta
+                </Badge>
               )}
-              onClick={() => {
-                if (voiceButtonDisabled) {
-                  toast.info(`Disponible pour ${voiceRequiredPlan}`, {
-                    description: "Passez à un plan supérieur pour accéder à la saisie vocale.",
-                  });
-                } else {
-                  setShowVoiceInput(true);
-                }
-              }}
-            >
-              {voiceButtonDisabled ? (
-                <Lock className="w-5 h-5" />
-              ) : (
-                <Mic className="w-6 h-6" />
-              )}
-            </Button>
+            </div>
           )}
         </div>
 

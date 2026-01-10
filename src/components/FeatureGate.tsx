@@ -1,10 +1,11 @@
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { useFeatureAccess } from "@/hooks/use-feature-access";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Lock, Zap, FlaskConical } from "lucide-react";
+import { Lock, Zap, FlaskConical, MessageSquare } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { BetaFeedbackDialog } from "@/components/BetaFeedbackDialog";
 
 interface FeatureGateProps {
   featureKey: string;
@@ -34,6 +35,7 @@ export function FeatureGate({
 }: FeatureGateProps) {
   const { hasAccess, loading, reason, nextPlan, isGloballyDisabled, isNotInPlan, isBeta } = useFeatureAccess(featureKey);
   const navigate = useNavigate();
+  const [showFeedback, setShowFeedback] = useState(false);
 
   // While loading, show nothing or a skeleton
   if (loading) {
@@ -53,19 +55,34 @@ export function FeatureGate({
     return null;
   }
 
-  // User has access - render children with optional beta badge
+  // User has access - render children with optional beta badge and feedback
   if (hasAccess) {
     if (isBeta && showBetaBadge) {
       return (
         <div className="relative">
-          <Badge 
-            variant="beta" 
-            className="absolute top-2 right-2 z-10 flex items-center gap-1"
-          >
-            <FlaskConical className="w-3 h-3" />
-            Bêta
-          </Badge>
+          <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
+            <Badge 
+              variant="beta" 
+              className="flex items-center gap-1"
+            >
+              <FlaskConical className="w-3 h-3" />
+              Bêta
+            </Badge>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 rounded-full bg-amber-500/10 hover:bg-amber-500/20"
+              onClick={() => setShowFeedback(true)}
+            >
+              <MessageSquare className="w-3.5 h-3.5 text-amber-600" />
+            </Button>
+          </div>
           {children}
+          <BetaFeedbackDialog
+            open={showFeedback}
+            onOpenChange={setShowFeedback}
+            featureKey={featureKey}
+          />
         </div>
       );
     }
