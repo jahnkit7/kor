@@ -750,7 +750,53 @@ END;
 $$;
 
 
+--
+-- Name: validate_referral_code(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.validate_referral_code(code text) RETURNS TABLE(referrer_id uuid, referrer_name text)
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+BEGIN
+  RETURN QUERY
+  SELECT p.user_id, p.shop_name
+  FROM profiles p
+  WHERE p.referral_code = UPPER(TRIM(code))
+  LIMIT 1;
+END;
+$$;
+
+
 SET default_table_access_method = heap;
+
+--
+-- Name: ab_test_assignments; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ab_test_assignments (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    feature_key text NOT NULL,
+    variant_id uuid NOT NULL,
+    assigned_at timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- Name: ab_test_metrics; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ab_test_metrics (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    feature_key text NOT NULL,
+    variant_id uuid NOT NULL,
+    metric_name text NOT NULL,
+    metric_value numeric DEFAULT 1,
+    created_at timestamp with time zone DEFAULT now()
+);
+
 
 --
 -- Name: activity_logs; Type: TABLE; Schema: public; Owner: -
@@ -778,6 +824,34 @@ CREATE TABLE public.admin_logs (
     details jsonb,
     ip_address text,
     created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: beta_feedback; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.beta_feedback (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    feature_key text NOT NULL,
+    rating integer NOT NULL,
+    comment text,
+    device_info jsonb DEFAULT '{}'::jsonb,
+    created_at timestamp with time zone DEFAULT now(),
+    CONSTRAINT beta_feedback_rating_check CHECK (((rating >= 1) AND (rating <= 5)))
+);
+
+
+--
+-- Name: changelog_views; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.changelog_views (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    changelog_id uuid NOT NULL,
+    viewed_at timestamp with time zone DEFAULT now()
 );
 
 
@@ -895,6 +969,24 @@ CREATE TABLE public.employee_invites (
 
 
 --
+-- Name: feature_changelogs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.feature_changelogs (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    feature_key text NOT NULL,
+    version text NOT NULL,
+    title text NOT NULL,
+    content_md text NOT NULL,
+    change_type text NOT NULL,
+    published_at timestamp with time zone DEFAULT now(),
+    created_by uuid,
+    created_at timestamp with time zone DEFAULT now(),
+    CONSTRAINT feature_changelogs_change_type_check CHECK ((change_type = ANY (ARRAY['feature'::text, 'improvement'::text, 'bugfix'::text, 'breaking'::text])))
+);
+
+
+--
 -- Name: feature_flags; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -909,7 +1001,11 @@ CREATE TABLE public.feature_flags (
     disabled_countries text[] DEFAULT '{}'::text[],
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    depends_on text[] DEFAULT '{}'::text[]
+    depends_on text[] DEFAULT '{}'::text[],
+    category text DEFAULT 'secondary'::text,
+    sort_order integer DEFAULT 0,
+    is_beta boolean DEFAULT false NOT NULL,
+    current_version text DEFAULT '1.0.0'::text
 );
 
 
@@ -924,6 +1020,25 @@ CREATE TABLE public.feature_usage (
     action text DEFAULT 'access'::text NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     metadata jsonb DEFAULT '{}'::jsonb
+);
+
+
+--
+-- Name: feature_variants; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.feature_variants (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    feature_key text NOT NULL,
+    variant_key text NOT NULL,
+    name text NOT NULL,
+    description text,
+    config jsonb DEFAULT '{}'::jsonb,
+    traffic_percentage integer DEFAULT 50,
+    is_control boolean DEFAULT false,
+    is_active boolean DEFAULT true,
+    created_at timestamp with time zone DEFAULT now(),
+    CONSTRAINT feature_variants_traffic_percentage_check CHECK (((traffic_percentage >= 0) AND (traffic_percentage <= 100)))
 );
 
 
@@ -1100,7 +1215,8 @@ CREATE TABLE public.profiles (
     referral_code text,
     referred_by uuid,
     notification_settings jsonb DEFAULT '{"debt_threshold": 50000, "notify_high_debt": true, "notify_low_stock": true, "low_stock_threshold": 5}'::jsonb,
-    auto_deduct_stock boolean DEFAULT true
+    auto_deduct_stock boolean DEFAULT true,
+    invoice_settings jsonb DEFAULT '{"logo_url": null, "show_logo": true, "footer_text": null, "primary_color": "#8B5CF6", "secondary_color": "#0EA5E9"}'::jsonb
 );
 
 
@@ -1237,6 +1353,30 @@ CREATE TABLE public.sales (
 
 
 --
+-- Name: saved_invoices; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.saved_invoices (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    sale_id uuid,
+    invoice_number text NOT NULL,
+    invoice_date timestamp with time zone NOT NULL,
+    customer_name text,
+    customer_phone text,
+    items jsonb DEFAULT '[]'::jsonb NOT NULL,
+    subtotal numeric DEFAULT 0 NOT NULL,
+    total numeric DEFAULT 0 NOT NULL,
+    payment_type text NOT NULL,
+    note text,
+    currency text DEFAULT 'CFA'::text,
+    style text DEFAULT 'classic'::text NOT NULL,
+    html_content text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
 -- Name: stock_alerts; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1347,6 +1487,23 @@ CREATE TABLE public.support_tickets (
 
 
 --
+-- Name: transcription_corrections; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.transcription_corrections (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    original_text text NOT NULL,
+    corrected_text text NOT NULL,
+    correction_type text NOT NULL,
+    usage_count integer DEFAULT 1,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    CONSTRAINT transcription_corrections_correction_type_check CHECK ((correction_type = ANY (ARRAY['client_name'::text, 'product_name'::text, 'general'::text])))
+);
+
+
+--
 -- Name: user_roles; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1356,6 +1513,30 @@ CREATE TABLE public.user_roles (
     role public.app_role DEFAULT 'owner'::public.app_role NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL
 );
+
+
+--
+-- Name: ab_test_assignments ab_test_assignments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ab_test_assignments
+    ADD CONSTRAINT ab_test_assignments_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: ab_test_assignments ab_test_assignments_user_id_feature_key_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ab_test_assignments
+    ADD CONSTRAINT ab_test_assignments_user_id_feature_key_key UNIQUE (user_id, feature_key);
+
+
+--
+-- Name: ab_test_metrics ab_test_metrics_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ab_test_metrics
+    ADD CONSTRAINT ab_test_metrics_pkey PRIMARY KEY (id);
 
 
 --
@@ -1372,6 +1553,30 @@ ALTER TABLE ONLY public.activity_logs
 
 ALTER TABLE ONLY public.admin_logs
     ADD CONSTRAINT admin_logs_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: beta_feedback beta_feedback_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.beta_feedback
+    ADD CONSTRAINT beta_feedback_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: changelog_views changelog_views_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.changelog_views
+    ADD CONSTRAINT changelog_views_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: changelog_views changelog_views_user_id_changelog_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.changelog_views
+    ADD CONSTRAINT changelog_views_user_id_changelog_id_key UNIQUE (user_id, changelog_id);
 
 
 --
@@ -1463,6 +1668,14 @@ ALTER TABLE ONLY public.employee_invites
 
 
 --
+-- Name: feature_changelogs feature_changelogs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.feature_changelogs
+    ADD CONSTRAINT feature_changelogs_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: feature_flags feature_flags_feature_key_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1484,6 +1697,22 @@ ALTER TABLE ONLY public.feature_flags
 
 ALTER TABLE ONLY public.feature_usage
     ADD CONSTRAINT feature_usage_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: feature_variants feature_variants_feature_key_variant_key_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.feature_variants
+    ADD CONSTRAINT feature_variants_feature_key_variant_key_key UNIQUE (feature_key, variant_key);
+
+
+--
+-- Name: feature_variants feature_variants_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.feature_variants
+    ADD CONSTRAINT feature_variants_pkey PRIMARY KEY (id);
 
 
 --
@@ -1671,6 +1900,14 @@ ALTER TABLE ONLY public.sales
 
 
 --
+-- Name: saved_invoices saved_invoices_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.saved_invoices
+    ADD CONSTRAINT saved_invoices_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: stock_alerts stock_alerts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1727,6 +1964,14 @@ ALTER TABLE ONLY public.support_tickets
 
 
 --
+-- Name: transcription_corrections transcription_corrections_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.transcription_corrections
+    ADD CONSTRAINT transcription_corrections_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: user_roles user_roles_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1743,6 +1988,27 @@ ALTER TABLE ONLY public.user_roles
 
 
 --
+-- Name: idx_ab_assignments_feature; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ab_assignments_feature ON public.ab_test_assignments USING btree (feature_key);
+
+
+--
+-- Name: idx_ab_assignments_user; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ab_assignments_user ON public.ab_test_assignments USING btree (user_id);
+
+
+--
+-- Name: idx_ab_metrics_variant; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ab_metrics_variant ON public.ab_test_metrics USING btree (variant_id);
+
+
+--
 -- Name: idx_activity_logs_created; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1750,10 +2016,52 @@ CREATE INDEX idx_activity_logs_created ON public.activity_logs USING btree (crea
 
 
 --
+-- Name: idx_beta_feedback_feature; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_beta_feedback_feature ON public.beta_feedback USING btree (feature_key);
+
+
+--
+-- Name: idx_beta_feedback_user; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_beta_feedback_user ON public.beta_feedback USING btree (user_id);
+
+
+--
+-- Name: idx_corrections_original; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_corrections_original ON public.transcription_corrections USING btree (user_id, original_text);
+
+
+--
+-- Name: idx_corrections_type; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_corrections_type ON public.transcription_corrections USING btree (user_id, correction_type);
+
+
+--
 -- Name: idx_employee_invites_invite_code; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_employee_invites_invite_code ON public.employee_invites USING btree (invite_code);
+
+
+--
+-- Name: idx_feature_changelogs_feature; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_feature_changelogs_feature ON public.feature_changelogs USING btree (feature_key);
+
+
+--
+-- Name: idx_feature_changelogs_published; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_feature_changelogs_published ON public.feature_changelogs USING btree (published_at DESC);
 
 
 --
@@ -1775,6 +2083,13 @@ CREATE INDEX idx_feature_usage_feature_key ON public.feature_usage USING btree (
 --
 
 CREATE INDEX idx_feature_usage_user_feature ON public.feature_usage USING btree (user_id, feature_key);
+
+
+--
+-- Name: idx_feature_variants_feature; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_feature_variants_feature ON public.feature_variants USING btree (feature_key);
 
 
 --
@@ -2093,11 +2408,50 @@ CREATE TRIGGER update_support_tickets_updated_at BEFORE UPDATE ON public.support
 
 
 --
+-- Name: transcription_corrections update_transcription_corrections_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER update_transcription_corrections_updated_at BEFORE UPDATE ON public.transcription_corrections FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+
+--
+-- Name: ab_test_assignments ab_test_assignments_variant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ab_test_assignments
+    ADD CONSTRAINT ab_test_assignments_variant_id_fkey FOREIGN KEY (variant_id) REFERENCES public.feature_variants(id) ON DELETE CASCADE;
+
+
+--
+-- Name: ab_test_metrics ab_test_metrics_variant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ab_test_metrics
+    ADD CONSTRAINT ab_test_metrics_variant_id_fkey FOREIGN KEY (variant_id) REFERENCES public.feature_variants(id) ON DELETE CASCADE;
+
+
+--
 -- Name: admin_logs admin_logs_admin_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.admin_logs
     ADD CONSTRAINT admin_logs_admin_id_fkey FOREIGN KEY (admin_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: beta_feedback beta_feedback_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.beta_feedback
+    ADD CONSTRAINT beta_feedback_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: changelog_views changelog_views_changelog_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.changelog_views
+    ADD CONSTRAINT changelog_views_changelog_id_fkey FOREIGN KEY (changelog_id) REFERENCES public.feature_changelogs(id) ON DELETE CASCADE;
 
 
 --
@@ -2301,6 +2655,14 @@ ALTER TABLE ONLY public.sales
 
 
 --
+-- Name: saved_invoices saved_invoices_sale_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.saved_invoices
+    ADD CONSTRAINT saved_invoices_sale_id_fkey FOREIGN KEY (sale_id) REFERENCES public.sales(id) ON DELETE SET NULL;
+
+
+--
 -- Name: stock_alerts stock_alerts_sale_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2394,6 +2756,13 @@ CREATE POLICY "Admins can manage all tickets" ON public.support_tickets TO authe
 
 
 --
+-- Name: feature_changelogs Admins can manage changelogs; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Admins can manage changelogs" ON public.feature_changelogs TO authenticated USING (public.has_role(auth.uid(), 'admin'::public.app_role));
+
+
+--
 -- Name: recharge_codes Admins can manage codes; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -2450,6 +2819,13 @@ CREATE POLICY "Admins can manage regions" ON public.regions TO authenticated USI
 
 
 --
+-- Name: feature_variants Admins can manage variants; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Admins can manage variants" ON public.feature_variants TO authenticated USING (public.has_role(auth.uid(), 'admin'::public.app_role));
+
+
+--
 -- Name: roadmap_items Admins can update roadmap items; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -2491,6 +2867,20 @@ CREATE POLICY "Admins can view all countries" ON public.countries FOR SELECT TO 
 --
 
 CREATE POLICY "Admins can view all debts" ON public.debts FOR SELECT USING (public.has_role(auth.uid(), 'admin'::public.app_role));
+
+
+--
+-- Name: beta_feedback Admins can view all feedback; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Admins can view all feedback" ON public.beta_feedback FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'admin'::public.app_role));
+
+
+--
+-- Name: ab_test_metrics Admins can view all metrics; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Admins can view all metrics" ON public.ab_test_metrics FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'admin'::public.app_role));
 
 
 --
@@ -2622,6 +3012,13 @@ CREATE POLICY "Authenticated users can create negotiations" ON public.merchant_n
 
 
 --
+-- Name: feature_changelogs Everyone can view changelogs; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Everyone can view changelogs" ON public.feature_changelogs FOR SELECT TO authenticated USING (true);
+
+
+--
 -- Name: employee_invites Invited employee can accept their invite; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -2680,6 +3077,13 @@ CREATE POLICY "System can insert stock alerts" ON public.stock_alerts FOR INSERT
 
 
 --
+-- Name: transcription_corrections Users can create own corrections; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can create own corrections" ON public.transcription_corrections FOR INSERT WITH CHECK ((auth.uid() = user_id));
+
+
+--
 -- Name: referrals Users can create referral invites; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -2698,6 +3102,13 @@ CREATE POLICY "Users can create their own clients" ON public.clients FOR INSERT 
 --
 
 CREATE POLICY "Users can create their own debts" ON public.debts FOR INSERT WITH CHECK ((auth.uid() = user_id));
+
+
+--
+-- Name: saved_invoices Users can create their own invoices; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can create their own invoices" ON public.saved_invoices FOR INSERT WITH CHECK ((auth.uid() = user_id));
 
 
 --
@@ -2778,6 +3189,13 @@ CREATE POLICY "Users can create tickets" ON public.support_tickets FOR INSERT TO
 
 
 --
+-- Name: transcription_corrections Users can delete own corrections; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can delete own corrections" ON public.transcription_corrections FOR DELETE USING ((auth.uid() = user_id));
+
+
+--
 -- Name: clients Users can delete their own clients; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -2789,6 +3207,13 @@ CREATE POLICY "Users can delete their own clients" ON public.clients FOR DELETE 
 --
 
 CREATE POLICY "Users can delete their own debts" ON public.debts FOR DELETE USING ((auth.uid() = user_id));
+
+
+--
+-- Name: saved_invoices Users can delete their own invoices; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can delete their own invoices" ON public.saved_invoices FOR DELETE USING ((auth.uid() = user_id));
 
 
 --
@@ -2862,6 +3287,20 @@ CREATE POLICY "Users can delete their sent messages" ON public.merchant_messages
 
 
 --
+-- Name: ab_test_assignments Users can insert their assignments; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can insert their assignments" ON public.ab_test_assignments FOR INSERT TO authenticated WITH CHECK ((auth.uid() = user_id));
+
+
+--
+-- Name: beta_feedback Users can insert their own feedback; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can insert their own feedback" ON public.beta_feedback FOR INSERT TO authenticated WITH CHECK ((auth.uid() = user_id));
+
+
+--
 -- Name: payment_history Users can insert their payments; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -2873,6 +3312,13 @@ CREATE POLICY "Users can insert their payments" ON public.payment_history FOR IN
 --
 
 CREATE POLICY "Users can insert their subscription" ON public.subscriptions FOR INSERT WITH CHECK ((auth.uid() = user_id));
+
+
+--
+-- Name: changelog_views Users can insert their views; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can insert their views" ON public.changelog_views FOR INSERT TO authenticated WITH CHECK ((auth.uid() = user_id));
 
 
 --
@@ -2890,10 +3336,38 @@ CREATE POLICY "Users can read active promo codes" ON public.promo_codes FOR SELE
 
 
 --
+-- Name: ab_test_assignments Users can see their assignments; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can see their assignments" ON public.ab_test_assignments FOR SELECT TO authenticated USING ((auth.uid() = user_id));
+
+
+--
+-- Name: feature_variants Users can see variants; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can see variants" ON public.feature_variants FOR SELECT TO authenticated USING (true);
+
+
+--
 -- Name: merchant_messages Users can send messages; Type: POLICY; Schema: public; Owner: -
 --
 
 CREATE POLICY "Users can send messages" ON public.merchant_messages FOR INSERT WITH CHECK ((auth.uid() = sender_id));
+
+
+--
+-- Name: ab_test_metrics Users can track their metrics; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can track their metrics" ON public.ab_test_metrics FOR INSERT TO authenticated WITH CHECK ((auth.uid() = user_id));
+
+
+--
+-- Name: transcription_corrections Users can update own corrections; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can update own corrections" ON public.transcription_corrections FOR UPDATE USING ((auth.uid() = user_id));
 
 
 --
@@ -3023,10 +3497,24 @@ CREATE POLICY "Users can view open or own requests" ON public.product_requests F
 
 
 --
+-- Name: transcription_corrections Users can view own corrections; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can view own corrections" ON public.transcription_corrections FOR SELECT USING ((auth.uid() = user_id));
+
+
+--
 -- Name: stock_alerts Users can view own stock alerts; Type: POLICY; Schema: public; Owner: -
 --
 
 CREATE POLICY "Users can view own stock alerts" ON public.stock_alerts FOR SELECT USING ((user_id = auth.uid()));
+
+
+--
+-- Name: changelog_views Users can view their changelog views; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can view their changelog views" ON public.changelog_views FOR SELECT TO authenticated USING ((auth.uid() = user_id));
 
 
 --
@@ -3062,6 +3550,20 @@ CREATE POLICY "Users can view their own clients" ON public.clients FOR SELECT US
 --
 
 CREATE POLICY "Users can view their own debts" ON public.debts FOR SELECT USING ((auth.uid() = user_id));
+
+
+--
+-- Name: beta_feedback Users can view their own feedback; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can view their own feedback" ON public.beta_feedback FOR SELECT TO authenticated USING ((auth.uid() = user_id));
+
+
+--
+-- Name: saved_invoices Users can view their own invoices; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can view their own invoices" ON public.saved_invoices FOR SELECT USING ((auth.uid() = user_id));
 
 
 --
@@ -3163,6 +3665,18 @@ CREATE POLICY "Users can view their used codes" ON public.recharge_codes FOR SEL
 
 
 --
+-- Name: ab_test_assignments; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.ab_test_assignments ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: ab_test_metrics; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.ab_test_metrics ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: activity_logs; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -3173,6 +3687,18 @@ ALTER TABLE public.activity_logs ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.admin_logs ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: beta_feedback; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.beta_feedback ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: changelog_views; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.changelog_views ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: clients; Type: ROW SECURITY; Schema: public; Owner: -
@@ -3217,6 +3743,12 @@ ALTER TABLE public.debts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.employee_invites ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: feature_changelogs; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.feature_changelogs ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: feature_flags; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -3227,6 +3759,12 @@ ALTER TABLE public.feature_flags ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.feature_usage ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: feature_variants; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.feature_variants ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: merchant_messages; Type: ROW SECURITY; Schema: public; Owner: -
@@ -3325,6 +3863,12 @@ ALTER TABLE public.sale_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sales ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: saved_invoices; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.saved_invoices ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: stock_alerts; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -3359,6 +3903,12 @@ ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.support_tickets ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: transcription_corrections; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.transcription_corrections ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: user_roles; Type: ROW SECURITY; Schema: public; Owner: -
