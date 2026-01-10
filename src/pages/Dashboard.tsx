@@ -24,6 +24,7 @@ import QuickActionFAB from "@/components/dashboard/QuickActionFAB";
 import TransactionItem from "@/components/dashboard/TransactionItem";
 import BentoStatsGrid from "@/components/dashboard/BentoStatsGrid";
 import { Skeleton } from "@/components/ui/skeleton";
+import { triggerHaptic } from "@/lib/haptics";
 
 const Dashboard = () => {
   const { loading: authLoading } = useRequireAuth();
@@ -145,7 +146,10 @@ const Dashboard = () => {
               variant="cash"
               size="lg"
               className="w-full min-w-0 h-[clamp(2.75rem,10vw,3rem)] rounded-xl gap-1.5 px-3"
-              onClick={() => navigate("/sale/cash")}
+              onClick={() => {
+                triggerHaptic();
+                navigate("/sale/cash");
+              }}
             >
               <Wallet className="w-[clamp(0.875rem,3vw,1rem)] h-[clamp(0.875rem,3vw,1rem)] flex-shrink-0" />
               <span className="text-[clamp(0.75rem,2.5vw,0.875rem)] font-medium truncate">Cash</span>
@@ -156,7 +160,10 @@ const Dashboard = () => {
               variant="credit"
               size="lg"
               className="w-full min-w-0 h-[clamp(2.75rem,10vw,3rem)] rounded-xl gap-1.5 px-3"
-              onClick={() => navigate("/sale/credit")}
+              onClick={() => {
+                triggerHaptic();
+                navigate("/sale/credit");
+              }}
             >
               <CreditCard className="w-[clamp(0.875rem,3vw,1rem)] h-[clamp(0.875rem,3vw,1rem)] flex-shrink-0" />
               <span className="text-[clamp(0.75rem,2.5vw,0.875rem)] font-medium truncate">Crédit</span>

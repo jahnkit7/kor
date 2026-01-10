@@ -16,6 +16,7 @@ import { useFeatureAccess } from "@/hooks/use-feature-access";
 import { useOffline } from "@/contexts/OfflineContext";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { triggerHaptic } from "@/lib/haptics";
 
 const BottomNav = () => {
   const navigate = useNavigate();
@@ -135,7 +136,10 @@ const BottomNav = () => {
           return (
             <motion.button
               key={path}
-              onClick={() => navigate(path)}
+              onClick={() => {
+                triggerHaptic();
+                navigate(path);
+              }}
               whileTap={{ scale: 0.92 }}
               className="group relative flex flex-col items-center justify-center min-w-[clamp(3rem,12vw,4.5rem)] h-full outline-none"
             >
