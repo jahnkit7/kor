@@ -16,8 +16,8 @@ const buttonVariants = cva(
         ghost: "hover:bg-secondary hover:text-secondary-foreground",
         link: "text-[#4f7df3] underline-offset-4 hover:underline",
         // CAISSE+ specific variants
-        cash: "gradient-cash text-cash-foreground shadow-button hover:opacity-90",
-        credit: "gradient-credit text-credit-foreground shadow-button hover:opacity-90",
+        cash: "bg-gradient-to-r from-[#4f7df3] via-[#5b8af5] to-[#3b6ce8] text-white shadow-lg shadow-[#4f7df3]/25 hover:opacity-90",
+        credit: "bg-gradient-to-r from-[#f97316] via-[#fb923c] to-[#ea580c] text-white shadow-lg shadow-[#f97316]/25 hover:opacity-90",
         action: "bg-gradient-to-r from-[#4f7df3] via-[#5b8af5] to-[#3b6ce8] text-white shadow-lg shadow-[#4f7df3]/25 hover:opacity-90",
         muted: "bg-muted text-muted-foreground hover:bg-muted/80",
       },
