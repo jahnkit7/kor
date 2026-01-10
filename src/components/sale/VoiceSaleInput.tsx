@@ -19,7 +19,7 @@ import { useFeatureTracking } from "@/hooks/use-feature-tracking";
 import { useTranscriptionLearning } from "@/hooks/use-transcription-learning";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import { parseSalesLocally } from "@/lib/local-sale-parser";
+import { parseSalesLocally, setKnownStockItems, setLearnedCorrections } from "@/lib/local-sale-parser";
 
 // Voice history storage key
 const VOICE_HISTORY_KEY = "voice_sale_history";
@@ -114,7 +114,7 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
   const { toast } = useToast();
   const { isOnline } = useNetworkStatus();
   const { trackFeature } = useFeatureTracking();
-  const { saveCorrection, applyCorrections } = useTranscriptionLearning();
+  const { saveCorrection, applyCorrections, corrections } = useTranscriptionLearning();
 
   // Track voice input usage
   useEffect(() => {
@@ -391,6 +391,18 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
       setStep("analyzing");
       
       try {
+        // Inject stock items and learned corrections into the parser
+        if (stockItems) {
+          setKnownStockItems(stockItems.map(s => s.name));
+        }
+        if (corrections.length > 0) {
+          setLearnedCorrections(corrections.map(c => ({
+            original: c.original_text,
+            corrected: c.corrected_text,
+            type: c.correction_type as "client_name" | "product_name" | "general",
+          })));
+        }
+        
         const result = parseSalesLocally(text);
         
         if (result.sales.length === 0) {
@@ -537,7 +549,7 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
       setCanRetry(true);
       toast({ title: "Erreur d'analyse", description: errorMsg, variant: "destructive" });
     }
-  }, [clients, isOnline, toast, voiceHistory]);
+  }, [clients, isOnline, toast, voiceHistory, stockItems, corrections, useLocalParser]);
 
   const getSaleStatus = (sale: ParsedSale): "ready" | "needs_action" => {
     if (sale.client_match.status === "found") return "ready";

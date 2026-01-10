@@ -27,6 +27,12 @@ export interface LocalSaleParseResult {
   suggestions: string[];
 }
 
+export interface TranscriptionCorrection {
+  original: string;
+  corrected: string;
+  type: "client_name" | "product_name" | "general";
+}
+
 // Common African names for client detection
 const COMMON_NAMES = [
   // West African names
@@ -38,7 +44,70 @@ const COMMON_NAMES = [
   "jean", "marie", "pierre", "paul", "emmanuel", "grace", "david", "esther",
   // Generic
   "monsieur", "madame", "client", "cliente", "patron", "patronne",
+  // More common names
+  "abdou", "samba", "khadija", "aicha", "fanta", "lamine", "djibril", "moustapha",
+  "papa", "maman", "tonton", "tata", "frere", "soeur",
 ];
+
+// Known product keywords that should never be client names
+const PRODUCT_KEYWORDS = [
+  "chargeur", "chargeurs", "ecran", "écran", "ecrans", "écrans",
+  "batterie", "batteries", "cable", "câble", "cables", "câbles",
+  "telephone", "téléphone", "telephones", "téléphones", "phone", "phones",
+  "coque", "coques", "etui", "étui", "protection", "protections",
+  "samsung", "iphone", "huawei", "xiaomi", "oppo", "tecno", "infinix", "itel",
+  "airpod", "airpods", "ecouteur", "écouteur", "ecouteurs", "écouteurs",
+  "montre", "montres", "watch", "smartwatch",
+  "tablette", "tablettes", "ipad", "tab",
+  "power", "bank", "powerbank",
+  "accessoire", "accessoires", "piece", "pièce", "pieces", "pièces",
+  "carte", "cartes", "memoire", "mémoire", "sd", "sim",
+  "verre", "verres", "trempe", "trempé",
+  "haut", "parleur", "speaker", "enceinte",
+  "clavier", "souris", "mouse", "keyboard",
+];
+
+// Store for stock items (injected externally)
+let knownStockItems: string[] = [];
+
+// Store for learned corrections (injected externally)
+let learnedCorrections: TranscriptionCorrection[] = [];
+
+/**
+ * Set the known stock items from the database
+ */
+export function setKnownStockItems(items: string[]) {
+  knownStockItems = items.map(i => normalizeText(i));
+}
+
+/**
+ * Set the learned corrections from the database
+ */
+export function setLearnedCorrections(corrections: TranscriptionCorrection[]) {
+  learnedCorrections = corrections;
+}
+
+/**
+ * Apply learned corrections to text before parsing
+ */
+function applyCorrections(text: string): string {
+  let correctedText = text;
+  
+  for (const correction of learnedCorrections) {
+    // Case-insensitive replacement
+    const regex = new RegExp(escapeRegex(correction.original), "gi");
+    correctedText = correctedText.replace(regex, correction.corrected);
+  }
+  
+  return correctedText;
+}
+
+/**
+ * Escape special regex characters
+ */
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
 // Normalize text for parsing
 function normalizeText(text: string): string {
@@ -50,6 +119,53 @@ function normalizeText(text: string): string {
     .trim();
 }
 
+/**
+ * Check if a word is a known product (from stock or dictionary)
+ */
+function isKnownProduct(word: string): boolean {
+  const normalized = normalizeText(word);
+  
+  // Check against product keywords
+  if (PRODUCT_KEYWORDS.some(kw => normalized.includes(kw) || kw.includes(normalized))) {
+    return true;
+  }
+  
+  // Check against known stock items
+  if (knownStockItems.some(item => item.includes(normalized) || normalized.includes(item))) {
+    return true;
+  }
+  
+  // Check against product dictionary
+  if (findProductInDictionary(word)) {
+    return true;
+  }
+  
+  return false;
+}
+
+/**
+ * Check if a word is a known client name (from corrections or common names)
+ */
+function isKnownClientName(word: string): boolean {
+  const normalized = normalizeText(word);
+  
+  // Check learned corrections for client names
+  const clientCorrections = learnedCorrections.filter(c => c.type === "client_name");
+  for (const correction of clientCorrections) {
+    const correctedNorm = normalizeText(correction.corrected);
+    if (correctedNorm === normalized || correctedNorm.includes(normalized)) {
+      return true;
+    }
+  }
+  
+  // Check common names
+  if (COMMON_NAMES.includes(normalized)) {
+    return true;
+  }
+  
+  return false;
+}
+
 // Extract client name from text
 function extractClientName(text: string): string | null {
   const normalized = normalizeText(text);
@@ -59,24 +175,49 @@ function extractClientName(text: string): string | null {
     /(?:a|à|pour|chez)\s+([a-zéèêëàâäùûüïîôö]+)/i,
     /([a-zéèêëàâäùûüïîôö]+)\s+(?:a pris|a achete|a acheté|veut|prend)/i,
     /(?:vente|vendu)\s+(?:a|à)\s+([a-zéèêëàâäùûüïîôö]+)/i,
+    /client\s*:?\s*([a-zéèêëàâäùûüïîôö]+)/i,
   ];
   
   for (const pattern of patterns) {
     const match = text.match(pattern);
     if (match) {
       const name = match[1].toLowerCase();
-      // Check if it's a known name or starts with uppercase in original
-      if (COMMON_NAMES.includes(name) || text.match(new RegExp(`\\b${match[1]}\\b`))) {
+      const normalizedName = normalizeText(name);
+      
+      // IMPORTANT: Skip if this is a product name, not a client
+      if (isKnownProduct(name)) {
+        continue;
+      }
+      
+      // Check if it's a known client name or a common name
+      if (isKnownClientName(name) || COMMON_NAMES.includes(normalizedName)) {
         // Capitalize first letter
         return match[1].charAt(0).toUpperCase() + match[1].slice(1).toLowerCase();
+      }
+      
+      // Check if it starts with uppercase in original (likely a name)
+      const originalWord = text.match(new RegExp(`\\b(${match[1]})\\b`, 'i'));
+      if (originalWord && originalWord[1][0] === originalWord[1][0].toUpperCase()) {
+        // Only if not a product
+        if (!isKnownProduct(match[1])) {
+          return match[1].charAt(0).toUpperCase() + match[1].slice(1).toLowerCase();
+        }
       }
     }
   }
   
-  // Look for any known name in the text
+  // Look for any known name in the text that's not a product
   for (const name of COMMON_NAMES) {
-    if (normalized.includes(name)) {
+    if (normalized.includes(name) && !isKnownProduct(name)) {
       return name.charAt(0).toUpperCase() + name.slice(1);
+    }
+  }
+  
+  // Check learned client name corrections
+  for (const correction of learnedCorrections.filter(c => c.type === "client_name")) {
+    const correctedNorm = normalizeText(correction.corrected);
+    if (normalized.includes(correctedNorm)) {
+      return correction.corrected.charAt(0).toUpperCase() + correction.corrected.slice(1).toLowerCase();
     }
   }
   
@@ -215,6 +356,11 @@ function extractProducts(text: string): Array<{ name: string; quantity: number; 
       const skipWords = ["a", "à", "de", "du", "la", "le", "les", "un", "une", "des", "et"];
       if (skipWords.includes(productName.toLowerCase())) continue;
       
+      // IMPORTANT: Skip if this is a client name, not a product
+      if (isKnownClientName(productName) && !isKnownProduct(productName)) {
+        continue;
+      }
+      
       // Check dictionary for better name
       const dictProduct = findProductInDictionary(productName);
       if (dictProduct) {
@@ -224,8 +370,14 @@ function extractProducts(text: string): Array<{ name: string; quantity: number; 
           unitPrice = dictProduct.typical_prices[0];
         }
       } else {
-        // Capitalize first letter
-        productName = productName.charAt(0).toUpperCase() + productName.slice(1);
+        // Check if it matches a known stock item (use original casing)
+        const stockMatch = knownStockItems.find(item => 
+          item.includes(normalizeText(productName)) || normalizeText(productName).includes(item)
+        );
+        if (!stockMatch) {
+          // Capitalize first letter
+          productName = productName.charAt(0).toUpperCase() + productName.slice(1);
+        }
       }
       
       // Only add if we haven't already added a similar product
@@ -251,14 +403,17 @@ function parseSaleSegment(segment: string): ParsedLocalSale | null {
   const trimmed = segment.trim();
   if (trimmed.length < 5) return null;
   
-  const amount = extractAmount(trimmed);
+  // Apply learned corrections before parsing
+  const correctedSegment = applyCorrections(trimmed);
+  
+  const amount = extractAmount(correctedSegment);
   if (amount === 0) return null;
   
-  const saleType = determineSaleType(trimmed);
-  const paid = extractPaidAmount(trimmed, amount);
+  const saleType = determineSaleType(correctedSegment);
+  const paid = extractPaidAmount(correctedSegment, amount);
   const remaining = saleType === "credit" ? Math.max(0, amount - paid) : 0;
-  const clientName = extractClientName(trimmed);
-  const products = extractProducts(trimmed);
+  const clientName = extractClientName(correctedSegment);
+  const products = extractProducts(correctedSegment);
   
   // Determine confidence
   let confidence: "high" | "medium" | "low" = "low";
@@ -313,7 +468,10 @@ export function parseSalesLocally(transcript: string): LocalSaleParseResult {
   const unparsedText: string[] = [];
   const suggestions: string[] = [];
   
-  const segments = splitBySeparators(transcript);
+  // Apply corrections to entire transcript first
+  const correctedTranscript = applyCorrections(transcript);
+  
+  const segments = splitBySeparators(correctedTranscript);
   
   for (const segment of segments) {
     const parsed = parseSaleSegment(segment);
