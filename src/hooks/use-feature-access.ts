@@ -13,9 +13,16 @@ interface FeatureFlag {
   disabled_countries: string[] | null;
 }
 
-interface UserSubscription {
+export interface UserSubscription {
+  id: string;
+  user_id: string;
   plan: string;
   is_active: boolean;
+  trial_started_at: string;
+  trial_ends_at: string;
+  max_clients: number | null;
+  created_at: string;
+  updated_at: string;
 }
 
 const planHierarchy: Record<string, number> = {

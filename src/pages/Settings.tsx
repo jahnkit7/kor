@@ -27,7 +27,7 @@ import { useProfile } from "@/hooks/use-profile";
 import { useAuth } from "@/hooks/use-auth";
 import { ThemeSelector } from "@/components/ThemeSelector";
 import { ActivateCodeDialog } from "@/components/settings/ActivateCodeDialog";
-import { SubscriptionStatus } from "@/components/settings/SubscriptionStatus";
+import { SubscriptionManagement } from "@/components/settings/SubscriptionManagement";
 import { toast } from "sonner";
 
 const Settings = () => {
@@ -109,13 +109,13 @@ const Settings = () => {
 
       {/* Settings Groups */}
       <div className="p-4 space-y-6">
-        {/* Subscription Status */}
+        {/* Subscription Management */}
         <div>
           <p className="text-sm font-semibold text-muted-foreground mb-3 px-1">
             Abonnement
           </p>
           <div className="space-y-3">
-            <SubscriptionStatus />
+            <SubscriptionManagement />
             <Card>
               <CardContent className="p-0">
                 <ActivateCodeDialog />

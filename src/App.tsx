@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { OfflineProvider } from "./contexts/OfflineContext";
 import { FeatureNotificationsProvider } from "./contexts/FeatureNotificationsContext";
+import { SubscriptionNotificationsProvider } from "./contexts/SubscriptionNotificationsContext";
 import { PWAStatus } from "./components/PWAStatus";
 import { RequireProfile } from "./components/RequireProfile";
 import { RequireSubscription } from "./components/RequireSubscription";
@@ -49,8 +50,9 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
-        <PWAStatus />
-        <BrowserRouter>
+          <PWAStatus />
+          <BrowserRouter>
+            <SubscriptionNotificationsProvider>
           <Routes>
             {/* Public routes */}
             <Route path="/" element={<Landing />} />
@@ -205,8 +207,9 @@ const App = () => (
 
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+            </SubscriptionNotificationsProvider>
+          </BrowserRouter>
+        </TooltipProvider>
       </FeatureNotificationsProvider>
     </OfflineProvider>
   </QueryClientProvider>
