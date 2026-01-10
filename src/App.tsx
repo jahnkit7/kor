@@ -44,6 +44,7 @@ import AdminPromoCodes from "./pages/admin/AdminPromoCodes";
 import AdminFinancials from "./pages/admin/AdminFinancials";
 import AdminNotifications from "./pages/admin/AdminNotifications";
 import AdminRoadmap from "./pages/admin/AdminRoadmap";
+import AdminSetup from "./pages/admin/AdminSetup";
 
 const queryClient = new QueryClient();
 
@@ -212,6 +213,7 @@ const App = () => (
             <Route path="/admin/roadmap" element={<AdminRoadmap />} />
             <Route path="/admin/support" element={<AdminSupport />} />
             <Route path="/admin/logs" element={<AdminLogs />} />
+            <Route path="/admin/setup" element={<AdminSetup />} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>
