@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { WhatsAppShare } from "@/components/WhatsAppShare";
+import { FeatureGate } from "@/components/FeatureGate";
 import { usePermissions } from "@/hooks/use-role";
 import { useHiddenAmount } from "@/components/HideAmountsToggle";
 import { useProfile } from "@/hooks/use-profile";
@@ -80,6 +81,7 @@ const Reports = () => {
   const totalSales = currentData.total || 1; // Avoid division by zero
 
   return (
+    <FeatureGate featureKey="reports" showUpgradePrompt>
     <AppLayout>
       {/* Header */}
       <div className="bg-card px-4 pt-4 pb-6 border-b border-border">
@@ -218,6 +220,7 @@ const Reports = () => {
         </Button>
       </div>
     </AppLayout>
+    </FeatureGate>
   );
 };
 
