@@ -69,10 +69,11 @@ const QuickActionFAB = ({ className }: QuickActionFABProps) => {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 20 }}
                     transition={{ delay: index * 0.05 }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={action.onClick}
-                    className="flex items-center gap-3 bg-white rounded-full pl-4 pr-3 py-2.5 shadow-lg hover:shadow-xl transition-shadow"
+                    className="flex items-center gap-3 bg-white rounded-full pl-4 pr-3 py-2.5 shadow-lg shadow-[#4f7df3]/10 hover:shadow-xl transition-shadow"
                   >
-                    <span className="text-sm font-semibold text-[#2d3748] whitespace-nowrap">
+                    <span className="text-sm font-semibold text-[#051425] whitespace-nowrap">
                       {action.label}
                     </span>
                     <div
@@ -92,12 +93,13 @@ const QuickActionFAB = ({ className }: QuickActionFABProps) => {
 
         {/* Main FAB Button */}
         <motion.button
-          whileTap={{ scale: 0.95 }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.9 }}
           onClick={() => setIsOpen(!isOpen)}
           className={cn(
             "w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all z-50",
             isOpen
-              ? "bg-[#718096] rotate-45"
+              ? "bg-[#718096]"
               : "bg-gradient-to-br from-[#22c55e] to-[#16a34a]"
           )}
           style={{
@@ -106,11 +108,16 @@ const QuickActionFAB = ({ className }: QuickActionFABProps) => {
               : "0 4px 20px rgba(34, 197, 94, 0.4)",
           }}
         >
-          <HugeiconsIcon 
-            icon={isOpen ? Cancel01Icon : Add01Icon} 
-            className="w-6 h-6 text-white" 
-            strokeWidth={2}
-          />
+          <motion.div
+            animate={{ rotate: isOpen ? 45 : 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+          >
+            <HugeiconsIcon 
+              icon={isOpen ? Cancel01Icon : Add01Icon} 
+              className="w-6 h-6 text-white" 
+              strokeWidth={2}
+            />
+          </motion.div>
         </motion.button>
       </div>
     </>

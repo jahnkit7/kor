@@ -99,7 +99,7 @@ const Dashboard = () => {
               </div>
               <div>
                 <p className="text-sm text-[#718096] font-medium">Bonjour 👋</p>
-                <h1 className="text-lg font-bold text-[#2d3748]">{shopName}</h1>
+                <h1 className="text-lg font-bold text-[#051425]">{shopName}</h1>
               </div>
             </div>
             <NotificationBell />
@@ -119,14 +119,14 @@ const Dashboard = () => {
           />
         </div>
 
-        {/* Action Buttons + FAB */}
+        {/* Action Buttons */}
         <div className="px-5 mt-5">
           <div className="flex items-center gap-3">
             {/* Vente Cash Button */}
             <Button
               variant="cash"
               size="lg"
-              className="flex-1 h-14 rounded-2xl gap-3"
+              className="w-1/2 h-14 rounded-xl gap-3"
               onClick={() => navigate("/sale/cash")}
             >
               <Wallet className="w-5 h-5" />
@@ -137,15 +137,12 @@ const Dashboard = () => {
             <Button
               variant="credit"
               size="lg"
-              className="flex-1 h-14 rounded-2xl gap-3"
+              className="w-1/2 h-14 rounded-xl gap-3"
               onClick={() => navigate("/sale/credit")}
             >
               <CreditCard className="w-5 h-5" />
               <span className="font-semibold">Vente Crédit</span>
             </Button>
-
-            {/* FAB */}
-            <QuickActionFAB />
           </div>
         </div>
 
@@ -154,10 +151,21 @@ const Dashboard = () => {
           <div className="w-10 h-1 bg-[#e2e8f0] rounded-full" />
         </div>
 
-        {/* Recent Activity */}
+        {/* Bento Grid - Debts & Stock */}
         <div className="px-5">
+          <BentoStatsGrid
+            totalDebts={totalDebts}
+            clientsWithDebts={clientsWithDebts}
+            stockValue={stockTotalValue}
+            stockItemsCount={stockItemsCount}
+            formatMoney={formatMoney}
+          />
+        </div>
+
+        {/* Recent Activity */}
+        <div className="px-5 mt-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-bold text-[#2d3748]">Activité récente</h2>
+            <h2 className="text-base font-bold text-[#051425]">Activité récente</h2>
             <button
               className="flex items-center gap-1 text-sm text-[#4f7df3] font-semibold"
               onClick={() => navigate("/sales/history")}
@@ -174,7 +182,7 @@ const Dashboard = () => {
 
           <div className="space-y-2">
             {recentSales.length === 0 ? (
-              <div className="bg-white rounded-2xl p-6 text-center text-[#718096] shadow-sm border border-[#f0f0f5]">
+              <div className="bg-white rounded-2xl p-6 text-center text-[#718096] shadow-lg shadow-[#4f7df3]/5">
                 Aucune vente aujourd'hui
               </div>
             ) : (
@@ -194,16 +202,11 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Bento Grid - Debts & Stock */}
-        <div className="px-5 mt-6 pb-8">
-          <BentoStatsGrid
-            totalDebts={totalDebts}
-            clientsWithDebts={clientsWithDebts}
-            stockValue={stockTotalValue}
-            stockItemsCount={stockItemsCount}
-            formatMoney={formatMoney}
-          />
-        </div>
+        {/* FAB - Fixed position */}
+        <QuickActionFAB className="fixed bottom-24 right-5 z-40" />
+
+        {/* Bottom spacing for FAB and BottomNav */}
+        <div className="h-32" />
       </div>
     </AppLayout>
   );
