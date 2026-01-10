@@ -123,7 +123,8 @@ const BottomNav = () => {
         )}
       </AnimatePresence>
       
-      <div className="flex items-center justify-around h-16 pb-1">
+      {/* Container avec hauteur responsive */}
+      <div className="flex items-center justify-around h-[clamp(3.5rem,10vw,4.5rem)] pb-1">
         {visibleItems.map(({ icon, label, path, badge, isBeta }) => {
           const isActive = location.pathname === path || 
             (path !== "/dashboard" && location.pathname.startsWith(path));
@@ -136,22 +137,19 @@ const BottomNav = () => {
               key={path}
               onClick={() => navigate(path)}
               whileTap={{ scale: 0.92 }}
-              className="group relative flex flex-col items-center justify-center w-16 h-full outline-none"
+              className="group relative flex flex-col items-center justify-center min-w-[clamp(3rem,12vw,4.5rem)] h-full outline-none"
             >
+              {/* Pill sans fond bleu - juste transparent */}
               <motion.div 
-                className={cn(
-                  "relative flex flex-col items-center gap-0.5 px-4 py-2 rounded-2xl transition-colors duration-150",
-                  isActive 
-                    ? "bg-[#e8f0fe]" 
-                    : "bg-transparent active:bg-[#e8f0fe]/60"
-                )}
+                className="relative flex flex-col items-center gap-0.5 px-3 py-2 rounded-2xl bg-transparent"
                 animate={{ scale: isActive ? 1.02 : 1 }}
                 transition={{ type: "spring", stiffness: 400, damping: 20 }}
               >
+                {/* Icône avec taille responsive */}
                 <HugeiconsIcon 
                   icon={icon}
                   className={cn(
-                    "w-6 h-6 transition-colors duration-150",
+                    "w-[clamp(1.25rem,5vw,1.75rem)] h-[clamp(1.25rem,5vw,1.75rem)] transition-colors duration-150",
                     isActive 
                       ? "text-[#4f7df3]" 
                       : "text-[#6F7A95] group-active:text-[#4f7df3]"
@@ -196,7 +194,7 @@ const BottomNav = () => {
                       exit={{ opacity: 0, y: -2 }}
                       className="flex flex-col items-center gap-0.5"
                     >
-                      <span className="text-[10px] font-semibold text-[#4f7df3]">
+                      <span className="text-[clamp(9px,2.5vw,11px)] font-semibold text-[#4f7df3]">
                         {label}
                       </span>
                       <div className="w-1 h-1 rounded-full bg-[#4f7df3]" />
