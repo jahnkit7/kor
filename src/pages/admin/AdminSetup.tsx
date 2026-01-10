@@ -101,17 +101,24 @@ const SEED_FEATURES = [
 ];
 
 const SEED_ROADMAP = [
+  // Terminés
+  { title: 'Bugs Activation certaines features', description: 'Checker toutes les features et corriger activation côté admin', category: 'bug', status: 'completed', priority: 'urgent' },
+  { title: 'Option Beta', description: 'Créer option beta pour features avec badge dégradé', category: 'improvement', status: 'completed', priority: 'low' },
+  { title: 'Problème de parrainage', description: 'Corriger application automatique du code parrainage', category: 'bug', status: 'completed', priority: 'urgent' },
+  { title: 'Confusion Commission Plateforme et Parrainage', description: 'Séparer les deux types de commissions', category: 'bug', status: 'completed', priority: 'urgent' },
+  { title: 'Problème Ventes - Apprentissage IA', description: 'Améliorer transcription vocale et apprentissage', category: 'bug', status: 'completed', priority: 'urgent' },
+  
   // En cours
-  { title: 'Finaliser générateur factures', description: 'Ajouter personnalisation logo/couleurs et historique des factures générées', category: 'feature', status: 'in_progress', priority: 'high' },
-  { title: 'Amélioration UI Settings', description: 'Réorganiser les paramètres : abonnement en haut, les trucs comme parrainage à la suite, suppression compte en bas', category: 'improvement', status: 'backlog', priority: 'high' },
-  { title: 'Style classique utilisateur', description: 'Appliquer les mêmes finitions douces que le dashboard admin', category: 'improvement', status: 'backlog', priority: 'medium' },
-  { title: 'Onboarding utilisateur', description: 'Corriger affichage infos utilisateur côté admin et améliorer le flux', category: 'bug', status: 'in_progress', priority: 'urgent' },
+  { title: 'Finaliser générateur factures', description: 'Personnalisation logo/couleurs et historique factures', category: 'feature', status: 'in_progress', priority: 'high' },
+  { title: 'Onboarding utilisateur', description: 'Corriger affichage infos utilisateur et améliorer flux', category: 'bug', status: 'in_progress', priority: 'urgent' },
   
   // Backlog
-  { title: 'Notifications push PWA', description: 'Implémenter les notifications push pour les alertes stock et dettes', category: 'feature', status: 'backlog', priority: 'medium' },
-  { title: 'Export données Excel/CSV', description: 'Permettre aux utilisateurs d\'exporter leurs données (ventes, stock, clients)', category: 'feature', status: 'backlog', priority: 'low' },
-  { title: 'Tableau de bord avancé', description: 'Graphiques et analyses plus détaillés avec filtres temporels', category: 'feature', status: 'backlog', priority: 'medium' },
-  { title: 'Intégration Mobile Money', description: 'Permettre le paiement abonnement via Mobile Money (Flooz, TMoney)', category: 'feature', status: 'backlog', priority: 'high' },
+  { title: 'Ameliorer UI ANALYSE EN COURS', description: 'Mettre en plein écran avec animation moderne', category: 'improvement', status: 'backlog', priority: 'high' },
+  { title: 'Amélioration UI Settings', description: 'Réorganiser paramètres : abonnement en haut, suppression en bas', category: 'improvement', status: 'backlog', priority: 'high' },
+  { title: 'Style classique utilisateur', description: 'Appliquer finitions douces du dashboard admin', category: 'improvement', status: 'backlog', priority: 'medium' },
+  { title: 'Notifications push PWA', description: 'Notifications push pour alertes stock et dettes', category: 'feature', status: 'backlog', priority: 'medium' },
+  { title: 'Export données Excel/CSV', description: 'Permettre export des données utilisateurs', category: 'feature', status: 'backlog', priority: 'low' },
+  { title: 'Intégration Mobile Money', description: 'Paiement abonnement via Flooz, TMoney', category: 'feature', status: 'backlog', priority: 'high' },
 ];
 
 export default function AdminSetup() {
@@ -276,15 +283,17 @@ export default function AdminSetup() {
   const exportSQL = async () => {
     setExportingSQL(true);
     try {
-      const [features, plans, countries] = await Promise.all([
+      const [features, plans, countries, roadmap] = await Promise.all([
         supabase.from("feature_flags").select("*"),
         supabase.from("subscription_plans").select("*"),
         supabase.from("countries").select("*"),
+        supabase.from("roadmap_items").select("*"),
       ]);
 
       if (features.error) throw features.error;
       if (plans.error) throw plans.error;
       if (countries.error) throw countries.error;
+      if (roadmap.error) throw roadmap.error;
 
       let sql = `-- CaissePlus Database Seed\n-- Generated: ${new Date().toISOString()}\n-- Version: 1.0\n\n`;
       
@@ -308,6 +317,13 @@ export default function AdminSetup() {
           ? `ARRAY[${f.depends_on.map((d: string) => `'${d}'`).join(',')}]::text[]` 
           : 'ARRAY[]::text[]';
         sql += `INSERT INTO feature_flags (feature_key, name, description, is_globally_enabled, min_plan_required, depends_on, category, sort_order, is_beta, current_version) VALUES ('${f.feature_key}', '${f.name}', '${(f.description || '').replace(/'/g, "''")}', ${f.is_globally_enabled}, ${f.min_plan_required ? `'${f.min_plan_required}'` : 'NULL'}, ${dependsOnArray}, '${f.category}', ${f.sort_order}, ${f.is_beta || false}, '${f.current_version || '1.0.0'}') ON CONFLICT (feature_key) DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.description, is_globally_enabled = EXCLUDED.is_globally_enabled, min_plan_required = EXCLUDED.min_plan_required, depends_on = EXCLUDED.depends_on, category = EXCLUDED.category, sort_order = EXCLUDED.sort_order, is_beta = EXCLUDED.is_beta, current_version = EXCLUDED.current_version;\n`;
+      });
+
+      // Roadmap Items
+      sql += `\n-- ===============================\n-- ROADMAP ITEMS (${roadmap.data?.length || 0} rows)\n-- ===============================\n`;
+      roadmap.data?.forEach(r => {
+        const description = (r.description || '').replace(/'/g, "''").replace(/\n/g, ' ');
+        sql += `INSERT INTO roadmap_items (title, description, category, status, priority, target_version, estimated_effort) VALUES ('${r.title.replace(/'/g, "''")}', '${description}', '${r.category}', '${r.status}', '${r.priority}', ${r.target_version ? `'${r.target_version}'` : 'NULL'}, ${r.estimated_effort ? `'${r.estimated_effort}'` : 'NULL'}) ON CONFLICT (title) DO UPDATE SET description = EXCLUDED.description, category = EXCLUDED.category, status = EXCLUDED.status, priority = EXCLUDED.priority, target_version = EXCLUDED.target_version, estimated_effort = EXCLUDED.estimated_effort;\n`;
       });
 
       const blob = new Blob([sql], { type: "text/sql" });
@@ -337,88 +353,111 @@ export default function AdminSetup() {
     setImporting(true);
     try {
       const content = await file.text();
-      const config = JSON.parse(content);
+      let config;
+      
+      try {
+        config = JSON.parse(content);
+      } catch (parseError) {
+        throw new Error("Fichier JSON invalide - vérifiez le format");
+      }
 
       // Validate structure
       if (!config.version || !config.exportDate) {
-        throw new Error("Format de fichier invalide");
+        throw new Error("Format de fichier invalide - version ou exportDate manquant");
       }
 
       let importedCount = 0;
+      const errors: string[] = [];
 
       // Import countries
       if (config.countries && Array.isArray(config.countries) && config.countries.length > 0) {
-        const countriesData = config.countries.map((c: any) => ({
-          name: c.name,
-          code: c.code,
-          phone_prefix: c.phone_prefix,
-          currency: c.currency,
-          is_active: c.is_active,
-        }));
-        const { error } = await supabase.from("countries").upsert(countriesData, { onConflict: "code" });
-        if (error) throw error;
-        importedCount += countriesData.length;
+        try {
+          const countriesData = config.countries.map((c: any) => ({
+            name: c.name,
+            code: c.code,
+            phone_prefix: c.phone_prefix,
+            currency: c.currency,
+            is_active: c.is_active ?? false,
+          }));
+          const { error } = await supabase.from("countries").upsert(countriesData, { onConflict: "code" });
+          if (error) throw error;
+          importedCount += countriesData.length;
+        } catch (e) {
+          errors.push(`Pays: ${e instanceof Error ? e.message : 'Erreur'}`);
+        }
       }
 
       // Import plans
       if (config.plans && Array.isArray(config.plans) && config.plans.length > 0) {
-        const plansData = config.plans.map((p: any) => ({
-          name: p.name,
-          price: p.price,
-          duration_days: p.duration_days,
-          currency: p.currency,
-          features: p.features,
-          is_active: p.is_active,
-          sort_order: p.sort_order,
-          description: p.description,
-          max_clients: p.max_clients,
-          max_sales_per_day: p.max_sales_per_day,
-          commission_reduction: p.commission_reduction,
-        }));
-        const { error } = await supabase.from("subscription_plans").upsert(plansData, { onConflict: "name" });
-        if (error) throw error;
-        importedCount += plansData.length;
+        try {
+          const plansData = config.plans.map((p: any) => ({
+            name: p.name,
+            price: p.price ?? 0,
+            duration_days: p.duration_days ?? 30,
+            currency: p.currency ?? 'XOF',
+            features: p.features ?? [],
+            is_active: p.is_active ?? true,
+            sort_order: p.sort_order ?? 0,
+            description: p.description ?? '',
+            max_clients: p.max_clients ?? null,
+            max_sales_per_day: p.max_sales_per_day ?? null,
+          }));
+          const { error } = await supabase.from("subscription_plans").upsert(plansData, { onConflict: "name" });
+          if (error) throw error;
+          importedCount += plansData.length;
+        } catch (e) {
+          errors.push(`Plans: ${e instanceof Error ? e.message : 'Erreur'}`);
+        }
       }
 
       // Import features
       if (config.features && Array.isArray(config.features) && config.features.length > 0) {
-        const featuresData = config.features.map((f: any) => ({
-          feature_key: f.feature_key,
-          name: f.name,
-          description: f.description,
-          is_globally_enabled: f.is_globally_enabled,
-          min_plan_required: f.min_plan_required,
-          depends_on: f.depends_on,
-          category: f.category,
-          sort_order: f.sort_order,
-          enabled_for_users: f.enabled_for_users,
-          disabled_countries: f.disabled_countries,
-          is_beta: f.is_beta,
-          current_version: f.current_version,
-        }));
-        const { error } = await supabase.from("feature_flags").upsert(featuresData, { onConflict: "feature_key" });
-        if (error) throw error;
-        importedCount += featuresData.length;
+        try {
+          const featuresData = config.features.map((f: any) => ({
+            feature_key: f.feature_key,
+            name: f.name,
+            description: f.description ?? '',
+            is_globally_enabled: f.is_globally_enabled ?? true,
+            min_plan_required: f.min_plan_required ?? null,
+            depends_on: f.depends_on ?? [],
+            category: f.category ?? 'secondary',
+            sort_order: f.sort_order ?? 0,
+            is_beta: f.is_beta ?? false,
+            current_version: f.current_version ?? '1.0.0',
+          }));
+          const { error } = await supabase.from("feature_flags").upsert(featuresData, { onConflict: "feature_key" });
+          if (error) throw error;
+          importedCount += featuresData.length;
+        } catch (e) {
+          errors.push(`Features: ${e instanceof Error ? e.message : 'Erreur'}`);
+        }
       }
 
-      // Import roadmap
-      if (config.roadmap && Array.isArray(config.roadmap) && config.roadmap.length > 0 && user?.id) {
-        const roadmapData = config.roadmap.map((r: any) => ({
-          title: r.title,
-          description: r.description,
-          category: r.category,
-          status: r.status,
-          priority: r.priority,
-          target_version: r.target_version,
-          estimated_effort: r.estimated_effort,
-          created_by: user.id,
-        }));
-        const { error } = await supabase.from("roadmap_items").upsert(roadmapData, { onConflict: "title" });
-        if (error) throw error;
-        importedCount += roadmapData.length;
+      // Import roadmap - sans created_by car nullable
+      if (config.roadmap && Array.isArray(config.roadmap) && config.roadmap.length > 0) {
+        try {
+          const roadmapData = config.roadmap.map((r: any) => ({
+            title: r.title,
+            description: r.description ?? '',
+            category: r.category ?? 'feature',
+            status: r.status ?? 'backlog',
+            priority: r.priority ?? 'medium',
+            target_version: r.target_version ?? null,
+            estimated_effort: r.estimated_effort ?? null,
+          }));
+          const { error } = await supabase.from("roadmap_items").upsert(roadmapData, { onConflict: "title" });
+          if (error) throw error;
+          importedCount += roadmapData.length;
+        } catch (e) {
+          errors.push(`Roadmap: ${e instanceof Error ? e.message : 'Erreur'}`);
+        }
       }
 
-      toast.success(`${importedCount} éléments importés avec succès`);
+      if (errors.length > 0) {
+        toast.warning(`${importedCount} éléments importés avec ${errors.length} erreur(s): ${errors.join(', ')}`);
+      } else {
+        toast.success(`${importedCount} éléments importés avec succès`);
+      }
       fetchStatus();
     } catch (error) {
       console.error("Error importing configuration:", error);
@@ -474,9 +513,9 @@ export default function AdminSetup() {
       key: "roadmap",
       icon: Map,
       title: "Roadmap",
-      description: "8 items actuels du projet",
+      description: "13 items actuels du projet",
       count: status?.roadmap || 0,
-      expected: 8,
+      expected: 13,
       onSeed: seedRoadmap,
     },
   ];
