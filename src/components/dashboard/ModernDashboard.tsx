@@ -5,13 +5,13 @@ import {
   CreditCard,
   TrendingUp,
   Plus,
-  Bell,
   Package,
   BarChart3,
   Users,
   ArrowUpRight,
   Radio,
 } from "lucide-react";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import AppLayout from "@/components/layout/AppLayout";
 import { RoleBadge } from "@/components/RoleBadge";
 import { HideAmountsToggle, useHiddenAmount } from "@/components/HideAmountsToggle";
@@ -66,9 +66,7 @@ const ModernDashboard = ({
           <div className="flex items-center gap-3">
             <RoleBadge role={role} />
             <HideAmountsToggle />
-            <button className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors">
-              <Bell className="w-5 h-5 text-muted-foreground" />
-            </button>
+            <NotificationBell />
           </div>
         </div>
 
