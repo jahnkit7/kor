@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Phone, Lock, ChevronDown, Check } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
+import { useUserSubscription } from "@/hooks/use-feature-access";
 import { supabase } from "@/integrations/supabase/client";
 
 // Pays d'Afrique de l'Ouest supportés
@@ -40,6 +41,7 @@ const Auth = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { signIn, signUp, isAuthenticated, loading, configured } = useAuth();
+  const { data: subscription, isLoading: subLoading } = useUserSubscription();
   
   // Récupérer le code d'invitation ou de parrainage s'ils existent
   const inviteCode = searchParams.get("invite");
@@ -100,15 +102,22 @@ const Auth = () => {
   }, []);
 
   useEffect(() => {
-    if (!loading && isAuthenticated) {
+    // Attendre que l'auth ET la subscription soient chargées
+    if (loading || subLoading) return;
+    
+    if (isAuthenticated) {
       // Si l'utilisateur vient d'une invitation, rediriger vers la page d'acceptation
       if (inviteCode) {
-        navigate(`/invite?code=${inviteCode}`);
+        navigate(`/invite?code=${inviteCode}`, { replace: true });
+      } else if (!subscription) {
+        // Pas d'abonnement du tout -> page abonnement
+        navigate("/subscriptions", { replace: true });
       } else {
-        navigate("/dashboard");
+        // A un abonnement (actif ou expiré) -> dashboard
+        navigate("/dashboard", { replace: true });
       }
     }
-  }, [isAuthenticated, loading, navigate, inviteCode]);
+  }, [isAuthenticated, loading, subLoading, subscription, navigate, inviteCode]);
 
   const formatPhone = (value: string) => {
     // Remove non-digits

@@ -35,6 +35,7 @@ import { ReferralSection } from "@/components/settings/ReferralSection";
 import { DeleteAccountDialog } from "@/components/settings/DeleteAccountDialog";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { NotificationSettings } from "@/components/settings/NotificationSettings";
+import { CommissionPayment } from "@/components/settings/CommissionPayment";
 import { toast } from "sonner";
 
 const Settings = () => {
@@ -139,6 +140,9 @@ const Settings = () => {
             </Card>
           </div>
         </div>
+
+        {/* Commission Payment (only shows if user has balance) */}
+        <CommissionPayment />
 
         {/* Referral Section */}
         <div>

@@ -75,6 +75,31 @@ export default function AdminUsers() {
     setCustomDays("");
   };
 
+  const handleSuspendUser = async (user: any, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    
+    if (!confirm(`Voulez-vous vraiment suspendre le compte de ${user.shop_name || user.owner_name || "cet utilisateur"} ?`)) {
+      return;
+    }
+
+    try {
+      // Désactiver l'abonnement
+      const { error } = await supabase
+        .from("subscriptions")
+        .update({ is_active: false })
+        .eq("user_id", user.user_id);
+
+      if (error) throw error;
+
+      toast.success("Compte suspendu avec succès");
+      setSelectedUser(null);
+      refetch();
+    } catch (error) {
+      console.error("Error suspending user:", error);
+      toast.error("Erreur lors de la suspension");
+    }
+  };
+
   const handleActivateSubscription = async () => {
     if (!activatingUser || !selectedPlanId) {
       toast.error("Veuillez sélectionner un plan");
@@ -252,7 +277,10 @@ export default function AdminUsers() {
                                 <CreditCard className="w-4 h-4 mr-2" />
                                 Activer abonnement
                               </DropdownMenuItem>
-                              <DropdownMenuItem className="text-destructive">
+                              <DropdownMenuItem 
+                                className="text-destructive"
+                                onClick={(e) => handleSuspendUser(user, e)}
+                              >
                                 Suspendre
                               </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -369,7 +397,11 @@ export default function AdminUsers() {
                     <Button variant="outline" className="w-full">
                       Reset PIN
                     </Button>
-                    <Button variant="destructive" className="w-full">
+                    <Button 
+                      variant="destructive" 
+                      className="w-full"
+                      onClick={() => handleSuspendUser(selectedUser)}
+                    >
                       Suspendre le compte
                     </Button>
                   </div>
