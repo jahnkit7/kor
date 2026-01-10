@@ -108,7 +108,17 @@ export function useStock() {
 
   const addItem = useCallback(
     async (item: NewStockItem) => {
-      if (!user) return null;
+      if (!user) {
+        console.error("[useStock] addItem: No user authenticated");
+        toast({
+          title: "Erreur",
+          description: "Vous devez être connecté pour ajouter un produit",
+          variant: "destructive",
+        });
+        return null;
+      }
+
+      console.log("[useStock] addItem:", item.name, "qty:", item.quantity, "price:", item.unit_price);
 
       try {
         // 1. Save locally first
@@ -120,8 +130,9 @@ export function useStock() {
           source: item.source || "manual",
           user_id: user.id,
         });
+        console.log("[useStock] Saved locally with ID:", localItem.id);
 
-        // 2. Update UI
+        // 2. Update UI immediately
         const newItem: StockItem = {
           id: localItem.id,
           user_id: user.id,
@@ -136,35 +147,45 @@ export function useStock() {
         };
         setItems(prev => [newItem, ...prev]);
 
-        // 3. If online, sync
+        // 3. If online, sync to Supabase immediately
         if (isOnline) {
-          try {
-            const { error } = await supabase
-              .from("stock_items")
-              .insert({
-                id: localItem.id,
-                user_id: user.id,
-                name: item.name,
-                quantity: item.quantity,
-                unit_price: item.unit_price,
-                model: item.model || null,
-                source: item.source || "manual",
-              });
+          console.log("[useStock] Syncing to Supabase...");
+          const { data, error } = await supabase
+            .from("stock_items")
+            .insert({
+              id: localItem.id,
+              user_id: user.id,
+              name: item.name,
+              quantity: item.quantity,
+              unit_price: item.unit_price,
+              model: item.model || null,
+              source: item.source || "manual",
+            })
+            .select()
+            .single();
 
-            if (!error) {
-              await localDB.markAsSynced("stock_items", localItem.id);
-              setItems(prev => prev.map(i => 
-                i.id === localItem.id ? { ...i, synced: true } : i
-              ));
-            }
-          } catch (error) {
-            console.log("Stock item queued for sync:", error);
+          if (error) {
+            console.error("[useStock] Supabase INSERT error:", error.message, error.details, error.hint);
+            toast({
+              title: "Erreur de synchronisation",
+              description: `${item.name}: ${error.message}`,
+              variant: "destructive",
+            });
+            // Item stays local, will be synced later
+          } else {
+            console.log("[useStock] Synced to Supabase:", data?.id);
+            await localDB.markAsSynced("stock_items", localItem.id);
+            setItems(prev => prev.map(i => 
+              i.id === localItem.id ? { ...i, synced: true } : i
+            ));
           }
+        } else {
+          console.log("[useStock] Offline - item queued for sync");
         }
 
         return newItem;
       } catch (error) {
-        console.error("Error adding stock item:", error);
+        console.error("[useStock] Exception adding stock item:", error);
         toast({
           title: "Erreur",
           description: "Impossible d'ajouter le produit",
