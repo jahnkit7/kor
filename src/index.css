@@ -218,6 +218,14 @@
     padding-bottom: env(safe-area-inset-bottom);
   }
 
+  .pt-safe {
+    padding-top: max(env(safe-area-inset-top), 20px);
+  }
+
+  .pb-safe {
+    padding-bottom: max(env(safe-area-inset-bottom), 20px);
+  }
+
   /* Main app container with safe areas */
   .app-container {
     min-height: 100vh;
