@@ -252,3 +252,33 @@
     box-shadow: var(--shadow-glow);
   }
 }
+
+/* Auth page animations */
+@keyframes pulse-border {
+  0%, 100% { 
+    box-shadow: 0 0 0 3px rgba(79,125,243,0.1); 
+  }
+  50% { 
+    box-shadow: 0 0 0 5px rgba(79,125,243,0.2), 0 0 15px rgba(79,125,243,0.15); 
+  }
+}
+
+@keyframes gradient-border {
+  0% {
+    border-color: #4f7df3;
+  }
+  50% {
+    border-color: #8b5cf6;
+  }
+  100% {
+    border-color: #4f7df3;
+  }
+}
+
+.animate-pulse-border {
+  animation: pulse-border 2s ease-in-out infinite;
+}
+
+.animate-gradient-border {
+  animation: gradient-border 2s ease-in-out infinite;
+}
