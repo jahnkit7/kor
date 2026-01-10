@@ -6,9 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ArrowLeft, Check, User, MessageSquare, Mic, ChevronDown, ChevronUp, Wallet, CreditCard, Clock, Lock, Package } from "lucide-react";
-import { BetaBadge } from "@/components/BetaBadge";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { ArrowLeft, Check, User, MessageSquare, Mic, Wallet, CreditCard, Clock, Lock, Package, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { useClients } from "@/hooks/use-clients";
 import { useSales, SaleItem } from "@/hooks/use-sales";
@@ -16,6 +15,7 @@ import { useStock } from "@/hooks/use-stock";
 import { VoiceSaleInput } from "@/components/sale/VoiceSaleInput";
 import { ProductSelector } from "@/components/sale/ProductSelector";
 import { cn } from "@/lib/utils";
+import FullScreenLayout from "@/components/layout/FullScreenLayout";
 
 interface SaleProduct {
   stock_item_id?: string | null;
@@ -43,23 +43,19 @@ const Sale = () => {
   const voiceButtonDisabled = voiceNotInPlan;
 
   const { clients, loading: clientsLoading, quickCreateClient } = useClients();
-  const { addSale, sales, loading: salesLoading } = useSales();
-  const { items: stockItems, loading: stockLoading, refetch: refetchStock, addItem } = useStock();
+  const { addSale, sales } = useSales();
+  const { items: stockItems, refetch: refetchStock, addItem } = useStock();
 
   // Track page view
   useEffect(() => {
     trackFeature("sales", { action: "page_view", metadata: { type } });
   }, [trackFeature, type]);
   
-  const [showRecentSales, setShowRecentSales] = useState(false);
-  const [showAllSales, setShowAllSales] = useState(false);
-  const [showProducts, setShowProducts] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<SaleProduct[]>([]);
-  
-  // Displayed sales (limited or all)
-  const displayedSales = useMemo(() => {
-    return showAllSales ? sales : sales.slice(0, 10);
-  }, [sales, showAllSales]);
+  const [showProductsSheet, setShowProductsSheet] = useState(false);
+  const [showHistorySheet, setShowHistorySheet] = useState(false);
+  const [showNoteSheet, setShowNoteSheet] = useState(false);
+  const [showClientSheet, setShowClientSheet] = useState(false);
 
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
@@ -166,7 +162,6 @@ const Sale = () => {
     await addSale(saleData);
     // Refresh stock after voice sale
     refetchStock();
-    // Don't navigate immediately - let VoiceSaleInput handle multiple sales
   };
 
   const handleVoiceSalesFinished = () => {
@@ -181,80 +176,82 @@ const Sale = () => {
   // Voice input mode
   if (showVoiceInput) {
     return (
-      <div className="min-h-screen bg-background">
-        <div className={`${isCash ? "gradient-cash" : "gradient-credit"} px-4 py-4 text-primary-foreground`}>
-          <div className="flex items-center gap-4">
+      <FullScreenLayout>
+        <div className={`${isCash ? "gradient-cash" : "gradient-credit"} px-4 py-3 text-primary-foreground`}>
+          <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="icon"
-              className="text-primary-foreground hover:bg-primary-foreground/10"
+              className="text-primary-foreground hover:bg-primary-foreground/10 h-9 w-9"
               onClick={() => setShowVoiceInput(false)}
             >
-              <ArrowLeft className="w-6 h-6" />
+              <ArrowLeft className="w-5 h-5" />
             </Button>
-            <h1 className="text-xl font-bold">
+            <h1 className="text-lg font-bold">
               {isCash ? "Vente Cash" : "Vente Crédit"} - Dictée
             </h1>
           </div>
         </div>
-        <VoiceSaleInput
-          clients={clients}
-          stockItems={stockItems}
-          onComplete={handleVoiceSaleComplete}
-          onCancel={() => setShowVoiceInput(false)}
-          onCreateClient={quickCreateClient}
-          onFinish={handleVoiceSalesFinished}
-        />
-      </div>
+        <div className="flex-1 overflow-auto">
+          <VoiceSaleInput
+            clients={clients}
+            stockItems={stockItems}
+            onComplete={handleVoiceSaleComplete}
+            onCancel={() => setShowVoiceInput(false)}
+            onCreateClient={quickCreateClient}
+            onFinish={handleVoiceSalesFinished}
+          />
+        </div>
+      </FullScreenLayout>
     );
   }
 
   if (showSuccess) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+      <FullScreenLayout className="items-center justify-center p-6">
         <div className="text-center animate-scale-in">
-          <div className={`w-24 h-24 rounded-full mx-auto mb-6 flex items-center justify-center ${isCash ? "bg-cash" : "bg-credit"}`}>
-            <Check className="w-12 h-12 text-primary-foreground" />
+          <div className={`w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center ${isCash ? "bg-cash" : "bg-credit"}`}>
+            <Check className="w-10 h-10 text-primary-foreground" />
           </div>
-          <h1 className="text-2xl font-bold mb-2">Vente enregistrée !</h1>
-          <p className="text-money-lg text-foreground">
-            {formatMoney(amount)} <span className="text-lg text-muted-foreground">CFA</span>
+          <h1 className="text-xl font-bold mb-1">Vente enregistrée !</h1>
+          <p className="text-2xl font-bold text-foreground">
+            {formatMoney(effectiveAmount)} <span className="text-base text-muted-foreground">CFA</span>
           </p>
           {!isCash && selectedClientName && (
-            <p className="text-muted-foreground mt-2">Crédit: {selectedClientName}</p>
+            <p className="text-muted-foreground mt-1 text-sm">Crédit: {selectedClientName}</p>
           )}
         </div>
-      </div>
+      </FullScreenLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <div className={`${isCash ? "gradient-cash" : "gradient-credit"} px-4 py-4 text-primary-foreground`}>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-4">
+    <FullScreenLayout>
+      {/* Header - Compact */}
+      <div className={`${isCash ? "gradient-cash" : "gradient-credit"} px-4 py-3 text-primary-foreground shrink-0`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="icon"
-              className="text-primary-foreground hover:bg-primary-foreground/10"
+              className="text-primary-foreground hover:bg-primary-foreground/10 h-9 w-9"
               onClick={() => navigate(-1)}
             >
-              <ArrowLeft className="w-6 h-6" />
+              <ArrowLeft className="w-5 h-5" />
             </Button>
-            <h1 className="text-xl font-bold">
+            <h1 className="text-lg font-bold">
               {isCash ? "Vente Cash" : "Vente Crédit"}
             </h1>
           </div>
           
-          {/* Voice button - hidden if globally disabled, shows lock if not in plan */}
+          {/* Voice button */}
           {showVoiceButton && (
             <div className="relative">
               <Button
                 variant="ghost"
                 size="icon"
                 className={cn(
-                  "text-primary-foreground",
+                  "text-primary-foreground h-9 w-9",
                   voiceButtonDisabled 
                     ? "opacity-60 cursor-not-allowed" 
                     : "hover:bg-primary-foreground/10"
@@ -270,266 +267,280 @@ const Sale = () => {
                 }}
               >
                 {voiceButtonDisabled ? (
-                  <Lock className="w-5 h-5" />
+                  <Lock className="w-4 h-4" />
                 ) : (
-                  <Mic className="w-6 h-6" />
+                  <Mic className="w-5 h-5" />
                 )}
               </Button>
-              {/* Beta badge on voice button */}
               {voiceBeta && !voiceButtonDisabled && (
                 <Badge 
                   variant="beta" 
-                  className="absolute -top-2 -right-2 text-[9px] px-1.5 py-0 h-4"
+                  className="absolute -top-1 -right-1 text-[8px] px-1 py-0 h-3.5"
                 >
-                  Bêta
+                  β
                 </Badge>
               )}
             </div>
           )}
         </div>
 
-        {/* Amount Display */}
-        <div className="text-center py-6">
-          <p className="text-sm opacity-80 mb-2">
+        {/* Amount Display - Compact */}
+        <div className="text-center py-4">
+          <p className="text-xs opacity-80 mb-1">
             {selectedProducts.length > 0 ? "Total produits" : "Montant"}
           </p>
-          <p className="text-money-xl">
-            {formatMoney(effectiveAmount)} <span className="text-xl">CFA</span>
+          <p className="text-3xl font-bold">
+            {formatMoney(effectiveAmount)} <span className="text-lg">CFA</span>
           </p>
-          {selectedProducts.length > 0 && (
-            <p className="text-xs opacity-70 mt-1">
-              {selectedProducts.length} produit{selectedProducts.length > 1 ? "s" : ""}
-            </p>
-          )}
         </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 px-4 py-4 overflow-auto">
-        {/* Quick Amounts */}
-        <div className="grid grid-cols-3 gap-2 mb-4">
+      {/* Content - Flex grow with controlled overflow */}
+      <div className="flex-1 flex flex-col min-h-0 px-3 py-2">
+        {/* Quick Amounts - Single row, 6 columns */}
+        <div className="grid grid-cols-6 gap-1.5 mb-2 shrink-0">
           {quickAmounts.map((quickAmount) => (
             <Button
               key={quickAmount}
               variant="secondary"
               size="sm"
               onClick={() => setAmount(String(quickAmount))}
-              className="text-sm font-semibold"
+              className="text-[10px] font-semibold h-8 px-1"
             >
-              {formatMoney(String(quickAmount))}
+              {quickAmount >= 1000 ? `${quickAmount / 1000}k` : quickAmount}
             </Button>
           ))}
         </div>
 
-        {/* Product Selection Section */}
-        <Collapsible open={showProducts} onOpenChange={setShowProducts} className="mb-4">
-          <CollapsibleTrigger asChild>
-            <button className="w-full flex items-center justify-between px-4 py-3 bg-secondary/50 rounded-xl text-sm font-medium">
-              <span className="flex items-center gap-2">
-                <Package className="w-4 h-4 text-muted-foreground" />
-                Produits
-              </span>
-              <span className="flex items-center gap-2 text-muted-foreground">
+        {/* Produits / Récentes / Note - Same line */}
+        <div className="grid grid-cols-3 gap-1.5 mb-2 shrink-0">
+          {/* Produits */}
+          <Sheet open={showProductsSheet} onOpenChange={setShowProductsSheet}>
+            <SheetTrigger asChild>
+              <button className="flex items-center justify-between px-2.5 py-2 bg-secondary/50 rounded-lg">
+                <span className="flex items-center gap-1.5 text-[11px] font-medium">
+                  <Package className="w-3.5 h-3.5 text-muted-foreground" />
+                  Produits
+                </span>
                 {selectedProducts.length > 0 && (
-                  <Badge variant="secondary">{selectedProducts.length}</Badge>
+                  <Badge variant="secondary" className="text-[9px] h-4 px-1.5">{selectedProducts.length}</Badge>
                 )}
-                {showProducts ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-              </span>
-            </button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="mt-2">
-            <Card className="p-3">
-              <ProductSelector
-                stockItems={stockItems}
-                selectedProducts={selectedProducts}
-                onProductsChange={setSelectedProducts}
-                onCreateStockItem={async (item) => {
-                  console.log("[Sale] Creating stock item from ProductSelector:", item);
-                  const result = await addItem({
-                    name: item.name,
-                    quantity: item.quantity,
-                    unit_price: item.unit_price,
-                    source: "manual",
-                  });
-                  if (result) {
-                    console.log("[Sale] Stock item created successfully:", result.id);
-                    return { id: result.id };
-                  }
-                  return null;
-                }}
-              />
-            </Card>
-          </CollapsibleContent>
-        </Collapsible>
+              </button>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="h-[70vh]">
+              <SheetHeader>
+                <SheetTitle>Sélectionner des produits</SheetTitle>
+              </SheetHeader>
+              <div className="mt-4">
+                <ProductSelector
+                  stockItems={stockItems}
+                  selectedProducts={selectedProducts}
+                  onProductsChange={setSelectedProducts}
+                  onCreateStockItem={async (item) => {
+                    const result = await addItem({
+                      name: item.name,
+                      quantity: item.quantity,
+                      unit_price: item.unit_price,
+                      source: "manual",
+                    });
+                    if (result) {
+                      return { id: result.id };
+                    }
+                    return null;
+                  }}
+                />
+              </div>
+            </SheetContent>
+          </Sheet>
 
-        {/* Recent Sales History */}
-        {sales.length > 0 && (
-          <div className="mb-4">
-            <button
-              onClick={() => setShowRecentSales(!showRecentSales)}
-              className="w-full flex items-center justify-between px-4 py-3 bg-secondary/50 rounded-xl text-sm font-medium"
-            >
-              <span className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-muted-foreground" />
-                Ventes récentes
-              </span>
-              <span className="flex items-center gap-2 text-muted-foreground">
-                <Badge variant="secondary">{sales.length}</Badge>
-                {showRecentSales ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-              </span>
-            </button>
-            
-            {showRecentSales && (
-              <>
-                <ScrollArea className={cn("mt-2", showAllSales ? "max-h-[60vh]" : "max-h-48")}>
-                  <div className="space-y-2">
-                    {displayedSales.map((sale) => (
-                      <Card key={sale.id} className="bg-card/50">
-                        <CardContent className="p-3 flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className={cn(
-                              "w-8 h-8 rounded-full flex items-center justify-center",
-                              sale.type === "cash" ? "bg-cash/20" : "bg-credit/20"
-                            )}>
-                              {sale.type === "cash" ? (
-                                <Wallet className="w-4 h-4 text-cash" />
-                              ) : (
-                                <CreditCard className="w-4 h-4 text-credit" />
-                              )}
-                            </div>
-                            <div>
-                              <p className="font-semibold text-sm">
-                                {formatMoney(String(sale.amount))} CFA
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {sale.client_name || "Vente anonyme"}
-                                {sale.note && ` • ${sale.note}`}
-                              </p>
-                            </div>
+          {/* Ventes récentes */}
+          <Sheet open={showHistorySheet} onOpenChange={setShowHistorySheet}>
+            <SheetTrigger asChild>
+              <button className="flex items-center justify-between px-2.5 py-2 bg-secondary/50 rounded-lg">
+                <span className="flex items-center gap-1.5 text-[11px] font-medium">
+                  <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+                  Récentes
+                </span>
+                {sales.length > 0 && (
+                  <Badge variant="secondary" className="text-[9px] h-4 px-1.5">{sales.length}</Badge>
+                )}
+              </button>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="h-[60vh]">
+              <SheetHeader>
+                <SheetTitle>Ventes récentes</SheetTitle>
+              </SheetHeader>
+              <ScrollArea className="mt-4 h-[calc(100%-3rem)]">
+                <div className="space-y-2 pr-2">
+                  {sales.slice(0, 20).map((sale) => (
+                    <Card key={sale.id} className="bg-card/50">
+                      <CardContent className="p-3 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={cn(
+                            "w-8 h-8 rounded-full flex items-center justify-center",
+                            sale.type === "cash" ? "bg-cash/20" : "bg-credit/20"
+                          )}>
+                            {sale.type === "cash" ? (
+                              <Wallet className="w-4 h-4 text-cash" />
+                            ) : (
+                              <CreditCard className="w-4 h-4 text-credit" />
+                            )}
                           </div>
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(sale.created_at).toLocaleTimeString("fr-FR", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </p>
+                          <div>
+                            <p className="font-semibold text-sm">
+                              {formatMoney(String(sale.amount))} CFA
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {sale.client_name || "Vente anonyme"}
+                            </p>
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(sale.created_at).toLocaleTimeString("fr-FR", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </ScrollArea>
+            </SheetContent>
+          </Sheet>
+
+          {/* Note */}
+          <Sheet open={showNoteSheet} onOpenChange={setShowNoteSheet}>
+            <SheetTrigger asChild>
+              <button className="flex items-center justify-center gap-1.5 px-2.5 py-2 bg-secondary/50 rounded-lg">
+                <MessageSquare className="w-3.5 h-3.5 text-muted-foreground" />
+                <span className="text-[11px] font-medium">Note</span>
+                {note && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
+              </button>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="h-[40vh]">
+              <SheetHeader>
+                <SheetTitle>Note de vente</SheetTitle>
+              </SheetHeader>
+              <div className="mt-4">
+                <textarea
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="Ajouter une note (optionnel)..."
+                  className="w-full h-32 p-3 border rounded-lg resize-none bg-secondary/30 text-sm"
+                />
+                <Button 
+                  className="w-full mt-3" 
+                  onClick={() => setShowNoteSheet(false)}
+                >
+                  Enregistrer
+                </Button>
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
+
+        {/* Client Selection (Credit only) - Compact button */}
+        {!isCash && (
+          <Sheet open={showClientSheet} onOpenChange={setShowClientSheet}>
+            <SheetTrigger asChild>
+              <button className="w-full flex items-center justify-between px-3 py-2.5 bg-secondary/50 rounded-lg mb-2 shrink-0">
+                <span className="flex items-center gap-2">
+                  <User className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">
+                    {selectedClientName || "Sélectionner un client"}
+                  </span>
+                </span>
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              </button>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="h-[70vh]">
+              <SheetHeader>
+                <SheetTitle>Sélectionner un client</SheetTitle>
+              </SheetHeader>
+              <ScrollArea className="mt-4 h-[calc(100%-5rem)]">
+                <div className="space-y-2 pr-2">
+                  {clientsLoading ? (
+                    <p className="text-center text-muted-foreground py-4">Chargement...</p>
+                  ) : (
+                    clients.map((client) => (
+                      <Card
+                        key={client.id}
+                        className={cn(
+                          "cursor-pointer transition-all",
+                          selectedClient === client.id && "border-2 border-credit bg-credit/5"
+                        )}
+                        onClick={() => {
+                          setSelectedClient(client.id);
+                          setShowClientSheet(false);
+                        }}
+                      >
+                        <CardContent className="p-3 flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+                            <User className="w-5 h-5 text-muted-foreground" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-semibold">{client.name}</p>
+                            <p className="text-xs text-muted-foreground">{client.phone}</p>
+                          </div>
+                          {selectedClient === client.id && (
+                            <Check className="w-5 h-5 text-credit" />
+                          )}
                         </CardContent>
                       </Card>
-                    ))}
-                  </div>
-                </ScrollArea>
-                
-                {/* Show all / Show less button */}
-                {sales.length > 10 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full mt-2 text-muted-foreground"
-                    onClick={() => setShowAllSales(!showAllSales)}
-                  >
-                    {showAllSales ? "Afficher moins" : `Afficher tout (${sales.length})`}
-                  </Button>
-                )}
-              </>
-            )}
-          </div>
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
+              <div className="pt-3">
+                <Button variant="outline" className="w-full" onClick={() => navigate("/clients/new")}>
+                  <User className="w-4 h-4 mr-2" />
+                  Nouveau client
+                </Button>
+              </div>
+            </SheetContent>
+          </Sheet>
         )}
 
-        {/* Client Selection (Credit only) */}
-        {!isCash && (
-          <div className="mb-4">
-            <p className="text-sm font-semibold text-muted-foreground mb-2">Client</p>
-            <div className="space-y-2">
-              {clientsLoading ? (
-                <Card>
-                  <CardContent className="p-4 text-center text-muted-foreground">
-                    Chargement des clients...
-                  </CardContent>
-                </Card>
-              ) : (
-                clients.map((client) => (
-                  <Card
-                    key={client.id}
-                    className={`cursor-pointer transition-all ${
-                      selectedClient === client.id
-                        ? "border-2 border-credit bg-credit/5"
-                        : ""
-                    }`}
-                    onClick={() => setSelectedClient(client.id)}
-                  >
-                    <CardContent className="p-3 flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
-                        <User className="w-5 h-5 text-muted-foreground" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-semibold">{client.name}</p>
-                        <p className="text-xs text-muted-foreground">{client.phone}</p>
-                      </div>
-                      {selectedClient === client.id && (
-                        <Check className="w-5 h-5 text-credit" />
-                      )}
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-              <Button variant="outline" className="w-full" onClick={() => navigate("/clients/new")}>
-                <User className="w-5 h-5 mr-2" />
-                Nouveau client
-              </Button>
+        {/* Spacer to push numpad down */}
+        <div className="flex-1 min-h-0" />
+
+        {/* Numpad - Compact */}
+        <div className="shrink-0">
+          {selectedProducts.length === 0 ? (
+            <div className="grid grid-cols-3 gap-1.5 max-w-xs mx-auto mb-2">
+              {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((num) => (
+                <NumpadButton key={num} onClick={() => handleNumberClick(num)}>
+                  {num}
+                </NumpadButton>
+              ))}
+              <NumpadButton onClick={handleClear} variant="secondary">
+                C
+              </NumpadButton>
+              <NumpadButton onClick={() => handleNumberClick("0")}>0</NumpadButton>
+              <NumpadButton onClick={handleDelete} variant="secondary">
+                ←
+              </NumpadButton>
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="text-center text-xs text-muted-foreground mb-2 py-1">
+              Montant calculé depuis les produits
+            </div>
+          )}
 
-        {/* Note */}
-        <div className="mb-4">
-          <div className="flex items-center gap-2 px-4 py-3 bg-secondary rounded-xl">
-            <MessageSquare className="w-5 h-5 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Ajouter une note (optionnel)"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-            />
-          </div>
+          <Button
+            variant={isCash ? "cash" : "credit"}
+            size="lg"
+            className="w-full h-12"
+            onClick={handleSubmit}
+            disabled={effectiveAmount === 0 || (!isCash && !selectedClient) || isLoading}
+          >
+            <Check className="w-5 h-5 mr-2" />
+            Enregistrer {formatMoney(effectiveAmount)} CFA
+          </Button>
         </div>
       </div>
-
-      {/* Numpad - disabled if products selected */}
-      <div className="px-4 pb-4 safe-bottom bg-background border-t border-border pt-4">
-        {selectedProducts.length === 0 ? (
-          <div className="grid grid-cols-3 gap-2 max-w-sm mx-auto mb-3">
-            {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((num) => (
-              <NumpadButton key={num} onClick={() => handleNumberClick(num)}>
-                {num}
-              </NumpadButton>
-            ))}
-            <NumpadButton onClick={handleClear} variant="secondary">
-              C
-            </NumpadButton>
-            <NumpadButton onClick={() => handleNumberClick("0")}>0</NumpadButton>
-            <NumpadButton onClick={handleDelete} variant="secondary">
-              ←
-            </NumpadButton>
-          </div>
-        ) : (
-          <div className="text-center text-sm text-muted-foreground mb-3 py-2">
-            Le montant est calculé automatiquement à partir des produits
-          </div>
-        )}
-
-        <Button
-          variant={isCash ? "cash" : "credit"}
-          size="lg"
-          className="w-full"
-          onClick={handleSubmit}
-          disabled={effectiveAmount === 0 || (!isCash && !selectedClient) || isLoading}
-        >
-          <Check className="w-6 h-6 mr-2" />
-          Enregistrer {formatMoney(effectiveAmount)} CFA
-        </Button>
-      </div>
-    </div>
+    </FullScreenLayout>
   );
 };
 
@@ -544,7 +555,7 @@ const NumpadButton = ({
 }) => (
   <button
     onClick={onClick}
-    className={`h-14 rounded-xl text-xl font-bold transition-all duration-150 active:scale-95 ${
+    className={`h-11 rounded-xl text-lg font-bold transition-all duration-150 active:scale-95 ${
       variant === "secondary"
         ? "bg-secondary text-secondary-foreground"
         : "bg-card text-foreground border border-border hover:bg-secondary"
