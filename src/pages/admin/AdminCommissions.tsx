@@ -17,6 +17,8 @@ import {
   useCollectCommission,
 } from "@/hooks/use-commission-balance";
 import { useAdminCountries, useAdminUsers } from "@/hooks/use-admin-stats";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import { 
   Percent, 
   Plus, 
@@ -30,7 +32,9 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  User
+  User,
+  RefreshCw,
+  AlertTriangle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,11 +58,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
 export default function AdminCommissions() {
+  const queryClient = useQueryClient();
   const { data: commissions, isLoading: commissionsLoading } = useAdminCommissions();
   const { data: stats, isLoading: statsLoading } = useCommissionStats();
   const { data: countries } = useAdminCountries();
@@ -79,6 +95,7 @@ export default function AdminCommissions() {
   const [collectMethod, setCollectMethod] = useState("cash");
   const [simulationAmount, setSimulationAmount] = useState("");
   const [simulationType, setSimulationType] = useState("cash");
+  const [isRecalculating, setIsRecalculating] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -172,6 +189,35 @@ export default function AdminCommissions() {
       setCollectAmount("");
     } catch (error) {
       toast.error("Erreur lors de la collecte");
+    }
+  };
+
+  // Recalculate all commissions
+  const handleRecalculateAll = async () => {
+    setIsRecalculating(true);
+    try {
+      const { data, error } = await supabase.rpc('recalculate_all_commissions');
+      
+      if (error) {
+        console.error("Recalculate error:", error);
+        toast.error("Erreur lors du recalcul");
+        return;
+      }
+
+      const result = data as { success: boolean; users_processed: number; sales_processed: number; total_commissions: number };
+      
+      toast.success("Commissions recalculées", {
+        description: `${result.users_processed} utilisateur(s), ${result.sales_processed} vente(s), ${formatCFA(result.total_commissions)} total`,
+      });
+
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['admin-commission-balances'] });
+      queryClient.invalidateQueries({ queryKey: ['commission-stats'] });
+    } catch (error) {
+      console.error("Recalculate error:", error);
+      toast.error("Erreur lors du recalcul des commissions");
+    } finally {
+      setIsRecalculating(false);
     }
   };
 
@@ -482,15 +528,65 @@ export default function AdminCommissions() {
           {/* Collection Tab */}
           <TabsContent value="collection" className="space-y-6">
             {/* Collection Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-4">
               <h2 className="text-lg font-semibold">Collecte des commissions</h2>
-              <Dialog open={collectDialogOpen} onOpenChange={setCollectDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" className="gap-2">
-                    <Wallet className="w-4 h-4" />
-                    Collecter manuellement
-                  </Button>
-                </DialogTrigger>
+              <div className="flex items-center gap-2">
+                {/* Recalculate All Button */}
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" className="gap-2">
+                      <RefreshCw className={`w-4 h-4 ${isRecalculating ? 'animate-spin' : ''}`} />
+                      Recalculer tout
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="flex items-center gap-2">
+                        <AlertTriangle className="w-5 h-5 text-amber-500" />
+                        Recalculer toutes les commissions ?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Cette action va recalculer les commissions de <strong>tous les utilisateurs</strong> basées sur leurs ventes existantes et les règles de commission actuelles.
+                        <br /><br />
+                        Cela peut être utile si :
+                        <ul className="list-disc list-inside mt-2 space-y-1">
+                          <li>Des ventes ont été créées hors-ligne et synchronisées après coup</li>
+                          <li>Les règles de commission ont été modifiées</li>
+                          <li>Il y a des incohérences dans les soldes de commission</li>
+                        </ul>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Annuler</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleRecalculateAll}
+                        disabled={isRecalculating}
+                        className="gap-2"
+                      >
+                        {isRecalculating ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                            Recalcul en cours...
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="w-4 h-4" />
+                            Recalculer
+                          </>
+                        )}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+
+                {/* Collect Manually Button */}
+                <Dialog open={collectDialogOpen} onOpenChange={setCollectDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="gap-2">
+                      <Wallet className="w-4 h-4" />
+                      Collecter manuellement
+                    </Button>
+                  </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Collecter une commission</DialogTitle>
@@ -545,6 +641,7 @@ export default function AdminCommissions() {
                   </div>
                 </DialogContent>
               </Dialog>
+              </div>
             </div>
 
             {/* Pending Payments */}

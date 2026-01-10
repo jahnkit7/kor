@@ -1429,6 +1429,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      recalculate_all_commissions: { Args: never; Returns: Json }
       send_notification: {
         Args: {
           notification_action_url?: string
