@@ -45,6 +45,7 @@ import AdminFinancials from "./pages/admin/AdminFinancials";
 import AdminNotifications from "./pages/admin/AdminNotifications";
 import AdminRoadmap from "./pages/admin/AdminRoadmap";
 import AdminSetup from "./pages/admin/AdminSetup";
+import AdminSyncDiagnostic from "./pages/admin/AdminSyncDiagnostic";
 
 const queryClient = new QueryClient();
 
@@ -214,6 +215,7 @@ const App = () => (
             <Route path="/admin/support" element={<AdminSupport />} />
             <Route path="/admin/logs" element={<AdminLogs />} />
             <Route path="/admin/setup" element={<AdminSetup />} />
+            <Route path="/admin/sync-diagnostic" element={<AdminSyncDiagnostic />} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>

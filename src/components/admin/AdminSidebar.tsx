@@ -13,7 +13,8 @@ import {
   TrendingUp,
   Gift,
   Map,
-  Database
+  Database,
+  RefreshCw
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +29,7 @@ const navItems = [
   { to: "/admin/features", icon: ToggleLeft, label: "Fonctionnalités" },
   { to: "/admin/roadmap", icon: Map, label: "Roadmap" },
   { to: "/admin/commissions", icon: Gift, label: "Commissions" },
+  { to: "/admin/sync-diagnostic", icon: RefreshCw, label: "Diagnostic Sync" },
   { to: "/admin/support", icon: MessageSquare, label: "Support" },
   { to: "/admin/logs", icon: FileText, label: "Logs" },
   { to: "/admin/setup", icon: Database, label: "Config. Initiale" },
