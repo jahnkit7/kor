@@ -12,7 +12,8 @@ import {
   Settings,
   TrendingUp,
   Gift,
-  Map
+  Map,
+  Database
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +30,7 @@ const navItems = [
   { to: "/admin/commissions", icon: Gift, label: "Commissions" },
   { to: "/admin/support", icon: MessageSquare, label: "Support" },
   { to: "/admin/logs", icon: FileText, label: "Logs" },
+  { to: "/admin/setup", icon: Database, label: "Config. Initiale" },
 ];
 
 export function AdminSidebar() {
