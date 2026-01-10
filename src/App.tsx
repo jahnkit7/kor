@@ -41,6 +41,7 @@ import AdminLogs from "./pages/admin/AdminLogs";
 import AdminCommissions from "./pages/admin/AdminCommissions";
 import AdminFeatureAnalytics from "./pages/admin/AdminFeatureAnalytics";
 import AdminBetaAnalytics from "./pages/admin/AdminBetaAnalytics";
+import AdminABTesting from "./pages/admin/AdminABTesting";
 import AdminPromoCodes from "./pages/admin/AdminPromoCodes";
 import AdminReferrals from "./pages/admin/AdminReferrals";
 import AdminFinancials from "./pages/admin/AdminFinancials";
@@ -213,6 +214,7 @@ const App = () => (
             <Route path="/admin/referrals" element={<AdminReferrals />} />
             <Route path="/admin/feature-analytics" element={<AdminFeatureAnalytics />} />
             <Route path="/admin/beta-analytics" element={<AdminBetaAnalytics />} />
+            <Route path="/admin/ab-testing" element={<AdminABTesting />} />
             <Route path="/admin/promo-codes" element={<AdminPromoCodes />} />
             <Route path="/admin/notifications" element={<AdminNotifications />} />
             <Route path="/admin/roadmap" element={<AdminRoadmap />} />

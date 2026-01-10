@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, ReactNode, useCallback } from "re
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Sparkles } from "lucide-react";
 
 interface FeatureNotificationsContextType {
   // Context can be extended later if needed
@@ -63,9 +63,21 @@ export function FeatureNotificationsProvider({ children }: FeatureNotificationsP
     }
   }, [queryClient]);
 
+  const handleChangelogInsert = useCallback((payload: any) => {
+    const newChangelog = payload.new;
+    if (newChangelog) {
+      toast.info(`Nouveauté Bêta !`, {
+        description: `${newChangelog.title}`,
+        icon: <Sparkles className="w-5 h-5 text-amber-500" />,
+        duration: 6000,
+      });
+      queryClient.invalidateQueries({ queryKey: ["changelogs"] });
+    }
+  }, [queryClient]);
+
   useEffect(() => {
     // Subscribe to realtime changes on feature_flags table
-    const channel = supabase
+    const featureChannel = supabase
       .channel("feature-flags-changes")
       .on(
         "postgres_changes",
@@ -78,10 +90,25 @@ export function FeatureNotificationsProvider({ children }: FeatureNotificationsP
       )
       .subscribe();
 
+    // Subscribe to new changelogs
+    const changelogChannel = supabase
+      .channel("changelog-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "feature_changelogs",
+        },
+        handleChangelogInsert
+      )
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(featureChannel);
+      supabase.removeChannel(changelogChannel);
     };
-  }, [handleFeatureChange]);
+  }, [handleFeatureChange, handleChangelogInsert]);
 
   return (
     <FeatureNotificationsContext.Provider value={{}}>
