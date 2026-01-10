@@ -17,10 +17,11 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { ArrowLeft, Plus, Package, Search, Mic, Loader2, History } from "lucide-react";
+import { ArrowLeft, Plus, Package, Search, Mic, Loader2, History, RefreshCw, WifiOff, Cloud, CloudOff } from "lucide-react";
 import { useStock, type NewStockItem, type StockItem } from "@/hooks/use-stock";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { useToast } from "@/hooks/use-toast";
+import { useOffline } from "@/contexts/OfflineContext";
 import AppLayout from "@/components/layout/AppLayout";
 import { StockEntryModes, type StockEntryMode } from "@/components/stock/StockEntryModes";
 import { ManualStockInput } from "@/components/stock/ManualStockInput";
@@ -33,8 +34,9 @@ export default function Stock() {
   useRequireAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { items, loading, addItem, addItems, updateItem, deleteItem, getTotalValue } = useStock();
+  const { items, loading, addItem, addItems, updateItem, deleteItem, getTotalValue, refetch } = useStock();
   const { trackFeature } = useFeatureTracking();
+  const { isOnline, isSyncing, pendingCount, performSync } = useOffline();
 
   // Track page view
   useEffect(() => {
@@ -46,6 +48,31 @@ export default function Stock() {
   const [entryMode, setEntryMode] = useState<StockEntryMode | null>(null);
   const [activeTab, setActiveTab] = useState("stock");
   const [editingItem, setEditingItem] = useState<StockItem | null>(null);
+  const [isManualSyncing, setIsManualSyncing] = useState(false);
+
+  // Count unsynced items in current stock
+  const unsyncedCount = items.filter(item => !item.synced).length;
+
+  // Manual sync handler
+  const handleManualSync = async () => {
+    setIsManualSyncing(true);
+    toast({ title: "🔄 Synchronisation...", description: "En cours" });
+    
+    try {
+      await performSync();
+      await refetch();
+      toast({ title: "✅ Synchronisation terminée", description: "Stock mis à jour" });
+    } catch (error) {
+      console.error("Manual sync error:", error);
+      toast({ 
+        title: "❌ Erreur de synchronisation", 
+        description: "Vérifiez votre connexion",
+        variant: "destructive" 
+      });
+    } finally {
+      setIsManualSyncing(false);
+    }
+  };
   
   const filteredItems = items.filter((item) =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -106,16 +133,64 @@ export default function Stock() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1">
-            <h1 className="text-xl font-bold">Stock</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-bold">Stock</h1>
+              {/* Sync Status Badge */}
+              {unsyncedCount > 0 && (
+                <Badge variant="destructive" className="gap-1 text-xs">
+                  <WifiOff className="h-3 w-3" />
+                  {unsyncedCount}
+                </Badge>
+              )}
+              {isSyncing && (
+                <Badge variant="secondary" className="gap-1 text-xs">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Sync
+                </Badge>
+              )}
+            </div>
             <p className="text-sm text-muted-foreground">
               {items.length} produit{items.length > 1 ? "s" : ""} • {formatMoney(getTotalValue())}
             </p>
           </div>
+          
+          {/* Manual Sync Button */}
+          <Button 
+            variant="outline" 
+            size="icon"
+            onClick={handleManualSync}
+            disabled={isManualSyncing || isSyncing}
+            className="shrink-0"
+          >
+            <RefreshCw className={`h-4 w-4 ${isManualSyncing || isSyncing ? 'animate-spin' : ''}`} />
+          </Button>
+          
           <Button onClick={() => setIsAddSheetOpen(true)} className="gap-2">
             <Plus className="h-4 w-4" />
             Ajouter
           </Button>
         </div>
+
+        {/* Sync Warning Banner */}
+        {unsyncedCount > 0 && (
+          <div className="px-4 pb-2">
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800">
+              <CloudOff className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+              <span className="text-sm text-orange-700 dark:text-orange-300 flex-1">
+                {unsyncedCount} produit{unsyncedCount > 1 ? "s" : ""} en attente de synchronisation
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleManualSync}
+                disabled={isManualSyncing || isSyncing}
+                className="text-orange-700 dark:text-orange-300 hover:text-orange-900 dark:hover:text-orange-100"
+              >
+                {isManualSyncing ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Sync'}
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Search */}
         <div className="px-4 pb-4">
@@ -175,7 +250,7 @@ export default function Stock() {
               filteredItems.map((item) => (
                 <Card 
                   key={item.id} 
-                  className="p-4 cursor-pointer hover:shadow-md transition-shadow active:scale-[0.99]"
+                  className={`p-4 cursor-pointer hover:shadow-md transition-shadow active:scale-[0.99] ${!item.synced ? 'border-orange-300 dark:border-orange-700' : ''}`}
                   onClick={() => setEditingItem(item)}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -183,6 +258,13 @@ export default function Stock() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-medium truncate">{item.name}</h3>
                         {getSourceBadge(item.source)}
+                        {/* Sync Status Indicator */}
+                        {!item.synced && (
+                          <Badge variant="outline" className="text-xs gap-1 text-orange-600 border-orange-300 dark:text-orange-400 dark:border-orange-700">
+                            <Cloud className="h-3 w-3" />
+                            En attente
+                          </Badge>
+                        )}
                       </div>
                       {item.model && (
                         <p className="text-sm text-muted-foreground">{item.model}</p>
