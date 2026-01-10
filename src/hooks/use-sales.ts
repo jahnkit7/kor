@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "./use-auth";
+import { useNetworkStatus } from "./use-network-status";
 import { isSupabaseConfigured, getSupabaseClient } from "@/lib/supabase";
+import * as localDB from "@/lib/db";
 import { toast } from "sonner";
 
 export interface Sale {
@@ -13,6 +15,8 @@ export interface Sale {
   created_at: string;
   // Joined data
   client_name?: string;
+  // Sync status
+  synced?: boolean;
 }
 
 export interface SaleItem {
@@ -41,44 +45,82 @@ interface SalesState {
 
 export function useSales(): SalesState {
   const { user } = useAuth();
+  const { isOnline } = useNetworkStatus();
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchSales = useCallback(async () => {
-    if (!user || !isSupabaseConfigured()) {
-      setLoading(false);
-      return;
-    }
-
     try {
-      const supabase = await getSupabaseClient();
-      const { data, error } = await supabase
-        .from("sales")
-        .select(`
-          *,
-          clients:client_id (name)
-        `)
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        console.error("Error fetching sales:", error);
-        return;
-      }
-
-      const salesWithClientNames: Sale[] = data.map(sale => ({
-        ...sale,
-        type: sale.type as "cash" | "credit",
-        client_name: sale.clients?.name || null,
+      // 1. Always load local data first for instant display
+      const localSales = await localDB.getSales();
+      const mappedLocalSales: Sale[] = localSales.map(s => ({
+        id: s.id,
+        type: s.type,
+        amount: s.amount,
+        note: s.note || null,
+        client_id: s.clientId || null,
+        user_id: s.user_id || user?.id || "",
+        created_at: s.createdAt,
+        client_name: s.client_name,
+        synced: s.synced,
       }));
+      setSales(mappedLocalSales);
+      setLoading(false);
 
-      setSales(salesWithClientNames);
+      // 2. If online and authenticated, sync with cloud
+      if (isOnline && user && isSupabaseConfigured()) {
+        try {
+          const supabase = await getSupabaseClient();
+          const { data, error } = await supabase
+            .from("sales")
+            .select(`
+              *,
+              clients:client_id (name)
+            `)
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false });
+
+          if (!error && data) {
+            const cloudSales: Sale[] = data.map(sale => ({
+              ...sale,
+              type: sale.type as "cash" | "credit",
+              client_name: sale.clients?.name || null,
+              synced: true,
+            }));
+
+            // Merge: keep local unsynced sales, update with cloud data for synced ones
+            const unsyncedLocalSales = mappedLocalSales.filter(s => !s.synced);
+            const cloudSaleIds = new Set(cloudSales.map(s => s.id));
+            const finalSales = [
+              ...unsyncedLocalSales.filter(s => !cloudSaleIds.has(s.id)),
+              ...cloudSales,
+            ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+            setSales(finalSales);
+
+            // Update local DB with cloud data
+            for (const sale of data) {
+              await localDB.upsertFromCloud("sales", [{
+                id: sale.id,
+                type: sale.type,
+                amount: sale.amount,
+                note: sale.note,
+                clientId: sale.client_id,
+                client_name: sale.clients?.name,
+                user_id: sale.user_id,
+                createdAt: sale.created_at,
+              }]);
+            }
+          }
+        } catch (error) {
+          console.warn("Could not sync sales with cloud:", error);
+        }
+      }
     } catch (error) {
       console.error("Error fetching sales:", error);
-    } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, isOnline]);
 
   useEffect(() => {
     fetchSales();
@@ -92,118 +134,153 @@ export function useSales(): SalesState {
     client_id?: string;
     items?: SaleItem[];
   }): Promise<Sale | null> => {
-    if (!user || !isSupabaseConfigured()) return null;
+    if (!user) return null;
 
     try {
-      const supabase = await getSupabaseClient();
-      const { data, error } = await supabase
-        .from("sales")
-        .insert({
-          type: saleData.type,
-          amount: saleData.amount,
-          note: saleData.note || null,
-          client_id: saleData.client_id || null,
-          user_id: user.id,
-        })
-        .select()
-        .single();
+      // 1. Save locally first (works offline)
+      const localSale = await localDB.addSale({
+        type: saleData.type,
+        amount: saleData.amount,
+        note: saleData.note,
+        clientId: saleData.client_id,
+        user_id: user.id,
+      });
 
-      if (error) {
-        console.error("Error adding sale:", error);
-        toast.error("Erreur lors de l'ajout de la vente");
-        return null;
-      }
-
-      // Insert sale items if provided (triggers automatic stock deduction)
+      // Save sale items locally if provided
       if (saleData.items && saleData.items.length > 0) {
-        const saleItemsToInsert = saleData.items.map(item => ({
-          sale_id: data.id,
+        await localDB.addSaleItems(saleData.items.map(item => ({
+          sale_id: localSale.id,
           stock_item_id: item.stock_item_id || null,
           product_name: item.product_name,
           quantity: item.quantity,
           unit_price: item.unit_price,
-          user_id: user.id,
-        }));
-
-        const { error: itemsError } = await supabase
-          .from("sale_items")
-          .insert(saleItemsToInsert);
-
-        if (itemsError) {
-          console.error("Error adding sale items:", itemsError);
-          // Sale was created but items weren't - log but don't fail
-        }
+        })));
       }
 
-      // Create debt record for credit sales
-      if (saleData.type === "credit" && saleData.client_id) {
-        const paidAmount = saleData.paid || 0;
-        
-        const { data: debtData, error: debtError } = await supabase
-          .from("debts")
-          .insert({
-            client_id: saleData.client_id,
-            amount: saleData.amount,
-            paid: paidAmount,
-            user_id: user.id,
-          })
-          .select()
-          .single();
-
-        if (debtError) {
-          console.error("Error creating debt:", debtError);
-          // Sale was created but debt wasn't - log but don't fail
-        }
-
-        // If there was a partial payment, record it
-        if (!debtError && debtData && paidAmount > 0) {
-          await supabase.from("payments").insert({
-            debt_id: debtData.id,
-            client_id: saleData.client_id,
-            amount: paidAmount,
-            user_id: user.id,
-          });
-        }
-      }
-
+      // 2. Update UI immediately
       const newSale: Sale = {
-        ...data,
-        type: data.type as "cash" | "credit",
+        id: localSale.id,
+        type: localSale.type,
+        amount: localSale.amount,
+        note: localSale.note || null,
+        client_id: localSale.clientId || null,
+        user_id: user.id,
+        created_at: localSale.createdAt,
+        synced: false,
       };
       setSales(prev => [newSale, ...prev]);
       toast.success(saleData.type === "cash" ? "Vente cash ajoutée" : "Vente crédit ajoutée");
+
+      // 3. If online, try to sync immediately
+      if (isOnline && isSupabaseConfigured()) {
+        try {
+          const supabase = await getSupabaseClient();
+          const { data, error } = await supabase
+            .from("sales")
+            .insert({
+              id: localSale.id, // Use same ID for consistency
+              type: saleData.type,
+              amount: saleData.amount,
+              note: saleData.note || null,
+              client_id: saleData.client_id || null,
+              user_id: user.id,
+            })
+            .select()
+            .single();
+
+          if (!error && data) {
+            // Insert sale items to cloud
+            if (saleData.items && saleData.items.length > 0) {
+              const saleItemsToInsert = saleData.items.map(item => ({
+                sale_id: data.id,
+                stock_item_id: item.stock_item_id || null,
+                product_name: item.product_name,
+                quantity: item.quantity,
+                unit_price: item.unit_price,
+                user_id: user.id,
+              }));
+
+              await supabase.from("sale_items").insert(saleItemsToInsert);
+            }
+
+            // Create debt record for credit sales
+            if (saleData.type === "credit" && saleData.client_id) {
+              const paidAmount = saleData.paid || 0;
+              
+              const { data: debtData, error: debtError } = await supabase
+                .from("debts")
+                .insert({
+                  client_id: saleData.client_id,
+                  amount: saleData.amount,
+                  paid: paidAmount,
+                  user_id: user.id,
+                })
+                .select()
+                .single();
+
+              if (!debtError && debtData && paidAmount > 0) {
+                await supabase.from("payments").insert({
+                  debt_id: debtData.id,
+                  client_id: saleData.client_id,
+                  amount: paidAmount,
+                  user_id: user.id,
+                });
+              }
+            }
+
+            // Mark as synced
+            await localDB.markAsSynced("sales", localSale.id);
+            setSales(prev => prev.map(s => 
+              s.id === localSale.id ? { ...s, synced: true } : s
+            ));
+          }
+        } catch (error) {
+          console.log("Sale queued for sync:", error);
+          toast.info("Vente enregistrée hors-ligne", {
+            description: "Sera synchronisée à la reconnexion"
+          });
+        }
+      } else {
+        toast.info("Vente enregistrée hors-ligne", {
+          description: "Sera synchronisée à la reconnexion"
+        });
+      }
+
       return newSale;
     } catch (error) {
       console.error("Error adding sale:", error);
       toast.error("Erreur lors de l'ajout de la vente");
       return null;
     }
-  }, [user]);
+  }, [user, isOnline]);
 
   const deleteSale = useCallback(async (id: string) => {
-    if (!user || !isSupabaseConfigured()) return;
+    if (!user) return;
 
     try {
-      const supabase = await getSupabaseClient();
-      const { error } = await supabase
-        .from("sales")
-        .delete()
-        .eq("id", id)
-        .eq("user_id", user.id);
+      // Remove from local state immediately
+      setSales(prev => prev.filter(s => s.id !== id));
 
-      if (error) {
-        console.error("Error deleting sale:", error);
-        toast.error("Erreur lors de la suppression");
-        return;
+      // Try to delete from cloud if online
+      if (isOnline && isSupabaseConfigured()) {
+        try {
+          const supabase = await getSupabaseClient();
+          await supabase
+            .from("sales")
+            .delete()
+            .eq("id", id)
+            .eq("user_id", user.id);
+        } catch (error) {
+          console.warn("Could not delete from cloud:", error);
+        }
       }
 
-      setSales(prev => prev.filter(s => s.id !== id));
       toast.success("Vente supprimée");
     } catch (error) {
       console.error("Error deleting sale:", error);
       toast.error("Erreur lors de la suppression");
     }
-  }, [user]);
+  }, [user, isOnline]);
 
   const getTodayStats = useCallback(() => {
     const today = new Date().toDateString();

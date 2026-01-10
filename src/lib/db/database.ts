@@ -1,5 +1,5 @@
 import { openDB, DBSchema, IDBPDatabase } from "idb";
-import type { Client, Sale, Debt, Payment, SyncQueueItem, AppSettings } from "./types";
+import type { Client, Sale, SaleItem, Debt, Payment, StockItem, SyncQueueItem, AppSettings } from "./types";
 
 interface CaissePlusDB extends DBSchema {
   clients: {
@@ -12,6 +12,11 @@ interface CaissePlusDB extends DBSchema {
     value: Sale;
     indexes: { "by-date": string; "by-synced": number; "by-type": string };
   };
+  sale_items: {
+    key: string;
+    value: SaleItem;
+    indexes: { "by-sale": string; "by-synced": number };
+  };
   debts: {
     key: string;
     value: Debt;
@@ -21,6 +26,11 @@ interface CaissePlusDB extends DBSchema {
     key: string;
     value: Payment;
     indexes: { "by-debt": string; "by-client": string; "by-synced": number };
+  };
+  stock_items: {
+    key: string;
+    value: StockItem;
+    indexes: { "by-name": string; "by-synced": number };
   };
   syncQueue: {
     key: string;
@@ -34,7 +44,7 @@ interface CaissePlusDB extends DBSchema {
 }
 
 const DB_NAME = "caisse-plus-db";
-const DB_VERSION = 1;
+const DB_VERSION = 2; // Increment version for new stores
 
 let dbInstance: IDBPDatabase<CaissePlusDB> | null = null;
 
@@ -42,7 +52,7 @@ export async function getDB(): Promise<IDBPDatabase<CaissePlusDB>> {
   if (dbInstance) return dbInstance;
 
   dbInstance = await openDB<CaissePlusDB>(DB_NAME, DB_VERSION, {
-    upgrade(db) {
+    upgrade(db, oldVersion) {
       // Clients store
       if (!db.objectStoreNames.contains("clients")) {
         const clientStore = db.createObjectStore("clients", { keyPath: "id" });
@@ -58,6 +68,13 @@ export async function getDB(): Promise<IDBPDatabase<CaissePlusDB>> {
         salesStore.createIndex("by-type", "type");
       }
 
+      // Sale items store (new)
+      if (!db.objectStoreNames.contains("sale_items")) {
+        const saleItemsStore = db.createObjectStore("sale_items", { keyPath: "id" });
+        saleItemsStore.createIndex("by-sale", "sale_id");
+        saleItemsStore.createIndex("by-synced", "synced");
+      }
+
       // Debts store
       if (!db.objectStoreNames.contains("debts")) {
         const debtsStore = db.createObjectStore("debts", { keyPath: "id" });
@@ -71,6 +88,13 @@ export async function getDB(): Promise<IDBPDatabase<CaissePlusDB>> {
         paymentsStore.createIndex("by-debt", "debtId");
         paymentsStore.createIndex("by-client", "clientId");
         paymentsStore.createIndex("by-synced", "synced");
+      }
+
+      // Stock items store (new)
+      if (!db.objectStoreNames.contains("stock_items")) {
+        const stockStore = db.createObjectStore("stock_items", { keyPath: "id" });
+        stockStore.createIndex("by-name", "name");
+        stockStore.createIndex("by-synced", "synced");
       }
 
       // Sync queue store
@@ -286,6 +310,113 @@ export async function getSettings(): Promise<AppSettings | undefined> {
 export async function saveSettings(settings: AppSettings): Promise<void> {
   const db = await getDB();
   await db.put("settings", settings);
+}
+
+// Stock item operations
+export async function addStockItem(item: Omit<StockItem, "id" | "createdAt" | "updatedAt" | "synced">): Promise<StockItem> {
+  const db = await getDB();
+  const now = new Date().toISOString();
+  const newItem: StockItem = {
+    ...item,
+    id: generateId(),
+    createdAt: now,
+    updatedAt: now,
+    synced: false,
+  };
+  await db.put("stock_items", newItem);
+  await addToSyncQueue("create", "stock_items", newItem);
+  return newItem;
+}
+
+export async function getStockItems(): Promise<StockItem[]> {
+  const db = await getDB();
+  return db.getAll("stock_items");
+}
+
+export async function getStockItem(id: string): Promise<StockItem | undefined> {
+  const db = await getDB();
+  return db.get("stock_items", id);
+}
+
+export async function updateStockItem(id: string, updates: Partial<StockItem>): Promise<StockItem | undefined> {
+  const db = await getDB();
+  const item = await db.get("stock_items", id);
+  if (!item) return undefined;
+  
+  const updated: StockItem = {
+    ...item,
+    ...updates,
+    updatedAt: new Date().toISOString(),
+    synced: false,
+  };
+  await db.put("stock_items", updated);
+  await addToSyncQueue("update", "stock_items", updated);
+  return updated;
+}
+
+export async function deleteStockItem(id: string): Promise<boolean> {
+  const db = await getDB();
+  const item = await db.get("stock_items", id);
+  if (!item) return false;
+  
+  await db.delete("stock_items", id);
+  await addToSyncQueue("delete", "stock_items", { id });
+  return true;
+}
+
+// Sale items operations
+export async function addSaleItems(items: Omit<SaleItem, "id" | "synced">[]): Promise<SaleItem[]> {
+  const db = await getDB();
+  const newItems: SaleItem[] = items.map(item => ({
+    ...item,
+    id: generateId(),
+    synced: false,
+  }));
+  
+  for (const item of newItems) {
+    await db.put("sale_items", item);
+    await addToSyncQueue("create", "sale_items", item);
+  }
+  
+  return newItems;
+}
+
+export async function getSaleItemsBySale(saleId: string): Promise<SaleItem[]> {
+  const db = await getDB();
+  return db.getAllFromIndex("sale_items", "by-sale", saleId);
+}
+
+// Mark as synced helper
+export async function markAsSynced(
+  table: "clients" | "sales" | "debts" | "payments" | "stock_items" | "sale_items",
+  id: string
+): Promise<void> {
+  const db = await getDB();
+  const record = await db.get(table, id);
+  if (record) {
+    await db.put(table, { ...record, synced: true });
+  }
+}
+
+// Bulk update from cloud data
+export async function upsertFromCloud<T extends { id: string }>(
+  table: "clients" | "sales" | "debts" | "payments" | "stock_items",
+  items: T[]
+): Promise<void> {
+  const db = await getDB();
+  for (const item of items) {
+    const existing = await db.get(table, item.id);
+    // Only update if local version is synced (no pending changes)
+    if (!existing || existing.synced) {
+      await db.put(table, { ...item, synced: true } as never);
+    }
+  }
+}
+
+// Clear all data for a specific table
+export async function clearTable(table: "clients" | "sales" | "debts" | "payments" | "stock_items" | "sale_items"): Promise<void> {
+  const db = await getDB();
+  await db.clear(table);
 }
 
 // Stats helpers

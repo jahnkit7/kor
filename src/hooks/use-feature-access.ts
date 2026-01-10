@@ -34,21 +34,37 @@ const planHierarchy: Record<string, number> = {
   "annuel premium": 2,
 };
 
-// Features par plan - source de vérité
-const planFeaturesMap: Record<string, string[]> = {
-  gratuit: ["sales", "stock", "clients", "debts"],
-  free_trial: ["sales", "stock", "clients", "debts", "reports", "employees"],
-  starter: ["sales", "stock", "clients", "debts", "reports", "employees", "voice_input"],
-  premium: ["sales", "stock", "clients", "debts", "reports", "employees", "voice_input", "network", "analytics"],
-  annuel: ["sales", "stock", "clients", "debts", "reports", "employees", "voice_input", "network", "analytics"],
-  "annuel premium": ["sales", "stock", "clients", "debts", "reports", "employees", "voice_input", "network", "analytics"],
-};
+// Hook pour récupérer les features de chaque plan depuis la BDD
+export function useSubscriptionPlanFeatures() {
+  return useQuery({
+    queryKey: ["subscription-plan-features"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("subscription_plans")
+        .select("name, features")
+        .eq("is_active", true);
 
-// Helper pour obtenir les features d'un plan
-export function getPlanFeatures(planName: string | undefined | null): string[] {
+      if (error) throw error;
+      
+      // Créer un map dynamique des plans -> features
+      const map: Record<string, string[]> = {};
+      for (const plan of data || []) {
+        const planName = plan.name?.toLowerCase() || "";
+        // features est stocké comme JSON array
+        const features = Array.isArray(plan.features) ? plan.features : [];
+        map[planName] = features.map((f: unknown) => String(f));
+      }
+      return map;
+    },
+    staleTime: 2 * 60 * 1000, // Cache 2 minutes pour réactivité
+  });
+}
+
+// Helper pour obtenir les features d'un plan - utilise les données de la query
+export function getPlanFeatures(planName: string | undefined | null, planFeaturesMap?: Record<string, string[]>): string[] {
   if (!planName) return [];
   const normalizedPlan = planName.toLowerCase();
-  return planFeaturesMap[normalizedPlan] || [];
+  return planFeaturesMap?.[normalizedPlan] || [];
 }
 
 export function useFeatureFlags() {
@@ -114,11 +130,12 @@ export function useFeatureAccess(featureKey: string): FeatureAccessResult {
   const { user } = useAuth();
   const { data: features, isLoading: featuresLoading } = useFeatureFlags();
   const { data: subscription, isLoading: subLoading } = useUserSubscription();
+  const { data: planFeaturesMap, isLoading: planFeaturesLoading } = useSubscriptionPlanFeatures();
 
-  const loading = featuresLoading || subLoading;
+  const loading = featuresLoading || subLoading || planFeaturesLoading;
 
   // Default result while loading
-  if (loading || !features) {
+  if (loading || !features || !planFeaturesMap) {
     return { 
       hasAccess: false, 
       loading: true, 
@@ -173,7 +190,7 @@ export function useFeatureAccess(featureKey: string): FeatureAccessResult {
 
   // 3. Check if feature is included in user's plan
   const userPlan = subscription.plan?.toLowerCase() || "gratuit";
-  const planFeatures = getPlanFeatures(userPlan);
+  const planFeatures = getPlanFeatures(userPlan, planFeaturesMap);
   
   // Determine minimum required plan for this feature
   const getRequiredPlanForFeature = (fKey: string): string => {
@@ -246,16 +263,17 @@ export function useAllFeatureAccess() {
   const { user } = useAuth();
   const { data: features, isLoading: featuresLoading } = useFeatureFlags();
   const { data: subscription, isLoading: subLoading } = useUserSubscription();
+  const { data: planFeaturesMap, isLoading: planFeaturesLoading } = useSubscriptionPlanFeatures();
 
-  const loading = featuresLoading || subLoading;
+  const loading = featuresLoading || subLoading || planFeaturesLoading;
 
-  if (loading || !features) {
+  if (loading || !features || !planFeaturesMap) {
     return { accessMap: {}, loading: true };
   }
 
   const accessMap: Record<string, boolean> = {};
   const userPlan = subscription?.plan?.toLowerCase() || "";
-  const planFeatures = getPlanFeatures(userPlan);
+  const planFeatures = getPlanFeatures(userPlan, planFeaturesMap);
   const hasActiveSubscription = subscription?.is_active === true;
 
   for (const feature of features) {
