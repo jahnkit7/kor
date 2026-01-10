@@ -1,6 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { 
@@ -26,6 +25,27 @@ const SPECIALTIES = [
   { value: "pharmacie", label: "Pharmacie" },
   { value: "autre", label: "Autre" },
 ];
+
+// Éléments décoratifs géométriques
+const DecoElements = () => (
+  <>
+    {/* Dégradé rose/violet en haut à gauche */}
+    <div className="absolute top-0 left-0 w-48 h-48 bg-gradient-to-br from-pink-200/40 via-purple-200/30 to-transparent rounded-full blur-3xl pointer-events-none" />
+    
+    {/* Dégradé bleu en haut à droite */}
+    <div className="absolute top-20 right-0 w-32 h-32 bg-gradient-to-bl from-blue-100/50 to-transparent rounded-full blur-2xl pointer-events-none" />
+    
+    {/* Points colorés */}
+    <div className="absolute bottom-32 left-8 w-3 h-3 rounded-full bg-yellow-400 pointer-events-none" />
+    <div className="absolute bottom-36 left-24 w-2 h-2 rounded-full bg-green-500 pointer-events-none" />
+    <div className="absolute bottom-40 right-20 w-2 h-2 rounded-full bg-emerald-400 pointer-events-none" />
+    <div className="absolute bottom-44 right-8 w-3 h-3 rounded-full border-2 border-red-400 pointer-events-none" />
+    
+    {/* Losanges */}
+    <div className="absolute bottom-28 left-12 w-2 h-2 rotate-45 bg-slate-400 pointer-events-none" />
+    <div className="absolute bottom-24 left-32 w-2 h-2 rotate-45 bg-slate-300 pointer-events-none" />
+  </>
+);
 
 const ProfileSetup = () => {
   const navigate = useNavigate();
@@ -214,8 +234,8 @@ const ProfileSetup = () => {
   // Show loading while checking auth or profile
   if (authLoading || profileLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="min-h-screen bg-gradient-to-b from-[#f8f9ff] via-white to-[#f8f9ff] flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-[#4f7df3] border-t-transparent rounded-full" />
       </div>
     );
   }
@@ -223,25 +243,27 @@ const ProfileSetup = () => {
   const isFormValid = shopName.trim() && ownerName.trim();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background flex flex-col">
-      {/* Header compact */}
-      <div className="px-6 pt-8 pb-4 text-center">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-primary/10 mb-3">
-          <Store className="w-7 h-7 text-primary" />
-        </div>
-        <h1 className="text-xl font-bold text-foreground">Configurez votre boutique</h1>
-        <p className="text-sm text-muted-foreground mt-1">
+    <div className="min-h-screen bg-gradient-to-b from-[#f8f9ff] via-white to-[#f8f9ff] flex flex-col font-poppins relative overflow-hidden">
+      {/* Éléments décoratifs */}
+      <DecoElements />
+      
+      {/* Header */}
+      <div className="px-6 pt-12 pb-4 text-left relative z-10">
+        <h1 className="text-3xl font-extrabold text-[#2d3748] mb-2">
+          Configurez votre boutique
+        </h1>
+        <p className="text-[#718096] font-light text-sm">
           Étape finale avant de commencer
         </p>
       </div>
 
-      {/* Form - full screen centered */}
-      <div className="flex-1 flex flex-col justify-center px-6 pb-8">
+      {/* Form */}
+      <div className="flex-1 flex flex-col px-6 pb-8 relative z-10 overflow-y-auto">
         <form onSubmit={handleSubmit} className="space-y-4 max-w-sm mx-auto w-full">
           {/* Owner Name */}
           <div className="space-y-1.5">
-            <Label htmlFor="ownerName" className="text-sm font-medium flex items-center gap-2">
-              <User className="w-4 h-4 text-muted-foreground" />
+            <Label htmlFor="ownerName" className="text-sm font-medium text-[#2d3748] flex items-center gap-2">
+              <User className="w-4 h-4 text-[#718096]" />
               Votre nom *
             </Label>
             <Input
@@ -250,15 +272,15 @@ const ProfileSetup = () => {
               placeholder="Ex: Mamadou Diop"
               value={ownerName}
               onChange={(e) => setOwnerName(e.target.value)}
-              className="h-12 bg-card border-border/50 focus:border-primary"
+              className="h-12 bg-[#f5f7fa] border-0 rounded-xl text-[#2d3748] placeholder:text-[#a0aec0] focus:ring-2 focus:ring-[#4f7df3]/20"
               autoComplete="name"
             />
           </div>
 
           {/* Shop Name */}
           <div className="space-y-1.5">
-            <Label htmlFor="shopName" className="text-sm font-medium flex items-center gap-2">
-              <Store className="w-4 h-4 text-muted-foreground" />
+            <Label htmlFor="shopName" className="text-sm font-medium text-[#2d3748] flex items-center gap-2">
+              <Store className="w-4 h-4 text-[#718096]" />
               Nom de la boutique *
             </Label>
             <Input
@@ -267,14 +289,14 @@ const ProfileSetup = () => {
               placeholder="Ex: Boutique Mamadou"
               value={shopName}
               onChange={(e) => setShopName(e.target.value)}
-              className="h-12 bg-card border-border/50 focus:border-primary"
+              className="h-12 bg-[#f5f7fa] border-0 rounded-xl text-[#2d3748] placeholder:text-[#a0aec0] focus:ring-2 focus:ring-[#4f7df3]/20"
             />
           </div>
 
           {/* City */}
           <div className="space-y-1.5">
-            <Label htmlFor="city" className="text-sm font-medium flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-muted-foreground" />
+            <Label htmlFor="city" className="text-sm font-medium text-[#2d3748] flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-[#718096]" />
               Ville
             </Label>
             <Input
@@ -283,23 +305,23 @@ const ProfileSetup = () => {
               placeholder="Ex: Lomé, Cotonou..."
               value={city}
               onChange={(e) => setCity(e.target.value)}
-              className="h-12 bg-card border-border/50 focus:border-primary"
+              className="h-12 bg-[#f5f7fa] border-0 rounded-xl text-[#2d3748] placeholder:text-[#a0aec0] focus:ring-2 focus:ring-[#4f7df3]/20"
             />
           </div>
 
           {/* Specialty */}
           <div className="space-y-1.5">
-            <Label htmlFor="specialty" className="text-sm font-medium flex items-center gap-2">
-              <Briefcase className="w-4 h-4 text-muted-foreground" />
+            <Label htmlFor="specialty" className="text-sm font-medium text-[#2d3748] flex items-center gap-2">
+              <Briefcase className="w-4 h-4 text-[#718096]" />
               Spécialité
             </Label>
             <Select value={specialty} onValueChange={setSpecialty}>
-              <SelectTrigger className="h-12 bg-card border-border/50 focus:border-primary">
+              <SelectTrigger className="h-12 bg-[#f5f7fa] border-0 rounded-xl text-[#2d3748] focus:ring-2 focus:ring-[#4f7df3]/20">
                 <SelectValue placeholder="Sélectionnez une spécialité" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white border-[#e2e8f0] rounded-xl">
                 {SPECIALTIES.map((spec) => (
-                  <SelectItem key={spec.value} value={spec.value}>
+                  <SelectItem key={spec.value} value={spec.value} className="text-[#2d3748]">
                     {spec.label}
                   </SelectItem>
                 ))}
@@ -309,8 +331,8 @@ const ProfileSetup = () => {
 
           {/* Phone (pre-filled, read-only visual) */}
           <div className="space-y-1.5">
-            <Label htmlFor="phone" className="text-sm font-medium flex items-center gap-2">
-              <Phone className="w-4 h-4 text-muted-foreground" />
+            <Label htmlFor="phone" className="text-sm font-medium text-[#2d3748] flex items-center gap-2">
+              <Phone className="w-4 h-4 text-[#718096]" />
               Téléphone
             </Label>
             <Input
@@ -319,35 +341,51 @@ const ProfileSetup = () => {
               placeholder="+228 90 123 45 67"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="h-12 bg-muted/50 border-border/50 text-muted-foreground"
+              className="h-12 bg-[#e8ecf4] border-0 rounded-xl text-[#718096] placeholder:text-[#a0aec0]"
               readOnly={!!extractedPhone}
             />
             {extractedPhone && (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-[#718096]">
                 Numéro détecté automatiquement
               </p>
             )}
           </div>
 
-          {/* Submit */}
-          <div className="pt-4">
-            <Button
+          {/* Submit Button */}
+          <div className="pt-6">
+            <button
               type="submit"
-              className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90"
               disabled={isLoading || !isFormValid}
+              className="
+                relative w-full h-14 rounded-full flex items-center justify-center gap-2
+                bg-gradient-to-r from-[#4f7df3] via-[#5b8af5] to-[#3b6ce8]
+                text-white font-bold text-base tracking-wide uppercase
+                shadow-lg shadow-blue-500/30
+                hover:shadow-xl hover:shadow-blue-500/40
+                active:scale-[0.98]
+                transition-all duration-200
+                disabled:opacity-50 disabled:cursor-not-allowed
+                overflow-hidden
+              "
             >
+              {/* Décorations intégrées au bouton */}
+              <span className="absolute left-4 top-2 w-1.5 h-1.5 rounded-full bg-white/30" />
+              <span className="absolute left-6 bottom-3 w-1 h-1 rotate-45 bg-white/20" />
+              <span className="absolute right-5 top-3 w-1 h-1 rotate-45 bg-white/25" />
+              <span className="absolute right-8 bottom-2 w-1.5 h-1.5 rounded-full border border-white/20" />
+              
               {isLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
               ) : (
                 <>
-                  Commencer
-                  <ArrowRight className="w-5 h-5 ml-2" />
+                  COMMENCER
+                  <ArrowRight className="w-5 h-5" />
                 </>
               )}
-            </Button>
+            </button>
           </div>
 
-          <p className="text-center text-xs text-muted-foreground pt-2">
+          <p className="text-center text-xs text-[#a0aec0] pt-2">
             Modifiable à tout moment dans les réglages
           </p>
         </form>

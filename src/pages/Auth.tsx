@@ -528,7 +528,7 @@ const Auth = () => {
             {isLoading ? (
               <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
             ) : step === "phone" ? (
-              "RECEVOIR OTP"
+              "CONTINUER"
             ) : showConfirmPin ? (
               "CRÉER LE COMPTE"
             ) : isNewUser ? (
