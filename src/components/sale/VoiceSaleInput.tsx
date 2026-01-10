@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useNetworkStatus } from "@/hooks/use-network-status";
 import { useFeatureTracking } from "@/hooks/use-feature-tracking";
+import { useTranscriptionLearning } from "@/hooks/use-transcription-learning";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { parseSalesLocally } from "@/lib/local-sale-parser";
@@ -113,6 +114,7 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
   const { toast } = useToast();
   const { isOnline } = useNetworkStatus();
   const { trackFeature } = useFeatureTracking();
+  const { saveCorrection, applyCorrections } = useTranscriptionLearning();
 
   // Track voice input usage
   useEffect(() => {
@@ -662,6 +664,9 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
     const updatedSales = [...parsedSales];
     const sale = updatedSales[editSaleIndex];
     
+    // Save client name correction for learning
+    const originalClientName = sale.client_match.client_name;
+    
     // Recalculate paid/remaining based on new type
     const paid = editType === "cash" ? newAmount : Math.min(newPaid, newAmount);
     const remaining = editType === "credit" ? Math.max(0, newAmount - paid) : 0;
@@ -676,9 +681,19 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
         finalClientId = newClient.id;
         finalClientName = newClient.name;
         toast({ title: `Client "${newClient.name}" créé` });
+        
+        // Save correction if original name was different (learning)
+        if (originalClientName && originalClientName.toLowerCase() !== newClient.name.toLowerCase()) {
+          await saveCorrection(originalClientName, newClient.name, "client_name");
+        }
       }
     } else if (editClientId) {
       finalClientName = clients.find(c => c.id === editClientId)?.name || null;
+      
+      // Save correction if user selected a different client (learning)
+      if (originalClientName && finalClientName && originalClientName.toLowerCase() !== finalClientName.toLowerCase()) {
+        await saveCorrection(originalClientName, finalClientName, "client_name");
+      }
     }
     
     updatedSales[editSaleIndex] = {

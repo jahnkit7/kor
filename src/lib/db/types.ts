@@ -111,3 +111,15 @@ export interface ProductDictionary {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface TranscriptionCorrection {
+  id: string;
+  user_id: string;
+  original_text: string;
+  corrected_text: string;
+  correction_type: "client_name" | "product_name" | "general";
+  usage_count: number;
+  created_at: string;
+  updated_at: string;
+  synced?: boolean;
+}
