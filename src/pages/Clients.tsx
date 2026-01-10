@@ -17,6 +17,7 @@ import { ClientWarningBadge } from "@/components/ClientWarningBadge";
 import { usePermissions } from "@/hooks/use-role";
 import { useHiddenAmount } from "@/components/HideAmountsToggle";
 import { useClients } from "@/hooks/use-clients";
+import { FeatureGate } from "@/components/FeatureGate";
 
 const Clients = () => {
   const navigate = useNavigate();
@@ -52,6 +53,7 @@ const Clients = () => {
 
   return (
     <AppLayout>
+      <FeatureGate featureKey="clients" showUpgradePrompt>
       {/* Header */}
       <div className="bg-card px-4 pt-4 pb-6 border-b border-border">
         <div className="flex items-center justify-between mb-6">
@@ -167,6 +169,7 @@ const Clients = () => {
           )}
         </div>
       </div>
+      </FeatureGate>
     </AppLayout>
   );
 };

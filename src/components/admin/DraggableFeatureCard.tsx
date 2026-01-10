@@ -21,7 +21,8 @@ import {
   Wallet,
   WifiOff,
   Bell,
-  CircleDollarSign
+  CircleDollarSign,
+  FlaskConical
 } from "lucide-react";
 
 interface FeatureFlag {
@@ -30,6 +31,7 @@ interface FeatureFlag {
   name: string;
   description: string | null;
   is_globally_enabled: boolean;
+  is_beta: boolean;
   min_plan_required: string | null;
   depends_on: string[] | null;
   enabled_for_users: string[] | null;
@@ -67,6 +69,8 @@ interface DraggableFeatureCardProps {
   dependenciesNames: (string | undefined)[];
   isToggling: boolean;
   onToggle: () => void;
+  onToggleBeta?: () => void;
+  isBetaToggling?: boolean;
 }
 
 export function DraggableFeatureCard({
@@ -75,6 +79,8 @@ export function DraggableFeatureCard({
   dependenciesNames,
   isToggling,
   onToggle,
+  onToggleBeta,
+  isBetaToggling,
 }: DraggableFeatureCardProps) {
   const {
     attributes,
@@ -118,15 +124,42 @@ export function DraggableFeatureCard({
                 {featureIcons[feature.feature_key] || <ToggleLeft className="w-5 h-5" />}
               </div>
             </div>
-            <Switch
-              checked={feature.is_globally_enabled}
-              onCheckedChange={onToggle}
-              disabled={isToggling}
-            />
+            <div className="flex items-center gap-2">
+              {/* Beta Toggle */}
+              {onToggleBeta && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleBeta();
+                  }}
+                  disabled={isBetaToggling}
+                  className={`p-1.5 rounded-lg transition-colors ${
+                    feature.is_beta 
+                      ? "bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-600" 
+                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  } ${isBetaToggling ? "opacity-50 cursor-not-allowed" : ""}`}
+                  title={feature.is_beta ? "Retirer le mode Bêta" : "Marquer comme Bêta"}
+                >
+                  <FlaskConical className="w-4 h-4" />
+                </button>
+              )}
+              <Switch
+                checked={feature.is_globally_enabled}
+                onCheckedChange={onToggle}
+                disabled={isToggling}
+              />
+            </div>
           </div>
 
           {/* Title & Description */}
-          <h3 className="font-semibold text-foreground">{feature.name}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold text-foreground">{feature.name}</h3>
+            {feature.is_beta && (
+              <Badge variant="beta" className="text-[10px] px-1.5 py-0">
+                Bêta
+              </Badge>
+            )}
+          </div>
           <p className="text-sm text-muted-foreground mt-1 flex-1 line-clamp-2">
             {feature.description}
           </p>

@@ -328,6 +328,7 @@ export type Database = {
           enabled_for_users: string[] | null
           feature_key: string
           id: string
+          is_beta: boolean
           is_globally_enabled: boolean
           min_plan_required: string | null
           name: string
@@ -343,6 +344,7 @@ export type Database = {
           enabled_for_users?: string[] | null
           feature_key: string
           id?: string
+          is_beta?: boolean
           is_globally_enabled?: boolean
           min_plan_required?: string | null
           name: string
@@ -358,6 +360,7 @@ export type Database = {
           enabled_for_users?: string[] | null
           feature_key?: string
           id?: string
+          is_beta?: boolean
           is_globally_enabled?: boolean
           min_plan_required?: string | null
           name?: string

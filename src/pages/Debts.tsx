@@ -19,6 +19,7 @@ import { WhatsAppShare } from "@/components/WhatsAppShare";
 import { useHiddenAmount } from "@/components/HideAmountsToggle";
 import { useDebts } from "@/hooks/use-debts";
 import { useClients } from "@/hooks/use-clients";
+import { FeatureGate } from "@/components/FeatureGate";
 
 const Debts = () => {
   const navigate = useNavigate();
@@ -94,6 +95,7 @@ const Debts = () => {
 
   return (
     <AppLayout>
+      <FeatureGate featureKey="debts" showUpgradePrompt>
       {/* Header */}
       <div className="bg-card px-4 pt-4 pb-6 border-b border-border">
         <div className="flex items-center gap-4 mb-6">
@@ -213,6 +215,7 @@ const Debts = () => {
           )}
         </div>
       </div>
+      </FeatureGate>
     </AppLayout>
   );
 };
