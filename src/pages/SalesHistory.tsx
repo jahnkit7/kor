@@ -14,11 +14,13 @@ import {
   User,
   Calendar,
   TrendingUp,
+  FileText,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { useHiddenAmount } from "@/components/HideAmountsToggle";
-import { useSales } from "@/hooks/use-sales";
+import { useSales, Sale } from "@/hooks/use-sales";
 import { FeatureGate } from "@/components/FeatureGate";
+import { InvoiceDialog } from "@/components/invoice/InvoiceDialog";
 
 type Period = "day" | "week" | "month" | "all";
 
@@ -28,6 +30,8 @@ const SalesHistory = () => {
   const { sales, loading, getPeriodStats } = useSales();
   const [period, setPeriod] = useState<Period>("day");
   const { trackFeature } = useFeatureTracking();
+  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [showInvoice, setShowInvoice] = useState(false);
 
   // Track page view
   useEffect(() => {
@@ -198,7 +202,14 @@ const SalesHistory = () => {
 
                   <div className="space-y-3">
                     {daySales.map((sale) => (
-                      <Card key={sale.id} className="animate-fade-in">
+                      <Card 
+                        key={sale.id} 
+                        className="animate-fade-in cursor-pointer hover:bg-accent/50 transition-colors group"
+                        onClick={() => {
+                          setSelectedSale(sale);
+                          setShowInvoice(true);
+                        }}
+                      >
                         <CardContent className="p-4">
                           <div className="flex items-center gap-4">
                             <div
@@ -242,15 +253,18 @@ const SalesHistory = () => {
                                 {formatTime(sale.created_at)}
                               </p>
                             </div>
-                            <p
-                              className={`text-lg font-bold ${
-                                sale.type === "credit"
-                                  ? "text-credit"
-                                  : "text-foreground"
-                              }`}
-                            >
-                              {formatMoney(sale.amount)} CFA
-                            </p>
+                            <div className="flex items-center gap-3">
+                              <p
+                                className={`text-lg font-bold ${
+                                  sale.type === "credit"
+                                    ? "text-credit"
+                                    : "text-foreground"
+                                }`}
+                              >
+                                {formatMoney(sale.amount)} CFA
+                              </p>
+                              <FileText className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
@@ -263,6 +277,13 @@ const SalesHistory = () => {
         </ScrollArea>
       </div>
       </FeatureGate>
+
+      {/* Invoice Dialog */}
+      <InvoiceDialog
+        open={showInvoice}
+        onOpenChange={setShowInvoice}
+        sale={selectedSale}
+      />
     </AppLayout>
   );
 };
