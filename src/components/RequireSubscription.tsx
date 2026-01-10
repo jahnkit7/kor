@@ -8,6 +8,15 @@ interface RequireSubscriptionProps {
   children: ReactNode;
 }
 
+/**
+ * Composant qui vérifie si l'utilisateur a un abonnement (actif ou expiré).
+ * 
+ * Comportement :
+ * - Si l'utilisateur n'a JAMAIS eu d'abonnement → redirection vers /subscriptions
+ * - Si l'utilisateur a un abonnement (même expiré) → accès au dashboard autorisé
+ * - La gestion des features désactivées se fait via les feature flags
+ * - Un popup de rappel s'affiche si l'abonnement est expiré (voir SubscriptionReminderPopup)
+ */
 export function RequireSubscription({ children }: RequireSubscriptionProps) {
   const { user, loading: authLoading } = useAuth();
   const { data: subscription, isLoading: subLoading } = useUserSubscription();
@@ -26,10 +35,14 @@ export function RequireSubscription({ children }: RequireSubscriptionProps) {
     return <Navigate to="/auth" replace />;
   }
 
-  // No subscription - redirect to subscriptions page
-  if (!subscription || !subscription.is_active) {
+  // Si l'utilisateur n'a JAMAIS eu d'abonnement (jamais créé de row dans subscriptions)
+  // Rediriger vers la page d'abonnement pour choisir un plan initial
+  if (!subscription) {
     return <Navigate to="/subscriptions" replace />;
   }
 
+  // Sinon, laisser passer même si l'abonnement est expiré
+  // La gestion des features désactivées se fait via les feature flags
+  // Le popup de rappel (SubscriptionReminderPopup) s'affichera si l'abonnement est expiré
   return <>{children}</>;
 }

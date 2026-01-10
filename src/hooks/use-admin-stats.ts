@@ -98,17 +98,50 @@ export function useAdminUsers() {
   return useQuery({
     queryKey: ["admin-users"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Fetch profiles first
+      const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
-        .select(`
-          *,
-          subscriptions(*)
-        `)
+        .select("*")
         .order("created_at", { ascending: false })
         .limit(100);
 
-      if (error) throw error;
-      return data;
+      if (profilesError) {
+        console.error("Error fetching profiles:", profilesError);
+        throw profilesError;
+      }
+
+      if (!profiles || profiles.length === 0) {
+        return [];
+      }
+
+      // Get user IDs
+      const userIds = profiles.map(p => p.user_id);
+
+      // Fetch subscriptions for these users
+      const { data: subscriptions, error: subsError } = await supabase
+        .from("subscriptions")
+        .select("*")
+        .in("user_id", userIds);
+
+      if (subsError) {
+        console.error("Error fetching subscriptions:", subsError);
+        // Don't throw, just continue without subscriptions
+      }
+
+      // Map subscriptions to profiles
+      const subsMap = new Map();
+      subscriptions?.forEach(sub => {
+        if (!subsMap.has(sub.user_id)) {
+          subsMap.set(sub.user_id, []);
+        }
+        subsMap.get(sub.user_id).push(sub);
+      });
+
+      // Combine profiles with their subscriptions
+      return profiles.map(profile => ({
+        ...profile,
+        subscriptions: subsMap.get(profile.user_id) || [],
+      }));
     },
   });
 }
