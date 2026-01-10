@@ -8,6 +8,11 @@ export interface SubscriptionPlan {
   duration_days: number;
   features: string[];
   is_active: boolean;
+  description?: string;
+  currency?: string;
+  max_clients?: number;
+  max_sales_per_day?: number;
+  sort_order?: number;
 }
 
 // Features par plan (à synchroniser avec la base de données)
