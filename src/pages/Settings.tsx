@@ -21,7 +21,8 @@ import {
   Palette,
   Gift,
   Bell,
-  Package
+  Package,
+  Database
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { OwnerBadge, RoleBadge } from "@/components/RoleBadge";
@@ -38,6 +39,7 @@ import { FeatureGate } from "@/components/FeatureGate";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { NotificationSettings } from "@/components/settings/NotificationSettings";
 import { CommissionPayment } from "@/components/settings/CommissionPayment";
+import { CacheManagement } from "@/components/settings/CacheManagement";
 import { toast } from "sonner";
 
 const Settings = () => {
@@ -309,6 +311,15 @@ const Settings = () => {
             Notifications
           </p>
           <NotificationSettings />
+        </div>
+
+        {/* Cache Management */}
+        <div>
+          <p className="text-sm font-semibold text-muted-foreground mb-3 px-1">
+            <Database className="inline w-4 h-4 mr-1" />
+            Données & Synchronisation
+          </p>
+          <CacheManagement />
         </div>
 
         {/* Theme / Appearance */}
