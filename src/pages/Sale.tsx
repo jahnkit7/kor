@@ -6,13 +6,22 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowLeft, Check, User, MessageSquare, Mic, ChevronDown, ChevronUp, Wallet, CreditCard, Clock, Lock } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ArrowLeft, Check, User, MessageSquare, Mic, ChevronDown, ChevronUp, Wallet, CreditCard, Clock, Lock, Package } from "lucide-react";
 import { toast } from "sonner";
 import { useClients } from "@/hooks/use-clients";
 import { useSales, SaleItem } from "@/hooks/use-sales";
 import { useStock } from "@/hooks/use-stock";
 import { VoiceSaleInput } from "@/components/sale/VoiceSaleInput";
+import { ProductSelector } from "@/components/sale/ProductSelector";
 import { cn } from "@/lib/utils";
+
+interface SaleProduct {
+  stock_item_id?: string | null;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+}
 
 const Sale = () => {
   const navigate = useNavigate();
@@ -33,7 +42,7 @@ const Sale = () => {
 
   const { clients, loading: clientsLoading, quickCreateClient } = useClients();
   const { addSale, sales, loading: salesLoading } = useSales();
-  const { items: stockItems, loading: stockLoading } = useStock();
+  const { items: stockItems, loading: stockLoading, refetch: refetchStock } = useStock();
 
   // Track page view
   useEffect(() => {
@@ -42,6 +51,8 @@ const Sale = () => {
   
   const [showRecentSales, setShowRecentSales] = useState(false);
   const [showAllSales, setShowAllSales] = useState(false);
+  const [showProducts, setShowProducts] = useState(false);
+  const [selectedProducts, setSelectedProducts] = useState<SaleProduct[]>([]);
   
   // Displayed sales (limited or all)
   const displayedSales = useMemo(() => {
@@ -60,8 +71,24 @@ const Sale = () => {
     [clients, selectedClient]
   );
 
-  const formatMoney = (value: string) => {
-    const num = parseInt(value) || 0;
+  // Calculate total from products if any selected
+  const productTotal = useMemo(() => {
+    return selectedProducts.reduce(
+      (sum, p) => sum + p.quantity * p.unit_price,
+      0
+    );
+  }, [selectedProducts]);
+
+  // Use product total or manual amount
+  const effectiveAmount = useMemo(() => {
+    if (selectedProducts.length > 0) {
+      return productTotal;
+    }
+    return parseInt(amount) || 0;
+  }, [selectedProducts, productTotal, amount]);
+
+  const formatMoney = (value: string | number) => {
+    const num = typeof value === "string" ? parseInt(value) || 0 : value;
     return new Intl.NumberFormat("fr-FR").format(num);
   };
 
@@ -80,8 +107,8 @@ const Sale = () => {
   };
 
   const handleSubmit = async () => {
-    if (!amount || parseInt(amount) === 0) {
-      toast.error("Entrez un montant valide");
+    if (effectiveAmount === 0) {
+      toast.error("Entrez un montant valide ou sélectionnez des produits");
       return;
     }
     if (!isCash && !selectedClient) {
@@ -91,16 +118,30 @@ const Sale = () => {
 
     setIsLoading(true);
     try {
+      // Prepare sale items from selected products
+      const saleItems: SaleItem[] = selectedProducts.map((p) => ({
+        stock_item_id: p.stock_item_id || null,
+        product_name: p.product_name,
+        quantity: p.quantity,
+        unit_price: p.unit_price,
+      }));
+
       const created = await addSale({
         type: isCash ? "cash" : "credit",
-        amount: parseInt(amount),
+        amount: effectiveAmount,
         note: note || undefined,
         client_id: isCash ? undefined : selectedClient || undefined,
+        items: saleItems.length > 0 ? saleItems : undefined,
       });
 
       if (!created) {
         setIsLoading(false);
         return;
+      }
+
+      // Refresh stock if products were sold
+      if (saleItems.length > 0) {
+        refetchStock();
       }
 
       setShowSuccess(true);
@@ -121,6 +162,8 @@ const Sale = () => {
     items?: SaleItem[];
   }) => {
     await addSale(saleData);
+    // Refresh stock after voice sale
+    refetchStock();
     // Don't navigate immediately - let VoiceSaleInput handle multiple sales
   };
 
@@ -234,10 +277,17 @@ const Sale = () => {
 
         {/* Amount Display */}
         <div className="text-center py-6">
-          <p className="text-sm opacity-80 mb-2">Montant</p>
-          <p className="text-money-xl">
-            {amount ? formatMoney(amount) : "0"} <span className="text-xl">CFA</span>
+          <p className="text-sm opacity-80 mb-2">
+            {selectedProducts.length > 0 ? "Total produits" : "Montant"}
           </p>
+          <p className="text-money-xl">
+            {formatMoney(effectiveAmount)} <span className="text-xl">CFA</span>
+          </p>
+          {selectedProducts.length > 0 && (
+            <p className="text-xs opacity-70 mt-1">
+              {selectedProducts.length} produit{selectedProducts.length > 1 ? "s" : ""}
+            </p>
+          )}
         </div>
       </div>
 
@@ -257,6 +307,33 @@ const Sale = () => {
             </Button>
           ))}
         </div>
+
+        {/* Product Selection Section */}
+        <Collapsible open={showProducts} onOpenChange={setShowProducts} className="mb-4">
+          <CollapsibleTrigger asChild>
+            <button className="w-full flex items-center justify-between px-4 py-3 bg-secondary/50 rounded-xl text-sm font-medium">
+              <span className="flex items-center gap-2">
+                <Package className="w-4 h-4 text-muted-foreground" />
+                Produits
+              </span>
+              <span className="flex items-center gap-2 text-muted-foreground">
+                {selectedProducts.length > 0 && (
+                  <Badge variant="secondary">{selectedProducts.length}</Badge>
+                )}
+                {showProducts ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </span>
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-2">
+            <Card className="p-3">
+              <ProductSelector
+                stockItems={stockItems}
+                selectedProducts={selectedProducts}
+                onProductsChange={setSelectedProducts}
+              />
+            </Card>
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* Recent Sales History */}
         {sales.length > 0 && (
@@ -391,32 +468,38 @@ const Sale = () => {
         </div>
       </div>
 
-      {/* Numpad */}
+      {/* Numpad - disabled if products selected */}
       <div className="px-4 pb-4 safe-bottom bg-background border-t border-border pt-4">
-        <div className="grid grid-cols-3 gap-2 max-w-sm mx-auto mb-3">
-          {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((num) => (
-            <NumpadButton key={num} onClick={() => handleNumberClick(num)}>
-              {num}
+        {selectedProducts.length === 0 ? (
+          <div className="grid grid-cols-3 gap-2 max-w-sm mx-auto mb-3">
+            {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((num) => (
+              <NumpadButton key={num} onClick={() => handleNumberClick(num)}>
+                {num}
+              </NumpadButton>
+            ))}
+            <NumpadButton onClick={handleClear} variant="secondary">
+              C
             </NumpadButton>
-          ))}
-          <NumpadButton onClick={handleClear} variant="secondary">
-            C
-          </NumpadButton>
-          <NumpadButton onClick={() => handleNumberClick("0")}>0</NumpadButton>
-          <NumpadButton onClick={handleDelete} variant="secondary">
-            ←
-          </NumpadButton>
-        </div>
+            <NumpadButton onClick={() => handleNumberClick("0")}>0</NumpadButton>
+            <NumpadButton onClick={handleDelete} variant="secondary">
+              ←
+            </NumpadButton>
+          </div>
+        ) : (
+          <div className="text-center text-sm text-muted-foreground mb-3 py-2">
+            Le montant est calculé automatiquement à partir des produits
+          </div>
+        )}
 
         <Button
           variant={isCash ? "cash" : "credit"}
           size="lg"
           className="w-full"
           onClick={handleSubmit}
-          disabled={!amount || parseInt(amount) === 0 || (!isCash && !selectedClient) || isLoading}
+          disabled={effectiveAmount === 0 || (!isCash && !selectedClient) || isLoading}
         >
           <Check className="w-6 h-6 mr-2" />
-          Enregistrer la vente
+          Enregistrer {formatMoney(effectiveAmount)} CFA
         </Button>
       </div>
     </div>

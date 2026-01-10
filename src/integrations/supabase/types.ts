@@ -1400,6 +1400,39 @@ export type Database = {
         }
         Relationships: []
       }
+      transcription_corrections: {
+        Row: {
+          corrected_text: string
+          correction_type: string
+          created_at: string | null
+          id: string
+          original_text: string
+          updated_at: string | null
+          usage_count: number | null
+          user_id: string
+        }
+        Insert: {
+          corrected_text: string
+          correction_type: string
+          created_at?: string | null
+          id?: string
+          original_text: string
+          updated_at?: string | null
+          usage_count?: number | null
+          user_id: string
+        }
+        Update: {
+          corrected_text?: string
+          correction_type?: string
+          created_at?: string | null
+          id?: string
+          original_text?: string
+          updated_at?: string | null
+          usage_count?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

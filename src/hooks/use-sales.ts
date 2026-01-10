@@ -155,6 +155,19 @@ export function useSales(): SalesState {
           quantity: item.quantity,
           unit_price: item.unit_price,
         })));
+
+        // Deduct stock locally for items with stock_item_id
+        for (const item of saleData.items) {
+          if (item.stock_item_id) {
+            const stockItem = await localDB.getStockItem(item.stock_item_id);
+            if (stockItem) {
+              const newQuantity = Math.max(0, stockItem.quantity - item.quantity);
+              await localDB.updateStockItem(item.stock_item_id, {
+                quantity: newQuantity,
+              });
+            }
+          }
+        }
       }
 
       // 2. Update UI immediately
@@ -201,6 +214,9 @@ export function useSales(): SalesState {
               }));
 
               await supabase.from("sale_items").insert(saleItemsToInsert);
+
+              // Note: Stock deduction in cloud is handled by the database trigger
+              // (deduct_stock_on_sale_item) which fires on sale_items insert
             }
 
             // Create debt record for credit sales
