@@ -108,12 +108,14 @@ export function useStock() {
 
   const addItem = useCallback(
     async (item: NewStockItem): Promise<StockItem | null> => {
-      // CRITICAL: Log BEFORE any checks
+      // CRITICAL: Log with timestamp BEFORE any checks
+      const timestamp = new Date().toISOString();
       console.log("========================================");
-      console.log("[useStock] ADD ITEM CALLED");
-      console.log("[useStock] Input item:", JSON.stringify(item));
-      console.log("[useStock] User ID:", user?.id ?? "NO USER");
-      console.log("[useStock] Is Online:", isOnline);
+      console.log(`[${timestamp}] [useStock] ===== addItem ENTRY =====`);
+      console.log(`[${timestamp}] [useStock] Input item:`, JSON.stringify(item));
+      console.log(`[${timestamp}] [useStock] User ID:`, user?.id ?? "NO USER");
+      console.log(`[${timestamp}] [useStock] User object exists:`, !!user);
+      console.log(`[${timestamp}] [useStock] Is Online:`, isOnline);
       console.log("========================================");
 
       if (!user) {
@@ -236,12 +238,15 @@ export function useStock() {
 
   const addItems = useCallback(
     async (newItems: NewStockItem[]): Promise<StockItem[]> => {
-      // CRITICAL: Log BEFORE any checks
+      // CRITICAL: Log with timestamp BEFORE any checks
+      const timestamp = new Date().toISOString();
       console.log("========================================");
-      console.log("[useStock] ADD ITEMS CALLED (BATCH)");
-      console.log("[useStock] Items count:", newItems.length);
-      console.log("[useStock] User ID:", user?.id ?? "NO USER");
-      console.log("[useStock] Is Online:", isOnline);
+      console.log(`[${timestamp}] [useStock] ===== addItems ENTRY (BATCH) =====`);
+      console.log(`[${timestamp}] [useStock] Items count:`, newItems.length);
+      console.log(`[${timestamp}] [useStock] Items data:`, JSON.stringify(newItems));
+      console.log(`[${timestamp}] [useStock] User ID:`, user?.id ?? "NO USER");
+      console.log(`[${timestamp}] [useStock] User object exists:`, !!user);
+      console.log(`[${timestamp}] [useStock] Is Online:`, isOnline);
       console.log("========================================");
 
       if (!user) {
