@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from "react";
 import { useNetworkStatus } from "@/hooks/use-network-status";
 import { getDB, getSyncQueue } from "@/lib/db";
-import { pushUnsyncedToCloud, retryFailedItems } from "@/lib/supabase-sync";
+import { pushUnsyncedToCloud } from "@/lib/supabase-sync";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
