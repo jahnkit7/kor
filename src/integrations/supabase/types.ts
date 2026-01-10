@@ -701,6 +701,7 @@ export type Database = {
           id: string
           language: string
           linked_owner_id: string | null
+          notification_settings: Json | null
           onboarding_completed: boolean | null
           owner_name: string | null
           phone: string | null
@@ -719,6 +720,7 @@ export type Database = {
           id?: string
           language?: string
           linked_owner_id?: string | null
+          notification_settings?: Json | null
           onboarding_completed?: boolean | null
           owner_name?: string | null
           phone?: string | null
@@ -737,6 +739,7 @@ export type Database = {
           id?: string
           language?: string
           linked_owner_id?: string | null
+          notification_settings?: Json | null
           onboarding_completed?: boolean | null
           owner_name?: string | null
           phone?: string | null

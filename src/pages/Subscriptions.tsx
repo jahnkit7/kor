@@ -119,9 +119,8 @@ export default function Subscriptions() {
       if (error) throw error;
 
       toast.success(`Plan ${plan.name} activé ! Bienvenue sur DÉKON 🎉`);
-      setJustActivated(true);
       await refetch();
-      setTimeout(() => navigate("/dashboard"), 1500);
+      navigate("/dashboard", { replace: true });
     } catch (error) {
       toast.error("Erreur lors de l'abonnement");
     } finally {
