@@ -7,9 +7,10 @@ import { cn } from "@/lib/utils";
 
 interface QuickActionFABProps {
   className?: string;
+  inline?: boolean;
 }
 
-const QuickActionFAB = ({ className }: QuickActionFABProps) => {
+const QuickActionFAB = ({ className, inline = false }: QuickActionFABProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -36,18 +37,20 @@ const QuickActionFAB = ({ className }: QuickActionFABProps) => {
 
   return (
     <>
-      {/* Backdrop */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
-            onClick={() => setIsOpen(false)}
-          />
-        )}
-      </AnimatePresence>
+      {/* Backdrop - only for non-inline mode */}
+      {!inline && (
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
+              onClick={() => setIsOpen(false)}
+            />
+          )}
+        </AnimatePresence>
+      )}
 
       {/* FAB Container */}
       <div className={cn("relative", className)}>
@@ -97,7 +100,10 @@ const QuickActionFAB = ({ className }: QuickActionFABProps) => {
           whileTap={{ scale: 0.9 }}
           onClick={() => setIsOpen(!isOpen)}
           className={cn(
-            "w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all z-50",
+            "flex items-center justify-center shadow-lg transition-all z-50",
+            inline 
+              ? "w-12 h-12 rounded-xl" 
+              : "w-14 h-14 rounded-full",
             isOpen
               ? "bg-[#718096]"
               : "bg-gradient-to-br from-[#22c55e] to-[#16a34a]"
@@ -114,7 +120,7 @@ const QuickActionFAB = ({ className }: QuickActionFABProps) => {
           >
             <HugeiconsIcon 
               icon={isOpen ? Cancel01Icon : Add01Icon} 
-              className="w-6 h-6 text-white" 
+              className={inline ? "w-5 h-5 text-white" : "w-6 h-6 text-white"}
               strokeWidth={2}
             />
           </motion.div>

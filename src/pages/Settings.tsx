@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useFeatureTracking } from "@/hooks/use-feature-tracking";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -23,7 +24,9 @@ import {
   Bell,
   Package,
   Database,
-  FileText
+  FileText,
+  Sparkles,
+  Ticket
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { OwnerBadge, RoleBadge } from "@/components/RoleBadge";
@@ -33,8 +36,7 @@ import { useProfile } from "@/hooks/use-profile";
 import { useAuth } from "@/hooks/use-auth";
 import { ThemeSelector } from "@/components/ThemeSelector";
 import { ActivateCodeDialog } from "@/components/settings/ActivateCodeDialog";
-import { SubscriptionManagement } from "@/components/settings/SubscriptionManagement";
-import { ReferralSection } from "@/components/settings/ReferralSection";
+import { SubscriptionStatus } from "@/components/settings/SubscriptionStatus";
 import { DeleteAccountDialog } from "@/components/settings/DeleteAccountDialog";
 import { FeatureGate } from "@/components/FeatureGate";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
@@ -94,32 +96,6 @@ const Settings = () => {
     );
   }
 
-  const shopSettings = [
-    { icon: Store, label: "Nom de la boutique", value: profile?.shop_name || "Ma Boutique" },
-    { icon: User, label: "Propriétaire", value: profile?.owner_name || "Non défini" },
-    { icon: Phone, label: "Téléphone", value: profile?.phone || "Non défini" },
-  ];
-
-  const appSettings = [
-    { icon: Globe, label: "Devise", value: profile?.currency || "CFA" },
-    { icon: Globe, label: "Langue", value: profile?.language === "fr" ? "Français" : profile?.language || "Français" },
-  ];
-
-  const securitySettings = [
-    { 
-      icon: Lock, 
-      label: "Code PIN", 
-      value: appPin ? "Actif" : "Non configuré",
-      onClick: () => toast.info("Fonctionnalité bientôt disponible")
-    },
-    { 
-      icon: Clock, 
-      label: "Verrouillage auto", 
-      value: `${autoLockMinutes} min`,
-      onClick: () => toast.info("Fonctionnalité bientôt disponible")
-    },
-  ];
-
   return (
     <AppLayout>
       {/* Header */}
@@ -133,27 +109,99 @@ const Settings = () => {
             >
               <ArrowLeft className="w-6 h-6" />
             </Button>
-            <h1 className="text-xl font-bold">Réglages</h1>
+            <h1 className="text-xl font-bold text-[#051425]">Réglages</h1>
           </div>
           <NotificationBell />
         </div>
       </div>
 
       {/* Settings Groups */}
-      <div className="p-4 space-y-6">
-        {/* Subscription Management */}
-        <div>
-          <p className="text-sm font-semibold text-muted-foreground mb-3 px-1">
-            Abonnement
-          </p>
-          <div className="space-y-3">
-            <SubscriptionManagement />
-            <Card>
-              <CardContent className="p-0">
-                <ActivateCodeDialog />
-              </CardContent>
-            </Card>
+      <div className="p-4 space-y-5">
+        {/* Premium Plan Card */}
+        <motion.div
+          onClick={() => navigate("/subscriptions")}
+          className="relative overflow-hidden rounded-2xl p-5 cursor-pointer"
+          style={{
+            background: "linear-gradient(135deg, #22c55e 0%, #16a34a 50%, #15803d 100%)"
+          }}
+          whileTap={{ scale: 0.98 }}
+          whileHover={{ scale: 1.01 }}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
+                <Sparkles className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <SubscriptionStatus variant="card" />
+              </div>
+            </div>
+            <ChevronRight className="w-5 h-5 text-white/70" />
           </div>
+          {/* Decorative circles */}
+          <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-white/10" />
+          <div className="absolute -right-2 -bottom-8 w-16 h-16 rounded-full bg-white/5" />
+        </motion.div>
+
+        {/* Referral Card */}
+        <FeatureGate featureKey="referrals" silentFail>
+          <motion.div
+            onClick={() => navigate("/referrals")}
+            className="relative overflow-hidden rounded-2xl p-5 cursor-pointer"
+            style={{
+              background: "linear-gradient(135deg, #f97316 0%, #ea580c 50%, #c2410c 100%)"
+            }}
+            whileTap={{ scale: 0.98 }}
+            whileHover={{ scale: 1.01 }}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
+                  <Gift className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-white font-bold text-lg">Parrainage</h3>
+                  <p className="text-white/80 text-sm">Invitez vos amis, gagnez des réductions</p>
+                </div>
+              </div>
+              <ChevronRight className="w-5 h-5 text-white/70" />
+            </div>
+            {/* Decorative circles */}
+            <div className="absolute -right-4 -top-4 w-20 h-20 rounded-full bg-white/10" />
+          </motion.div>
+        </FeatureGate>
+
+        {/* Bento Grid - Quick Access */}
+        <div className="grid grid-cols-2 gap-3">
+          {/* Role Card */}
+          <motion.div
+            className="bg-card rounded-2xl p-4 border border-border"
+            whileTap={{ scale: 0.98 }}
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <UserCheck className="w-5 h-5 text-primary" />
+              </div>
+            </div>
+            <p className="font-semibold text-[#051425] text-sm">Votre rôle</p>
+            <div className="mt-1">
+              {role === "owner" ? <OwnerBadge /> : <RoleBadge role={role} />}
+            </div>
+          </motion.div>
+
+          {/* Activate Code Card */}
+          <motion.div
+            className="bg-card rounded-2xl p-4 border border-border"
+            whileTap={{ scale: 0.98 }}
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
+                <Ticket className="w-5 h-5 text-purple-600" />
+              </div>
+            </div>
+            <p className="font-semibold text-[#051425] text-sm mb-2">Code d'activation</p>
+            <ActivateCodeDialog variant="compact" />
+          </motion.div>
         </div>
 
         {/* Commission Payment (only shows if user has balance) */}
@@ -161,111 +209,44 @@ const Settings = () => {
           <CommissionPayment />
         </FeatureGate>
 
-        {/* Referral Section */}
-        <FeatureGate featureKey="referrals" showUpgradePrompt>
-          <div>
-            <p className="text-sm font-semibold text-muted-foreground mb-3 px-1">
-              <Gift className="inline w-4 h-4 mr-1" />
-              Parrainage
-            </p>
-            <ReferralSection />
-          </div>
-        </FeatureGate>
-
-        {/* Role Display */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <UserCheck className="w-5 h-5 text-primary" />
+        {/* Display Settings */}
+        <div>
+          <p className="text-sm font-semibold text-muted-foreground mb-3 px-1">
+            Affichage
+          </p>
+          <Card>
+            <CardContent className="p-0 divide-y divide-border">
+              {/* Hide amounts toggle */}
+              <div className="flex items-center gap-4 p-4">
+                <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
+                  {hideAmounts ? (
+                    <EyeOff className="w-5 h-5 text-muted-foreground" />
+                  ) : (
+                    <Eye className="w-5 h-5 text-muted-foreground" />
+                  )}
                 </div>
-                <div>
-                  <p className="font-semibold text-foreground">Votre rôle</p>
+                <div className="flex-1">
+                  <p className="font-semibold text-[#051425]">Cacher les montants</p>
                   <p className="text-sm text-muted-foreground">
-                    {role === "owner" ? "Accès complet" : "Accès limité"}
+                    Pour plus de discrétion
                   </p>
                 </div>
+                <Switch
+                  checked={hideAmounts}
+                  onCheckedChange={handleToggleHideAmounts}
+                />
               </div>
-              {role === "owner" ? <OwnerBadge /> : <RoleBadge role={role} />}
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* Boutique */}
-        {canChangeSettings && (
-          <div>
-            <p className="text-sm font-semibold text-muted-foreground mb-3 px-1">
-              Boutique
-            </p>
-            <Card>
-              <CardContent className="p-0 divide-y divide-border">
-                {shopSettings.map(({ icon: Icon, label, value }) => (
-                  <button
-                    key={label}
-                    className="w-full flex items-center gap-4 p-4 text-left hover:bg-secondary/50 transition-colors"
-                    onClick={() => navigate("/profile-setup")}
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
-                      <Icon className="w-5 h-5 text-muted-foreground" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-foreground">{label}</p>
-                      {value && (
-                        <p className="text-sm text-muted-foreground">{value}</p>
-                      )}
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                  </button>
-                ))}
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Employees (Owner only) */}
-        {canManageEmployees && (
-          <div>
-            <p className="text-sm font-semibold text-muted-foreground mb-3 px-1">
-              Équipe
-            </p>
-            <Card>
-              <CardContent className="p-0">
-                <button
-                  className="w-full flex items-center gap-4 p-4 text-left hover:bg-secondary/50 transition-colors"
-                  onClick={() => navigate("/employees")}
-                >
-                  <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
-                    <Users className="w-5 h-5 text-muted-foreground" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-foreground">Gérer les employés</p>
-                    <p className="text-sm text-muted-foreground">Ajouter ou retirer des accès</p>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                </button>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Stock Settings */}
-        {canChangeSettings && (
-          <div>
-            <p className="text-sm font-semibold text-muted-foreground mb-3 px-1">
-              <Package className="inline w-4 h-4 mr-1" />
-              Gestion du Stock
-            </p>
-            <Card>
-              <CardContent className="p-0">
+              {/* Stock auto deduct */}
+              {canChangeSettings && (
                 <div className="flex items-center gap-4 p-4">
                   <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
                     <Package className="w-5 h-5 text-muted-foreground" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-semibold text-foreground">Déduction automatique</p>
+                    <p className="font-semibold text-[#051425]">Déduction automatique</p>
                     <p className="text-sm text-muted-foreground">
-                      Les ventes déduisent le stock automatiquement
+                      Stock déduit lors des ventes
                     </p>
                   </div>
                   <Switch
@@ -273,35 +254,7 @@ const Settings = () => {
                     onCheckedChange={handleToggleAutoDeductStock}
                   />
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Application */}
-        <div>
-          <p className="text-sm font-semibold text-muted-foreground mb-3 px-1">
-            Application
-          </p>
-          <Card>
-            <CardContent className="p-0 divide-y divide-border">
-              {appSettings.map(({ icon: Icon, label, value }) => (
-                <button
-                  key={label}
-                  className="w-full flex items-center gap-4 p-4 text-left hover:bg-secondary/50 transition-colors"
-                >
-                  <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
-                    <Icon className="w-5 h-5 text-muted-foreground" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-foreground">{label}</p>
-                    {value && (
-                      <p className="text-sm text-muted-foreground">{value}</p>
-                    )}
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                </button>
-              ))}
+              )}
             </CardContent>
           </Card>
         </div>
@@ -315,14 +268,78 @@ const Settings = () => {
           <NotificationSettings />
         </div>
 
-        {/* Cache Management */}
-        <div>
-          <p className="text-sm font-semibold text-muted-foreground mb-3 px-1">
-            <Database className="inline w-4 h-4 mr-1" />
-            Données & Synchronisation
-          </p>
-          <CacheManagement />
-        </div>
+        {/* Boutique */}
+        {canChangeSettings && (
+          <div>
+            <p className="text-sm font-semibold text-muted-foreground mb-3 px-1">
+              Ma boutique
+            </p>
+            <Card>
+              <CardContent className="p-0 divide-y divide-border">
+                <button
+                  className="w-full flex items-center gap-4 p-4 text-left hover:bg-secondary/50 transition-colors"
+                  onClick={() => navigate("/profile-setup")}
+                >
+                  <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
+                    <Store className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-[#051425]">Nom de la boutique</p>
+                    <p className="text-sm text-muted-foreground">{profile?.shop_name || "Ma Boutique"}</p>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                </button>
+                <button
+                  className="w-full flex items-center gap-4 p-4 text-left hover:bg-secondary/50 transition-colors"
+                  onClick={() => navigate("/profile-setup")}
+                >
+                  <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
+                    <User className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-[#051425]">Propriétaire</p>
+                    <p className="text-sm text-muted-foreground">{profile?.owner_name || "Non défini"}</p>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                </button>
+                <button
+                  className="w-full flex items-center gap-4 p-4 text-left hover:bg-secondary/50 transition-colors"
+                  onClick={() => navigate("/profile-setup")}
+                >
+                  <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
+                    <Phone className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-[#051425]">Téléphone</p>
+                    <p className="text-sm text-muted-foreground">{profile?.phone || "Non défini"}</p>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                </button>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Employees (Owner only) */}
+        {canManageEmployees && (
+          <Card>
+            <CardContent className="p-0">
+              <button
+                className="w-full flex items-center gap-4 p-4 text-left hover:bg-secondary/50 transition-colors"
+                onClick={() => navigate("/employees")}
+              >
+                <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
+                  <Users className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-[#051425]">Gérer les employés</p>
+                  <p className="text-sm text-muted-foreground">Ajouter ou retirer des accès</p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              </button>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Invoice Customization */}
         {canChangeSettings && (
@@ -342,7 +359,7 @@ const Settings = () => {
                     <FileText className="w-5 h-5 text-muted-foreground" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-semibold text-foreground">Historique des factures</p>
+                    <p className="font-semibold text-[#051425]">Historique des factures</p>
                     <p className="text-sm text-muted-foreground">Voir les factures générées</p>
                   </div>
                   <ChevronRight className="w-5 h-5 text-muted-foreground" />
@@ -351,6 +368,15 @@ const Settings = () => {
             </Card>
           </div>
         )}
+
+        {/* Cache Management */}
+        <div>
+          <p className="text-sm font-semibold text-muted-foreground mb-3 px-1">
+            <Database className="inline w-4 h-4 mr-1" />
+            Données & Synchronisation
+          </p>
+          <CacheManagement />
+        </div>
 
         {/* Theme / Appearance */}
         <div>
@@ -364,11 +390,44 @@ const Settings = () => {
                   <Palette className="w-5 h-5 text-muted-foreground" />
                 </div>
                 <div>
-                  <p className="font-semibold text-foreground">Changer de style</p>
+                  <p className="font-semibold text-[#051425]">Changer de style</p>
                   <p className="text-sm text-muted-foreground">Personnalisez l'apparence</p>
                 </div>
               </div>
               <ThemeSelector />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Application Settings */}
+        <div>
+          <p className="text-sm font-semibold text-muted-foreground mb-3 px-1">
+            Application
+          </p>
+          <Card>
+            <CardContent className="p-0 divide-y divide-border">
+              <button className="w-full flex items-center gap-4 p-4 text-left hover:bg-secondary/50 transition-colors">
+                <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
+                  <Globe className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-[#051425]">Devise</p>
+                  <p className="text-sm text-muted-foreground">{profile?.currency || "CFA"}</p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              </button>
+              <button className="w-full flex items-center gap-4 p-4 text-left hover:bg-secondary/50 transition-colors">
+                <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
+                  <Globe className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-[#051425]">Langue</p>
+                  <p className="text-sm text-muted-foreground">
+                    {profile?.language === "fr" ? "Français" : profile?.language || "Français"}
+                  </p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              </button>
             </CardContent>
           </Card>
         </div>
@@ -380,45 +439,32 @@ const Settings = () => {
           </p>
           <Card>
             <CardContent className="p-0 divide-y divide-border">
-              {securitySettings.map(({ icon: Icon, label, value, onClick }) => (
-                <button
-                  key={label}
-                  onClick={onClick}
-                  className="w-full flex items-center gap-4 p-4 text-left hover:bg-secondary/50 transition-colors"
-                >
-                  <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
-                    <Icon className="w-5 h-5 text-muted-foreground" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-foreground">{label}</p>
-                    {value && (
-                      <p className="text-sm text-muted-foreground">{value}</p>
-                    )}
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                </button>
-              ))}
-              
-              {/* Hide amounts toggle */}
-              <div className="flex items-center gap-4 p-4">
+              <button
+                onClick={() => toast.info("Fonctionnalité bientôt disponible")}
+                className="w-full flex items-center gap-4 p-4 text-left hover:bg-secondary/50 transition-colors"
+              >
                 <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
-                  {hideAmounts ? (
-                    <EyeOff className="w-5 h-5 text-muted-foreground" />
-                  ) : (
-                    <Eye className="w-5 h-5 text-muted-foreground" />
-                  )}
+                  <Lock className="w-5 h-5 text-muted-foreground" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-semibold text-foreground">Cacher les montants</p>
-                  <p className="text-sm text-muted-foreground">
-                    Pour plus de discrétion
-                  </p>
+                  <p className="font-semibold text-[#051425]">Code PIN</p>
+                  <p className="text-sm text-muted-foreground">{appPin ? "Actif" : "Non configuré"}</p>
                 </div>
-                <Switch
-                  checked={hideAmounts}
-                  onCheckedChange={handleToggleHideAmounts}
-                />
-              </div>
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              </button>
+              <button
+                onClick={() => toast.info("Fonctionnalité bientôt disponible")}
+                className="w-full flex items-center gap-4 p-4 text-left hover:bg-secondary/50 transition-colors"
+              >
+                <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-[#051425]">Verrouillage auto</p>
+                  <p className="text-sm text-muted-foreground">{autoLockMinutes} min</p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              </button>
             </CardContent>
           </Card>
         </div>
@@ -445,7 +491,7 @@ const Settings = () => {
         </div>
 
         {/* Version */}
-        <p className="text-center text-sm text-muted-foreground">
+        <p className="text-center text-sm text-muted-foreground pb-4">
           CAISSE+ v1.0.0
         </p>
       </div>

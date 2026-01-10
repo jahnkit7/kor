@@ -126,23 +126,26 @@ const Dashboard = () => {
             <Button
               variant="cash"
               size="lg"
-              className="w-1/2 h-14 rounded-xl gap-3"
+              className="flex-1 h-12 rounded-xl gap-2"
               onClick={() => navigate("/sale/cash")}
             >
-              <Wallet className="w-5 h-5" />
-              <span className="font-semibold">Vente Cash</span>
+              <Wallet className="w-4 h-4" />
+              <span className="text-sm font-medium">Vente Cash</span>
             </Button>
 
             {/* Vente Crédit Button */}
             <Button
               variant="credit"
               size="lg"
-              className="w-1/2 h-14 rounded-xl gap-3"
+              className="flex-1 h-12 rounded-xl gap-2"
               onClick={() => navigate("/sale/credit")}
             >
-              <CreditCard className="w-5 h-5" />
-              <span className="font-semibold">Vente Crédit</span>
+              <CreditCard className="w-4 h-4" />
+              <span className="text-sm font-medium">Vente Crédit</span>
             </Button>
+
+            {/* Quick Action FAB inline */}
+            <QuickActionFAB inline />
           </div>
         </div>
 
@@ -202,11 +205,8 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* FAB - Fixed position */}
-        <QuickActionFAB className="fixed bottom-24 right-5 z-40" />
-
-        {/* Bottom spacing for FAB and BottomNav */}
-        <div className="h-32" />
+        {/* Bottom spacing for BottomNav */}
+        <div className="h-24" />
       </div>
     </AppLayout>
   );

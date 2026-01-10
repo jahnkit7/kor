@@ -15,7 +15,11 @@ interface Subscription {
   max_clients: number | null;
 }
 
-export function SubscriptionStatus() {
+interface SubscriptionStatusProps {
+  variant?: "default" | "card";
+}
+
+export function SubscriptionStatus({ variant = "default" }: SubscriptionStatusProps) {
   const { user } = useAuth();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,6 +42,14 @@ export function SubscriptionStatus() {
   }, [user]);
 
   if (loading) {
+    if (variant === "card") {
+      return (
+        <div className="animate-pulse space-y-1">
+          <div className="h-5 bg-white/20 rounded w-24" />
+          <div className="h-4 bg-white/20 rounded w-32" />
+        </div>
+      );
+    }
     return (
       <Card>
         <CardContent className="p-4">
@@ -51,6 +63,14 @@ export function SubscriptionStatus() {
   }
 
   if (!subscription) {
+    if (variant === "card") {
+      return (
+        <div>
+          <h3 className="text-white font-bold text-lg">Aucun plan actif</h3>
+          <p className="text-white/80 text-sm">Activez un code pour commencer</p>
+        </div>
+      );
+    }
     return (
       <Card className="border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20">
         <CardContent className="p-4">
@@ -89,6 +109,20 @@ export function SubscriptionStatus() {
         return "from-primary to-primary";
     }
   };
+
+  if (variant === "card") {
+    return (
+      <div>
+        <h3 className="text-white font-bold text-lg capitalize">Plan {subscription.plan}</h3>
+        <p className="text-white/80 text-sm">
+          {isExpired 
+            ? `Expiré le ${format(endDate, "d MMM yyyy", { locale: fr })}` 
+            : `${daysLeft} jour${daysLeft > 1 ? 's' : ''} restant${daysLeft > 1 ? 's' : ''}`
+          }
+        </p>
+      </div>
+    );
+  }
 
   return (
     <Card className={isExpired ? "border-destructive/50" : isExpiringSoon ? "border-amber-500/50" : ""}>

@@ -1,0 +1,38 @@
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
+import AppLayout from "@/components/layout/AppLayout";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { ReferralSection } from "@/components/settings/ReferralSection";
+
+const Referrals = () => {
+  const navigate = useNavigate();
+
+  return (
+    <AppLayout>
+      {/* Header */}
+      <div className="bg-card px-4 pt-4 pb-6 border-b border-border">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/settings")}
+            >
+              <ArrowLeft className="w-6 h-6" />
+            </Button>
+            <h1 className="text-xl font-bold text-[#051425]">Parrainage</h1>
+          </div>
+          <NotificationBell />
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="p-4">
+        <ReferralSection />
+      </div>
+    </AppLayout>
+  );
+};
+
+export default Referrals;
