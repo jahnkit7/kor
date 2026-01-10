@@ -512,6 +512,39 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          action_url: string | null
+          created_at: string
+          id: string
+          message: string
+          read: boolean
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          action_url?: string | null
+          created_at?: string
+          id?: string
+          message: string
+          read?: boolean
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          action_url?: string | null
+          created_at?: string
+          id?: string
+          message?: string
+          read?: boolean
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       payment_history: {
         Row: {
           amount_original: number
@@ -1167,6 +1200,16 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      send_notification: {
+        Args: {
+          notification_action_url?: string
+          notification_message: string
+          notification_title: string
+          notification_type?: string
+          target_user_id: string
+        }
+        Returns: string
       }
     }
     Enums: {
