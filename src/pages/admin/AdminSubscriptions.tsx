@@ -65,6 +65,7 @@ interface PlanFormData {
   max_clients: number | null;
   max_sales_per_day: number | null;
   features: string[];
+  commission_reduction: number;
 }
 
 const defaultFormData: PlanFormData = {
@@ -75,6 +76,7 @@ const defaultFormData: PlanFormData = {
   max_clients: null,
   max_sales_per_day: null,
   features: [],
+  commission_reduction: 0,
 };
 
 export default function AdminSubscriptions() {
@@ -132,6 +134,7 @@ export default function AdminSubscriptions() {
       max_clients: plan.max_clients,
       max_sales_per_day: plan.max_sales_per_day,
       features: (plan.features as string[]) || [],
+      commission_reduction: plan.commission_reduction || 0,
     });
     setDialogOpen(true);
   };
@@ -191,6 +194,7 @@ export default function AdminSubscriptions() {
         max_sales_per_day: formData.max_sales_per_day,
         features: formData.features,
         currency: "XOF",
+        commission_reduction: formData.commission_reduction,
       };
 
       if (editingPlan) {
@@ -281,7 +285,7 @@ export default function AdminSubscriptions() {
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Durée (jours)</Label>
                   <Input 
@@ -291,6 +295,26 @@ export default function AdminSubscriptions() {
                     onChange={(e) => setFormData(prev => ({ ...prev, duration_days: parseInt(e.target.value) || 30 }))}
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label>Réduction commission (%)</Label>
+                  <Input 
+                    type="number" 
+                    placeholder="0"
+                    min={0}
+                    max={100}
+                    value={formData.commission_reduction}
+                    onChange={(e) => setFormData(prev => ({ 
+                      ...prev, 
+                      commission_reduction: Math.min(100, Math.max(0, parseInt(e.target.value) || 0))
+                    }))}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    0 = commission normale, 100 = pas de commission
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Max clients</Label>
                   <Input 
@@ -440,6 +464,12 @@ export default function AdminSubscriptions() {
                       <Clock className="w-3 h-3" />
                       {plan.max_sales_per_day ? `Max ${plan.max_sales_per_day} ventes/jour` : "Ventes illimitées"}
                     </div>
+                    {(plan as any).commission_reduction > 0 && (
+                      <div className="flex items-center gap-2 text-xs text-primary font-medium">
+                        <Zap className="w-3 h-3" />
+                        -{(plan as any).commission_reduction}% commission
+                      </div>
+                    )}
                   </div>
 
                   {/* Edit Button */}
