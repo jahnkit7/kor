@@ -137,33 +137,35 @@ const Dashboard = () => {
           />
         </div>
 
-        {/* Action Buttons */}
+        {/* Action Buttons - Grid 45% / 45% / 10% pour garantir le bouton + visible */}
         <div className="px-5 mt-5">
-          <div className="flex items-center gap-3">
+          <div className="grid grid-cols-[45fr_45fr_10fr] gap-2 items-center">
             {/* Vente Cash Button */}
             <Button
               variant="cash"
               size="lg"
-              className="flex-1 h-12 rounded-xl gap-2"
+              className="w-full min-w-0 h-[clamp(2.75rem,10vw,3rem)] rounded-xl gap-1.5 px-3"
               onClick={() => navigate("/sale/cash")}
             >
-              <Wallet className="w-4 h-4" />
-              <span className="text-sm font-medium">Vente Cash</span>
+              <Wallet className="w-[clamp(0.875rem,3vw,1rem)] h-[clamp(0.875rem,3vw,1rem)] flex-shrink-0" />
+              <span className="text-[clamp(0.75rem,2.5vw,0.875rem)] font-medium truncate">Cash</span>
             </Button>
 
             {/* Vente Crédit Button */}
             <Button
               variant="credit"
               size="lg"
-              className="flex-1 h-12 rounded-xl gap-2"
+              className="w-full min-w-0 h-[clamp(2.75rem,10vw,3rem)] rounded-xl gap-1.5 px-3"
               onClick={() => navigate("/sale/credit")}
             >
-              <CreditCard className="w-4 h-4" />
-              <span className="text-sm font-medium">Vente Crédit</span>
+              <CreditCard className="w-[clamp(0.875rem,3vw,1rem)] h-[clamp(0.875rem,3vw,1rem)] flex-shrink-0" />
+              <span className="text-[clamp(0.75rem,2.5vw,0.875rem)] font-medium truncate">Crédit</span>
             </Button>
 
-            {/* Quick Action FAB inline */}
-            <QuickActionFAB inline />
+            {/* Quick Action FAB inline - toujours visible */}
+            <div className="flex justify-center min-w-[clamp(2.5rem,10vw,3rem)]">
+              <QuickActionFAB inline />
+            </div>
           </div>
         </div>
 
