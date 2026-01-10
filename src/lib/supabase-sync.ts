@@ -182,6 +182,23 @@ export async function fullSync(userId: string): Promise<{ pushed: number; failed
   };
 }
 
+// Helper to validate UUID format
+function isValidUUID(id: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+}
+
+// Helper to generate a valid UUID
+function generateValidUUID(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
 // Push all unsynced items directly from stores (not just queue)
 export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: number; failed: number; details: { sales: number; clients: number; debts: number; payments: number; stock: number } }> {
   const supabase = await getSupabaseClient();
@@ -200,11 +217,20 @@ export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: num
   
   for (const sale of unsyncedSales) {
     try {
-      console.log(`[SYNC] Pushing sale: ${sale.id}, amount: ${sale.amount}`);
+      // Migrate invalid IDs to valid UUIDs
+      let cloudId = sale.id;
+      const oldId = sale.id;
+      
+      if (!isValidUUID(sale.id)) {
+        cloudId = generateValidUUID();
+        console.log(`[SYNC] Migrating invalid ID ${oldId} -> ${cloudId}`);
+      }
+      
+      console.log(`[SYNC] Pushing sale: ${cloudId}, amount: ${sale.amount}`);
       const { error } = await supabase
         .from("sales")
         .upsert({
-          id: sale.id,
+          id: cloudId,
           type: sale.type,
           amount: sale.amount,
           note: sale.note || null,
@@ -214,12 +240,18 @@ export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: num
         }, { onConflict: 'id' });
 
       if (!error) {
-        await db.put("sales", { ...sale, synced: true });
+        // If ID was migrated, delete old and insert with new ID
+        if (cloudId !== oldId) {
+          await db.delete("sales", oldId);
+          await db.put("sales", { ...sale, id: cloudId, synced: true });
+        } else {
+          await db.put("sales", { ...sale, synced: true });
+        }
         pushed++;
         details.sales++;
-        console.log(`[SYNC] ✓ Sale ${sale.id} synced successfully`);
+        console.log(`[SYNC] ✓ Sale ${cloudId} synced successfully`);
       } else {
-        console.error(`[SYNC] ✗ Error syncing sale ${sale.id}:`, error);
+        console.error(`[SYNC] ✗ Error syncing sale ${cloudId}:`, error);
         failed++;
       }
     } catch (err) {
@@ -235,10 +267,18 @@ export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: num
   
   for (const client of unsyncedClients) {
     try {
+      let cloudId = client.id;
+      const oldId = client.id;
+      
+      if (!isValidUUID(client.id)) {
+        cloudId = generateValidUUID();
+        console.log(`[SYNC] Migrating client ID ${oldId} -> ${cloudId}`);
+      }
+      
       const { error } = await supabase
         .from("clients")
         .upsert({
-          id: client.id,
+          id: cloudId,
           name: client.name,
           phone: client.phone,
           photo: client.photo || null,
@@ -249,11 +289,16 @@ export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: num
         }, { onConflict: 'id' });
 
       if (!error) {
-        await db.put("clients", { ...client, synced: true });
+        if (cloudId !== oldId) {
+          await db.delete("clients", oldId);
+          await db.put("clients", { ...client, id: cloudId, synced: true });
+        } else {
+          await db.put("clients", { ...client, synced: true });
+        }
         pushed++;
         details.clients++;
       } else {
-        console.error(`[SYNC] ✗ Error syncing client ${client.id}:`, error);
+        console.error(`[SYNC] ✗ Error syncing client ${cloudId}:`, error);
         failed++;
       }
     } catch (err) {
@@ -269,11 +314,30 @@ export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: num
   
   for (const debt of unsyncedDebts) {
     try {
+      let cloudId = debt.id;
+      const oldId = debt.id;
+      
+      if (!isValidUUID(debt.id)) {
+        cloudId = generateValidUUID();
+        console.log(`[SYNC] Migrating debt ID ${oldId} -> ${cloudId}`);
+      }
+      
+      // Also check if clientId is valid UUID - if not, try to find migrated client
+      let clientIdForCloud = debt.clientId;
+      if (debt.clientId && !isValidUUID(debt.clientId)) {
+        // Find if client was already migrated by checking local DB for matching client
+        const allClientsNow = await db.getAll("clients");
+        const migratedClient = allClientsNow.find(c => c.name && c.synced);
+        if (migratedClient) {
+          clientIdForCloud = migratedClient.id;
+        }
+      }
+      
       const { error } = await supabase
         .from("debts")
         .upsert({
-          id: debt.id,
-          client_id: debt.clientId,
+          id: cloudId,
+          client_id: clientIdForCloud,
           amount: debt.amount,
           paid: debt.paid,
           user_id: userId,
@@ -282,11 +346,16 @@ export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: num
         }, { onConflict: 'id' });
 
       if (!error) {
-        await db.put("debts", { ...debt, synced: true });
+        if (cloudId !== oldId) {
+          await db.delete("debts", oldId);
+          await db.put("debts", { ...debt, id: cloudId, clientId: clientIdForCloud, synced: true });
+        } else {
+          await db.put("debts", { ...debt, synced: true });
+        }
         pushed++;
         details.debts++;
       } else {
-        console.error(`[SYNC] ✗ Error syncing debt ${debt.id}:`, error);
+        console.error(`[SYNC] ✗ Error syncing debt ${cloudId}:`, error);
         failed++;
       }
     } catch (err) {
@@ -302,10 +371,18 @@ export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: num
   
   for (const payment of unsyncedPayments) {
     try {
+      let cloudId = payment.id;
+      const oldId = payment.id;
+      
+      if (!isValidUUID(payment.id)) {
+        cloudId = generateValidUUID();
+        console.log(`[SYNC] Migrating payment ID ${oldId} -> ${cloudId}`);
+      }
+      
       const { error } = await supabase
         .from("payments")
         .upsert({
-          id: payment.id,
+          id: cloudId,
           debt_id: payment.debtId,
           client_id: payment.clientId,
           amount: payment.amount,
@@ -314,11 +391,16 @@ export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: num
         }, { onConflict: 'id' });
 
       if (!error) {
-        await db.put("payments", { ...payment, synced: true });
+        if (cloudId !== oldId) {
+          await db.delete("payments", oldId);
+          await db.put("payments", { ...payment, id: cloudId, synced: true });
+        } else {
+          await db.put("payments", { ...payment, synced: true });
+        }
         pushed++;
         details.payments++;
       } else {
-        console.error(`[SYNC] ✗ Error syncing payment ${payment.id}:`, error);
+        console.error(`[SYNC] ✗ Error syncing payment ${cloudId}:`, error);
         failed++;
       }
     } catch (err) {
@@ -334,10 +416,18 @@ export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: num
   
   for (const stock of unsyncedStock) {
     try {
+      let cloudId = stock.id;
+      const oldId = stock.id;
+      
+      if (!isValidUUID(stock.id)) {
+        cloudId = generateValidUUID();
+        console.log(`[SYNC] Migrating stock ID ${oldId} -> ${cloudId}`);
+      }
+      
       const { error } = await supabase
         .from("stock_items")
         .upsert({
-          id: stock.id,
+          id: cloudId,
           name: stock.name,
           quantity: stock.quantity,
           unit_price: stock.unit_price,
@@ -349,11 +439,16 @@ export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: num
         }, { onConflict: 'id' });
 
       if (!error) {
-        await db.put("stock_items", { ...stock, synced: true });
+        if (cloudId !== oldId) {
+          await db.delete("stock_items", oldId);
+          await db.put("stock_items", { ...stock, id: cloudId, synced: true });
+        } else {
+          await db.put("stock_items", { ...stock, synced: true });
+        }
         pushed++;
         details.stock++;
       } else {
-        console.error(`[SYNC] ✗ Error syncing stock ${stock.id}:`, error);
+        console.error(`[SYNC] ✗ Error syncing stock ${cloudId}:`, error);
         failed++;
       }
     } catch (err) {

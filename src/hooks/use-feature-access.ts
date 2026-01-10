@@ -213,8 +213,9 @@ export function useFeatureAccess(featureKey: string): FeatureAccessResult {
     };
   }
 
-  // 4. Check minimum plan requirement (for upgraded features within plan)
-  if (feature.min_plan_required) {
+  // 4. Check minimum plan requirement - SKIP if feature is explicitly in subscription_plans.features
+  // The plan's features list OVERRIDES min_plan_required (allows admin flexibility)
+  if (feature.min_plan_required && !planFeatures.includes(featureKey)) {
     const requiredLevel = planHierarchy[feature.min_plan_required.toLowerCase()] ?? 0;
     const userLevel = planHierarchy[userPlan] ?? 0;
 
@@ -298,8 +299,8 @@ export function useAllFeatureAccess() {
       hasAccess = false;
     }
 
-    // Check plan requirement
-    if (hasAccess && feature.min_plan_required) {
+    // Check plan requirement - SKIP if feature is explicitly in plan's features list
+    if (hasAccess && feature.min_plan_required && !planFeatures.includes(feature.feature_key)) {
       const requiredLevel = planHierarchy[feature.min_plan_required.toLowerCase()] ?? 0;
       const userLevel = planHierarchy[userPlan] ?? 0;
       
