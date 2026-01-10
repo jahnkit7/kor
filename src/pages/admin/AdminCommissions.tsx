@@ -199,14 +199,14 @@ export default function AdminCommissions() {
                 <div>
                   <Label>Pays (optionnel)</Label>
                   <Select
-                    value={formData.country_id}
-                    onValueChange={(v) => setFormData({ ...formData, country_id: v })}
+                    value={formData.country_id || "all"}
+                    onValueChange={(v) => setFormData({ ...formData, country_id: v === "all" ? "" : v })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Tous les pays (global)" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Tous les pays</SelectItem>
+                      <SelectItem value="all">Tous les pays</SelectItem>
                       {countries?.map((country) => (
                         <SelectItem key={country.id} value={country.id}>
                           {country.name}
@@ -319,13 +319,20 @@ export default function AdminCommissions() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10">
-              <span className="text-sm text-muted-foreground">=</span>
+            <div className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl bg-primary/10">
               <span className="text-xl font-bold text-primary">
                 {formatCFA(simulatedCommission)}
               </span>
+              {(!commissions || commissions.filter(c => c.is_active).length === 0) && (
+                <span className="text-xs text-muted-foreground">Aucune règle active</span>
+              )}
             </div>
           </div>
+          {(!commissions || commissions.filter(c => c.is_active).length === 0) && (
+            <p className="text-xs text-muted-foreground mt-3">
+              💡 Créez une règle de commission pour voir le calcul en action
+            </p>
+          )}
         </BentoCard>
 
         {/* Commission Rules List */}

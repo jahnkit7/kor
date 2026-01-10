@@ -8,9 +8,9 @@ import {
   TrendingUp,
   Plus,
   ChevronRight,
-  Bell,
   Package,
 } from "lucide-react";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import AppLayout from "@/components/layout/AppLayout";
 import { RoleBadge } from "@/components/RoleBadge";
 import { HideAmountsToggle, useHiddenAmount } from "@/components/HideAmountsToggle";
@@ -85,9 +85,7 @@ const Dashboard = () => {
           </div>
           <div className="flex items-center gap-2">
             <HideAmountsToggle />
-            <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-foreground/10">
-              <Bell className="w-6 h-6" />
-            </Button>
+            <NotificationBell />
           </div>
         </div>
 
