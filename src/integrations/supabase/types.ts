@@ -763,6 +763,7 @@ export type Database = {
       profiles: {
         Row: {
           app_pin: string | null
+          auto_deduct_stock: boolean | null
           auto_lock_minutes: number | null
           created_at: string
           currency: string
@@ -782,6 +783,7 @@ export type Database = {
         }
         Insert: {
           app_pin?: string | null
+          auto_deduct_stock?: boolean | null
           auto_lock_minutes?: number | null
           created_at?: string
           currency?: string
@@ -801,6 +803,7 @@ export type Database = {
         }
         Update: {
           app_pin?: string | null
+          auto_deduct_stock?: boolean | null
           auto_lock_minutes?: number | null
           created_at?: string
           currency?: string
@@ -1130,6 +1133,60 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          product_name: string
+          quantity_sold: number
+          sale_id: string | null
+          stock_after: number
+          stock_item_id: string | null
+          user_id: string
+        }
+        Insert: {
+          alert_type?: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          product_name: string
+          quantity_sold: number
+          sale_id?: string | null
+          stock_after: number
+          stock_item_id?: string | null
+          user_id: string
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          product_name?: string
+          quantity_sold?: number
+          sale_id?: string | null
+          stock_after?: number
+          stock_item_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_alerts_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_alerts_stock_item_id_fkey"
+            columns: ["stock_item_id"]
+            isOneToOne: false
+            referencedRelation: "stock_items"
             referencedColumns: ["id"]
           },
         ]

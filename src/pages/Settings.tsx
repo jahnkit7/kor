@@ -20,7 +20,8 @@ import {
   Users,
   Palette,
   Gift,
-  Bell
+  Bell,
+  Package
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { OwnerBadge, RoleBadge } from "@/components/RoleBadge";
@@ -43,7 +44,7 @@ const Settings = () => {
   const { role } = useRole();
   const { canChangeSettings, canManageEmployees } = usePermissions();
   const { hideAmounts, autoLockMinutes, appPin, updateSettings } = useSecurity();
-  const { profile, loading: profileLoading } = useProfile();
+  const { profile, loading: profileLoading, updateProfile } = useProfile();
   const { signOut } = useAuth();
   const { trackFeature } = useFeatureTracking();
 
@@ -66,6 +67,15 @@ const Settings = () => {
     try {
       await updateSettings({ hideAmounts: !hideAmounts });
       toast.success(hideAmounts ? "Montants visibles" : "Montants cachés");
+    } catch {
+      toast.error("Erreur");
+    }
+  };
+
+  const handleToggleAutoDeductStock = async () => {
+    try {
+      await updateProfile({ auto_deduct_stock: !(profile?.auto_deduct_stock ?? true) });
+      toast.success(profile?.auto_deduct_stock ? "Déduction automatique désactivée" : "Déduction automatique activée");
     } catch {
       toast.error("Erreur");
     }
@@ -225,6 +235,35 @@ const Settings = () => {
                   </div>
                   <ChevronRight className="w-5 h-5 text-muted-foreground" />
                 </button>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Stock Settings */}
+        {canChangeSettings && (
+          <div>
+            <p className="text-sm font-semibold text-muted-foreground mb-3 px-1">
+              <Package className="inline w-4 h-4 mr-1" />
+              Gestion du Stock
+            </p>
+            <Card>
+              <CardContent className="p-0">
+                <div className="flex items-center gap-4 p-4">
+                  <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
+                    <Package className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-foreground">Déduction automatique</p>
+                    <p className="text-sm text-muted-foreground">
+                      Les ventes déduisent le stock automatiquement
+                    </p>
+                  </div>
+                  <Switch
+                    checked={profile?.auto_deduct_stock ?? true}
+                    onCheckedChange={handleToggleAutoDeductStock}
+                  />
+                </div>
               </CardContent>
             </Card>
           </div>
