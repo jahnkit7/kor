@@ -476,20 +476,6 @@ const Auth = () => {
               <p className="text-center text-sm text-[#718096]">
                 {selectedCountry.prefix} {formatPhone(phone)}
               </p>
-
-              {/* Resend Timer */}
-              <p className="text-center text-sm text-[#718096]">
-                {resendTimer > 0 ? (
-                  <>Renvoyer le code dans {resendTimer}s</>
-                ) : (
-                  <button 
-                    className="text-[#4f7df3] font-semibold"
-                    onClick={() => setResendTimer(55)}
-                  >
-                    Renvoyer OTP
-                  </button>
-                )}
-              </p>
             </div>
           )}
         </div>
