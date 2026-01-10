@@ -6,7 +6,8 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserSubscription } from "@/hooks/use-feature-access";
 import { supabase } from "@/integrations/supabase/client";
-import { recordReferral } from "@/hooks/use-referral-validation";
+import { recordReferral, useValidateReferralCode } from "@/hooks/use-referral-validation";
+import { Gift } from "lucide-react";
 
 // Pays d'Afrique de l'Ouest supportés
 const COUNTRIES = [
@@ -57,10 +58,14 @@ const Auth = () => {
   const [confirmPin, setConfirmPin] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [countryDetecting, setCountryDetecting] = useState(true);
+  const [referrerName, setReferrerName] = useState<string | null>(null);
   
   // Rate limiting state
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [lockoutUntil, setLockoutUntil] = useState<number | null>(null);
+  
+  // Hook for validating referral codes
+  const validateReferralCode = useValidateReferralCode();
 
   // Détection automatique du pays via géolocalisation IP
   useEffect(() => {
@@ -101,6 +106,28 @@ const Auth = () => {
 
     detectCountry();
   }, []);
+
+  // Validate and store refCode on mount
+  useEffect(() => {
+    const codeToValidate = refCode || localStorage.getItem("pendingReferralCode");
+    
+    if (codeToValidate) {
+      console.log("[Auth] Validating referral code:", codeToValidate);
+      localStorage.setItem("pendingReferralCode", codeToValidate);
+      
+      validateReferralCode.mutate(codeToValidate, {
+        onSuccess: (data) => {
+          console.log("[Auth] Referral code valid:", data);
+          setReferrerName(data.referrerName);
+          toast.success(`🎁 Parrainage de ${data.referrerName || 'un utilisateur'} détecté ! -10% sur votre abonnement`);
+        },
+        onError: (error) => {
+          console.warn("[Auth] Referral code invalid:", error);
+          localStorage.removeItem("pendingReferralCode");
+        },
+      });
+    }
+  }, [refCode]);
 
   useEffect(() => {
     // CRITICAL FIX: Attendre que l'auth ET la subscription soient vraiment chargées
@@ -352,6 +379,14 @@ const Auth = () => {
                   : "Entrez votre code PIN"
             }
           </p>
+          
+          {/* Referral Badge */}
+          {referrerName && (
+            <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-green-500/10 text-green-600 rounded-full text-sm font-medium">
+              <Gift className="w-4 h-4" />
+              Parrainage de {referrerName} • -10%
+            </div>
+          )}
         </div>
 
         {/* Display */}

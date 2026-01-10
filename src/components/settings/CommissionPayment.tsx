@@ -146,7 +146,7 @@ export function CommissionPayment() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Wallet className="w-5 h-5 text-primary" />
-            Commissions à payer
+            Commissions Plateforme
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -156,11 +156,11 @@ export function CommissionPayment() {
               <Wallet className="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
               <p className="font-medium text-muted-foreground">Aucune commission à payer</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Vos commissions s'accumulent via le parrainage d'utilisateurs
+                Les commissions plateforme sont calculées sur vos ventes (2%)
               </p>
               <div className="flex justify-center gap-4 mt-4 text-sm text-muted-foreground">
-                <span>Commissions gagnées: {formatCFA(balance.total_earned)}</span>
-                <span>Commissions payées: {formatCFA(balance.total_paid)}</span>
+                <span>Total dû: {formatCFA(balance.total_earned)}</span>
+                <span>Total payé: {formatCFA(balance.total_paid)}</span>
               </div>
             </div>
           ) : (
@@ -172,8 +172,8 @@ export function CommissionPayment() {
                   {formatCFA(balance.balance)}
                 </p>
                 <div className="flex gap-4 mt-2 text-sm text-muted-foreground">
-                  <span>Commissions gagnées: {formatCFA(balance.total_earned)}</span>
-                  <span>Commissions payées: {formatCFA(balance.total_paid)}</span>
+                  <span>Total dû: {formatCFA(balance.total_earned)}</span>
+                  <span>Total payé: {formatCFA(balance.total_paid)}</span>
                 </div>
               </div>
 

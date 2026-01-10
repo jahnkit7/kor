@@ -8,23 +8,31 @@ interface ReferrerInfo {
   discountPercent: number;
 }
 
-// Validate a referral code (different from promo codes)
+// Validate a referral code using RPC function (bypasses RLS)
 export function useValidateReferralCode() {
   return useMutation({
     mutationFn: async (code: string): Promise<ReferrerInfo> => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("user_id, shop_name")
-        .eq("referral_code", code.toUpperCase())
-        .single();
+      const cleanCode = code.trim().toUpperCase();
+      console.log("[Referral] Validating code:", cleanCode);
 
-      if (error || !data) {
+      const { data, error } = await supabase
+        .rpc('validate_referral_code', { code: cleanCode });
+
+      console.log("[Referral] RPC result:", { data, error });
+
+      if (error) {
+        console.error("[Referral] RPC error:", error);
+        throw new Error("Erreur de validation du code");
+      }
+
+      if (!data || data.length === 0) {
         throw new Error("Code de parrainage invalide");
       }
 
+      const referrer = data[0];
       return {
-        referrerId: data.user_id,
-        referrerName: data.shop_name,
+        referrerId: referrer.referrer_id,
+        referrerName: referrer.referrer_name,
         discountPercent: 10, // 10% discount for referred users
       };
     },
@@ -78,61 +86,68 @@ export function useReferralDiscount() {
   });
 }
 
-// Record referral after signup
+// Record referral after signup using RPC (bypasses RLS)
 export async function recordReferral(
   userId: string, 
   referralCode: string
 ): Promise<boolean> {
   try {
-    // Find the referrer by their code
-    const { data: referrer, error: referrerError } = await supabase
-      .from("profiles")
-      .select("user_id")
-      .eq("referral_code", referralCode.toUpperCase())
-      .single();
+    const cleanCode = referralCode.trim().toUpperCase();
+    console.log("[Referral] Recording referral for user:", userId, "with code:", cleanCode);
 
-    if (referrerError || !referrer) {
-      console.warn("Invalid referral code:", referralCode);
+    // Find the referrer using RPC function (bypasses RLS)
+    const { data: rpcResult, error: rpcError } = await supabase
+      .rpc('validate_referral_code', { code: cleanCode });
+
+    console.log("[Referral] RPC result:", { rpcResult, rpcError });
+
+    if (rpcError || !rpcResult || rpcResult.length === 0) {
+      console.warn("[Referral] Invalid referral code:", cleanCode, rpcError);
       return false;
     }
 
+    const referrer = rpcResult[0];
+
     // Don't allow self-referral
-    if (referrer.user_id === userId) {
-      console.warn("Self-referral attempted");
+    if (referrer.referrer_id === userId) {
+      console.warn("[Referral] Self-referral attempted");
       return false;
     }
 
     // Update the new user's profile with referred_by
     const { error: updateError } = await supabase
       .from("profiles")
-      .update({ referred_by: referrer.user_id })
+      .update({ referred_by: referrer.referrer_id })
       .eq("user_id", userId);
 
     if (updateError) {
-      console.error("Error updating referred_by:", updateError);
+      console.error("[Referral] Error updating referred_by:", updateError);
       return false;
     }
+
+    console.log("[Referral] Profile updated with referred_by:", referrer.referrer_id);
 
     // Create the referral record
     const { error: insertError } = await supabase
       .from("referrals")
       .insert({
-        referrer_id: referrer.user_id,
+        referrer_id: referrer.referrer_id,
         referred_id: userId,
-        referral_code: referralCode.toUpperCase(),
+        referral_code: cleanCode,
         status: "pending",
         reward_type: "discount",
         reward_value: 10,
       });
 
     if (insertError) {
-      console.error("Error creating referral:", insertError);
+      console.error("[Referral] Error creating referral:", insertError);
       return false;
     }
 
+    console.log("[Referral] Referral record created successfully");
     return true;
   } catch (error) {
-    console.error("Error recording referral:", error);
+    console.error("[Referral] Error recording referral:", error);
     return false;
   }
 }
