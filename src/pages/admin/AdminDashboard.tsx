@@ -186,8 +186,8 @@ export default function AdminDashboard() {
                 title="Abonnements"
               />
               <BentoCardValue
-                value={stats?.activePlans || 0}
-                label="plans actifs"
+                value={stats?.activeSubscriptions || 0}
+                label={`${stats?.activePlans || 0} plans disponibles`}
               />
             </BentoCard>
 

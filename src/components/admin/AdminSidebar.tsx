@@ -11,7 +11,8 @@ import {
   FileText,
   Settings,
   TrendingUp,
-  Gift
+  Gift,
+  Map
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +25,7 @@ const navItems = [
   { to: "/admin/promo-codes", icon: Percent, label: "Codes Promo" },
   { to: "/admin/geography", icon: Globe, label: "Géographie" },
   { to: "/admin/features", icon: ToggleLeft, label: "Fonctionnalités" },
+  { to: "/admin/roadmap", icon: Map, label: "Roadmap" },
   { to: "/admin/commissions", icon: Gift, label: "Commissions" },
   { to: "/admin/support", icon: MessageSquare, label: "Support" },
   { to: "/admin/logs", icon: FileText, label: "Logs" },

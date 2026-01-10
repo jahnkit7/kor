@@ -1000,6 +1000,54 @@ export type Database = {
           },
         ]
       }
+      roadmap_items: {
+        Row: {
+          assigned_to: string | null
+          category: string
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          estimated_effort: string | null
+          id: string
+          priority: string
+          status: string
+          target_version: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          category?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          estimated_effort?: string | null
+          id?: string
+          priority?: string
+          status?: string
+          target_version?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          category?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          estimated_effort?: string | null
+          id?: string
+          priority?: string
+          status?: string
+          target_version?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sales: {
         Row: {
           amount: number
