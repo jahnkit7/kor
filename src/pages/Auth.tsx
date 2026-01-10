@@ -4,14 +4,22 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Phone, Lock, ChevronDown, Check } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
 
+// Pays d'Afrique de l'Ouest supportés
 const COUNTRIES = [
-  { code: "SN", name: "Sénégal", prefix: "+221", flag: "🇸🇳" },
-  { code: "BJ", name: "Bénin", prefix: "+229", flag: "🇧🇯" },
   { code: "TG", name: "Togo", prefix: "+228", flag: "🇹🇬" },
+  { code: "BJ", name: "Bénin", prefix: "+229", flag: "🇧🇯" },
   { code: "CI", name: "Côte d'Ivoire", prefix: "+225", flag: "🇨🇮" },
-  { code: "GN", name: "Guinée", prefix: "+224", flag: "🇬🇳" },
+  { code: "SN", name: "Sénégal", prefix: "+221", flag: "🇸🇳" },
+  { code: "ML", name: "Mali", prefix: "+223", flag: "🇲🇱" },
+  { code: "NE", name: "Niger", prefix: "+227", flag: "🇳🇪" },
+  { code: "BF", name: "Burkina Faso", prefix: "+226", flag: "🇧🇫" },
+  { code: "CM", name: "Cameroun", prefix: "+237", flag: "🇨🇲" },
 ];
+
+// Pays par défaut (Togo - pays pilote)
+const DEFAULT_COUNTRY = COUNTRIES[0];
 
 // Minimum PIN length for security (6 digits instead of 4)
 const PIN_LENGTH = 6;
@@ -39,16 +47,57 @@ const Auth = () => {
   
   const [step, setStep] = useState<"phone" | "pin">("phone");
   const [isNewUser, setIsNewUser] = useState(!!inviteCode || !!refCode); // Par défaut nouveau si invitation/parrainage
-  const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
+  const [selectedCountry, setSelectedCountry] = useState(DEFAULT_COUNTRY);
   const [showCountryPicker, setShowCountryPicker] = useState(false);
   const [phone, setPhone] = useState("");
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [countryDetecting, setCountryDetecting] = useState(true);
   
   // Rate limiting state
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [lockoutUntil, setLockoutUntil] = useState<number | null>(null);
+
+  // Détection automatique du pays via géolocalisation IP
+  useEffect(() => {
+    const detectCountry = async () => {
+      try {
+        // Utiliser ipapi.co pour la géolocalisation gratuite
+        const response = await fetch("https://ipapi.co/json/", { 
+          signal: AbortSignal.timeout(5000) 
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          const detectedCode = data.country_code;
+          
+          // Vérifier si le pays détecté est dans notre liste
+          const matchingCountry = COUNTRIES.find(c => c.code === detectedCode);
+          
+          if (matchingCountry) {
+            // Vérifier si le pays est actif dans la base de données
+            const { data: countryData } = await supabase
+              .from("countries")
+              .select("is_active")
+              .eq("code", detectedCode)
+              .single();
+            
+            if (countryData?.is_active) {
+              setSelectedCountry(matchingCountry);
+            }
+          }
+        }
+      } catch (error) {
+        // En cas d'erreur, on garde le pays par défaut (Togo)
+        console.log("Détection du pays échouée, utilisation du pays par défaut");
+      } finally {
+        setCountryDetecting(false);
+      }
+    };
+
+    detectCountry();
+  }, []);
 
   useEffect(() => {
     if (!loading && isAuthenticated) {

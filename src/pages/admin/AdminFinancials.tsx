@@ -82,6 +82,8 @@ function StatCard({
   );
 }
 
+import { AdminLayout } from "@/components/admin/AdminLayout";
+
 export default function AdminFinancials() {
   const { data: financialStats, isLoading: statsLoading } = useFinancialStats();
   const { data: dailyRevenue } = useDailyRevenue(30);
@@ -92,6 +94,7 @@ export default function AdminFinancials() {
   const { data: referralStats } = useAdminReferralStats();
 
   return (
+    <AdminLayout>
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Tableau de Bord Financier</h1>
@@ -439,5 +442,6 @@ export default function AdminFinancials() {
         </TabsContent>
       </Tabs>
     </div>
+    </AdminLayout>
   );
 }
