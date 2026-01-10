@@ -7,7 +7,6 @@ import {
   Wallet,
   CreditCard,
   ChevronRight,
-  Bell,
 } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import AppLayout from "@/components/layout/AppLayout";
@@ -24,6 +23,7 @@ import SalesCard from "@/components/dashboard/SalesCard";
 import QuickActionFAB from "@/components/dashboard/QuickActionFAB";
 import TransactionItem from "@/components/dashboard/TransactionItem";
 import BentoStatsGrid from "@/components/dashboard/BentoStatsGrid";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Dashboard = () => {
   const { loading: authLoading } = useRequireAuth();
@@ -55,15 +55,32 @@ const Dashboard = () => {
     return new Intl.NumberFormat("fr-FR").format(val);
   };
 
-  const isLoading = authLoading || profileLoading || salesLoading || debtsLoading || stockLoading;
+  // Only block on auth/profile - data loading uses skeletons
+  const isAuthLoading = authLoading || profileLoading;
+  
+  // Timeout guard: never show auth loading for more than 3 seconds
+  const [forceReady, setForceReady] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (isAuthLoading) {
+        console.warn("[Dashboard] Auth loading timeout - forcing render");
+        setForceReady(true);
+      }
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [isAuthLoading]);
 
-  if (isLoading) {
+  const shouldShowContent = !isAuthLoading || forceReady;
+
+  if (!shouldShowContent) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[#f8f9ff] via-white to-[#f8f9ff] flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-[#4f7df3] border-t-transparent rounded-full" />
       </div>
     );
   }
+  
+  const isDataLoading = salesLoading || debtsLoading || stockLoading;
 
   // Render Modern Dashboard if theme is modern
   if (isModern) {
@@ -76,6 +93,7 @@ const Dashboard = () => {
         stockTotalValue={stockTotalValue}
         stockItemsCount={stockItemsCount}
         recentSales={recentSales}
+        isDataLoading={isDataLoading}
       />
     );
   }

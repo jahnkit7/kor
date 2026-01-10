@@ -22,6 +22,7 @@ import { useDebts } from "@/hooks/use-debts";
 import { useStock } from "@/hooks/use-stock";
 import { useFeatureAccess } from "@/hooks/use-feature-access";
 import { BetaBadge } from "@/components/BetaBadge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 interface ModernDashboardProps {
@@ -39,6 +40,7 @@ interface ModernDashboardProps {
     note?: string | null;
     created_at: string;
   }>;
+  isDataLoading?: boolean;
 }
 
 const ModernDashboard = ({
@@ -49,6 +51,7 @@ const ModernDashboard = ({
   stockTotalValue,
   stockItemsCount,
   recentSales,
+  isDataLoading = false,
 }: ModernDashboardProps) => {
   const navigate = useNavigate();
   const { role } = useRole();
@@ -88,10 +91,14 @@ const ModernDashboard = ({
               </span>
             </div>
             <p className="text-sm opacity-80 mb-1">Ventes du jour</p>
-            <p className="text-4xl font-extrabold tracking-tight">
-              {formatMoney(todayStats.total)}
-              <span className="text-lg ml-1 opacity-80">{!hideAmounts && "CFA"}</span>
-            </p>
+            {isDataLoading ? (
+              <Skeleton className="h-10 w-32 bg-primary-foreground/20" />
+            ) : (
+              <p className="text-4xl font-extrabold tracking-tight">
+                {formatMoney(todayStats.total)}
+                <span className="text-lg ml-1 opacity-80">{!hideAmounts && "CFA"}</span>
+              </p>
+            )}
           </div>
 
           {/* Cash Card */}
@@ -103,7 +110,11 @@ const ModernDashboard = ({
               <Wallet className="w-5 h-5 text-success" />
             </div>
             <p className="text-xs text-muted-foreground font-medium">Cash</p>
-            <p className="text-xl font-bold text-foreground">{formatMoney(todayStats.cash)}</p>
+            {isDataLoading ? (
+              <Skeleton className="h-7 w-20" />
+            ) : (
+              <p className="text-xl font-bold text-foreground">{formatMoney(todayStats.cash)}</p>
+            )}
           </div>
 
           {/* Credit Card */}
@@ -115,7 +126,11 @@ const ModernDashboard = ({
               <CreditCard className="w-5 h-5 text-accent" />
             </div>
             <p className="text-xs text-muted-foreground font-medium">Crédit</p>
-            <p className="text-xl font-bold text-foreground">{formatMoney(todayStats.credit)}</p>
+            {isDataLoading ? (
+              <Skeleton className="h-7 w-20" />
+            ) : (
+              <p className="text-xl font-bold text-foreground">{formatMoney(todayStats.credit)}</p>
+            )}
           </div>
 
           {/* Debts Card - Colored */}
@@ -131,8 +146,14 @@ const ModernDashboard = ({
               <ArrowUpRight className="w-5 h-5 opacity-70" />
             </div>
             <p className="text-xs opacity-80 font-medium">Dettes</p>
-            <p className="text-xl font-bold">{formatMoney(totalDebts)}</p>
-            <p className="text-xs opacity-70 mt-1">{clientsWithDebts} clients</p>
+            {isDataLoading ? (
+              <Skeleton className="h-7 w-20 bg-white/20" />
+            ) : (
+              <>
+                <p className="text-xl font-bold">{formatMoney(totalDebts)}</p>
+                <p className="text-xs opacity-70 mt-1">{clientsWithDebts} clients</p>
+              </>
+            )}
           </div>
 
           {/* Stock Card - Soft Blue */}
@@ -148,8 +169,14 @@ const ModernDashboard = ({
               <ArrowUpRight className="w-5 h-5 opacity-70" />
             </div>
             <p className="text-xs opacity-80 font-medium">Stock</p>
-            <p className="text-xl font-bold">{formatMoney(stockTotalValue)}</p>
-            <p className="text-xs opacity-70 mt-1">{stockItemsCount} produits</p>
+            {isDataLoading ? (
+              <Skeleton className="h-7 w-20 bg-white/20" />
+            ) : (
+              <>
+                <p className="text-xl font-bold">{formatMoney(stockTotalValue)}</p>
+                <p className="text-xs opacity-70 mt-1">{stockItemsCount} produits</p>
+              </>
+            )}
           </div>
         </div>
 

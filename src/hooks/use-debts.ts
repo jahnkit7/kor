@@ -4,6 +4,7 @@ import { useNetworkStatus } from "./use-network-status";
 import { isSupabaseConfigured, getSupabaseClient } from "@/lib/supabase";
 import * as localDB from "@/lib/db";
 import { toast } from "sonner";
+import { withTimeout } from "@/lib/promise-utils";
 
 export interface Debt {
   id: string;
@@ -52,9 +53,9 @@ export function useDebts(): DebtsState {
 
   const fetchDebts = useCallback(async () => {
     try {
-      // 1. Load local data first
-      const localDebts = await localDB.getDebts();
-      const localClients = await localDB.getClients();
+      // 1. Load local data first (with timeout protection)
+      const localDebts = await withTimeout(localDB.getDebts(), 2000, []);
+      const localClients = await withTimeout(localDB.getClients(), 2000, []);
       const clientMap = new Map(localClients.map(c => [c.id, c]));
 
       const mappedLocalDebts: Debt[] = localDebts.map(d => {

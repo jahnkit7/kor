@@ -4,6 +4,7 @@ import { useNetworkStatus } from "./use-network-status";
 import { supabase } from "@/integrations/supabase/client";
 import * as localDB from "@/lib/db";
 import { useToast } from "./use-toast";
+import { withTimeout } from "@/lib/promise-utils";
 
 export interface StockItem {
   id: string;
@@ -35,8 +36,8 @@ export function useStock() {
 
   const fetchItems = useCallback(async () => {
     try {
-      // 1. Load local data first
-      const localItems = await localDB.getStockItems();
+      // 1. Load local data first (with timeout protection)
+      const localItems = await withTimeout(localDB.getStockItems(), 2000, []);
       const mappedLocalItems: StockItem[] = localItems.map(item => ({
         id: item.id,
         user_id: item.user_id || user?.id || "",
