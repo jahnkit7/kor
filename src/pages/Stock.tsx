@@ -96,36 +96,46 @@ export default function Stock() {
   };
 
   const handleAddItems = async (newItems: NewStockItem[]) => {
-    console.log("[Stock] handleAddItems called with", newItems.length, "items");
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}] [Stock] ===== handleAddItems START =====`);
+    console.log(`[${timestamp}] [Stock] Items received:`, newItems.length);
+    console.log(`[${timestamp}] [Stock] Items data:`, JSON.stringify(newItems));
     
     if (newItems.length === 0) {
-      console.warn("[Stock] No items provided to handleAddItems");
+      console.error(`[${timestamp}] [Stock] ❌ No items provided`);
       toast({
         title: "⚠️ Aucun produit",
         description: "Aucun produit à ajouter",
         variant: "destructive",
       });
-      return;
+      throw new Error("Aucun produit à ajouter");
     }
     
-    const results = await addItems(newItems);
-    
-    console.log("[Stock] addItems returned", results.length, "items");
-    
-    if (results.length > 0) {
-      toast({
-        title: "✅ Stock généré",
-        description: `${results.length} produit${results.length > 1 ? "s" : ""} ajouté${results.length > 1 ? "s" : ""}`,
-      });
-      setIsAddSheetOpen(false);
-      setEntryMode(null);
-    } else {
-      console.error("[Stock] ❌ addItems returned empty - all items failed");
-      toast({
-        title: "❌ Échec de l'enregistrement",
-        description: "Les produits n'ont pas pu être enregistrés. Vérifiez votre connexion.",
-        variant: "destructive",
-      });
+    try {
+      console.log(`[${timestamp}] [Stock] Calling addItems...`);
+      const results = await addItems(newItems);
+      
+      console.log(`[${timestamp}] [Stock] addItems returned:`, results.length, "items");
+      
+      if (results.length > 0) {
+        toast({
+          title: "✅ Stock généré",
+          description: `${results.length} produit${results.length > 1 ? "s" : ""} ajouté${results.length > 1 ? "s" : ""}`,
+        });
+        setIsAddSheetOpen(false);
+        setEntryMode(null);
+      } else {
+        console.error(`[${timestamp}] [Stock] ❌ addItems returned empty - all items failed`);
+        toast({
+          title: "❌ Échec de l'enregistrement",
+          description: "Les produits n'ont pas pu être enregistrés. Vérifiez votre connexion.",
+          variant: "destructive",
+        });
+        throw new Error("Aucun produit n'a pu être enregistré");
+      }
+    } catch (error) {
+      console.error(`[${timestamp}] [Stock] ❌ handleAddItems EXCEPTION:`, error);
+      throw error; // Re-throw to propagate to VoiceStockInput
     }
   };
 

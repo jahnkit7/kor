@@ -475,27 +475,45 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
           setStep("saving");
           setIsSubmitting(true);
           
-          console.log("[VoiceStock] ===== AUTO SAVE MODE =====");
-          console.log("[VoiceStock] Items to save:", voiceItems.length);
+          const timestamp = new Date().toISOString();
+          console.log(`[${timestamp}] [VoiceStock] ===== AUTO SAVE MODE START =====`);
+          console.log(`[${timestamp}] [VoiceStock] Items to save:`, voiceItems.length);
+          console.log(`[${timestamp}] [VoiceStock] Raw voiceItems:`, JSON.stringify(voiceItems));
           
           try {
-            const stockItems: NewStockItem[] = voiceItems.map(({ tempId, isEditing, confidence, ...it }) => it);
-            console.log("[VoiceStock] Calling onComplete with:", stockItems);
+            // EXPLICIT MAPPING - Ensure source: "voice" is ALWAYS set
+            const stockItems: NewStockItem[] = voiceItems.map((item) => ({
+              name: item.name,
+              quantity: item.quantity,
+              unit_price: item.unit_price,
+              model: item.model || null,
+              source: "voice" as const,
+            }));
+            
+            console.log(`[${timestamp}] [VoiceStock] Mapped stockItems:`, JSON.stringify(stockItems));
+            console.log(`[${timestamp}] [VoiceStock] Calling onComplete NOW...`);
             
             await onComplete(stockItems);
             
-            console.log("[VoiceStock] ✅ onComplete finished successfully");
+            console.log(`[${timestamp}] [VoiceStock] ✅ onComplete finished successfully`);
             toast({
               title: "✅ Stock ajouté",
               description: `${stockItems.length} produit(s) enregistré(s).`,
             });
+            
+            // CLOSE MODAL after success
+            onCancel();
+            
           } catch (saveError) {
-            console.error("[VoiceStock] ❌ onComplete FAILED:", saveError);
+            console.error(`[${timestamp}] [VoiceStock] ❌ onComplete FAILED:`, saveError);
             toast({
               title: "❌ Erreur d'enregistrement",
               description: saveError instanceof Error ? saveError.message : "Erreur inconnue",
               variant: "destructive",
+              duration: 10000,
             });
+            // Fallback to validation mode for manual retry
+            setStep("validate");
           } finally {
             setIsSubmitting(false);
           }
