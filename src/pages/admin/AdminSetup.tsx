@@ -3,10 +3,11 @@ import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
-import { Database, Globe, CreditCard, ToggleLeft, Map, CheckCircle2, XCircle, Loader2, RefreshCw, Download, Upload, FileCode } from "lucide-react";
+import { Database, Globe, CreditCard, ToggleLeft, Map, CheckCircle2, XCircle, Loader2, RefreshCw, Download, Upload, FileCode, HardDrive, Shield } from "lucide-react";
 
 interface DataStatus {
   countries: number;
@@ -130,6 +131,12 @@ export default function AdminSetup() {
   const [exportingSQL, setExportingSQL] = useState(false);
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Full backup states
+  const [exportingFull, setExportingFull] = useState(false);
+  const [exportingFullSQL, setExportingFullSQL] = useState(false);
+  const [importingFull, setImportingFull] = useState(false);
+  const fullBackupInputRef = useRef<HTMLInputElement>(null);
 
   const fetchStatus = async () => {
     setLoading(true);
@@ -471,6 +478,429 @@ export default function AdminSetup() {
     }
   };
 
+  // ==================== FULL SYSTEM BACKUP ====================
+  const exportFullBackup = async () => {
+    setExportingFull(true);
+    try {
+      const [
+        countries, plans, features, roadmap,
+        profiles, userRoles, commissions,
+        promoCodes, rechargeCodes, regions
+      ] = await Promise.all([
+        supabase.from("countries").select("*"),
+        supabase.from("subscription_plans").select("*"),
+        supabase.from("feature_flags").select("*"),
+        supabase.from("roadmap_items").select("*"),
+        supabase.from("profiles").select("*"),
+        supabase.from("user_roles").select("*"),
+        supabase.from("commissions").select("*"),
+        supabase.from("promo_codes").select("*"),
+        supabase.from("recharge_codes").select("*"),
+        supabase.from("regions").select("*"),
+      ]);
+
+      const backup = {
+        version: "2.0",
+        type: "full_system_backup",
+        exportDate: new Date().toISOString(),
+        countries: countries.data || [],
+        plans: plans.data || [],
+        features: features.data || [],
+        roadmap: roadmap.data || [],
+        profiles: profiles.data || [],
+        userRoles: userRoles.data || [],
+        commissions: commissions.data || [],
+        promoCodes: promoCodes.data || [],
+        rechargeCodes: rechargeCodes.data || [],
+        regions: regions.data || [],
+      };
+
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `caisse-plus-full-backup-${new Date().toISOString().split("T")[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      const totalItems = Object.values(backup).filter(Array.isArray).reduce((sum, arr) => sum + arr.length, 0);
+      toast.success(`Sauvegarde complète exportée (${totalItems} éléments)`);
+    } catch (error) {
+      console.error("Error exporting full backup:", error);
+      toast.error("Erreur lors de l'export complet");
+    } finally {
+      setExportingFull(false);
+    }
+  };
+
+  const exportFullBackupSQL = async () => {
+    setExportingFullSQL(true);
+    try {
+      const [
+        countries, plans, features, roadmap,
+        profiles, userRoles, commissions,
+        promoCodes, rechargeCodes, regions
+      ] = await Promise.all([
+        supabase.from("countries").select("*"),
+        supabase.from("subscription_plans").select("*"),
+        supabase.from("feature_flags").select("*"),
+        supabase.from("roadmap_items").select("*"),
+        supabase.from("profiles").select("*"),
+        supabase.from("user_roles").select("*"),
+        supabase.from("commissions").select("*"),
+        supabase.from("promo_codes").select("*"),
+        supabase.from("recharge_codes").select("*"),
+        supabase.from("regions").select("*"),
+      ]);
+
+      let sql = `-- CaissePlus FULL System Backup\n-- Generated: ${new Date().toISOString()}\n-- Version: 2.0\n\n`;
+
+      // Countries
+      sql += `-- ===============================\n-- COUNTRIES (${countries.data?.length || 0} rows)\n-- ===============================\n`;
+      countries.data?.forEach(c => {
+        sql += `INSERT INTO countries (name, code, phone_prefix, currency, is_active) VALUES ('${c.name}', '${c.code}', '${c.phone_prefix}', '${c.currency}', ${c.is_active}) ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name, phone_prefix = EXCLUDED.phone_prefix, currency = EXCLUDED.currency, is_active = EXCLUDED.is_active;\n`;
+      });
+
+      // Plans
+      sql += `\n-- ===============================\n-- SUBSCRIPTION PLANS (${plans.data?.length || 0} rows)\n-- ===============================\n`;
+      plans.data?.forEach(p => {
+        const featuresJson = JSON.stringify(p.features || []).replace(/'/g, "''");
+        sql += `INSERT INTO subscription_plans (name, price, duration_days, currency, features, is_active, sort_order, description, max_clients, max_sales_per_day) VALUES ('${p.name}', ${p.price}, ${p.duration_days}, '${p.currency}', '${featuresJson}'::jsonb, ${p.is_active}, ${p.sort_order || 0}, '${(p.description || '').replace(/'/g, "''")}', ${p.max_clients || 'NULL'}, ${p.max_sales_per_day || 'NULL'}) ON CONFLICT (name) DO UPDATE SET price = EXCLUDED.price, duration_days = EXCLUDED.duration_days, features = EXCLUDED.features, is_active = EXCLUDED.is_active, sort_order = EXCLUDED.sort_order, description = EXCLUDED.description;\n`;
+      });
+
+      // Features
+      sql += `\n-- ===============================\n-- FEATURE FLAGS (${features.data?.length || 0} rows)\n-- ===============================\n`;
+      features.data?.forEach(f => {
+        const dependsOn = JSON.stringify(f.depends_on || []).replace(/'/g, "''");
+        sql += `INSERT INTO feature_flags (feature_key, name, description, is_globally_enabled, min_plan_required, depends_on, category, sort_order, is_beta, current_version) VALUES ('${f.feature_key}', '${f.name.replace(/'/g, "''")}', '${(f.description || '').replace(/'/g, "''")}', ${f.is_globally_enabled}, ${f.min_plan_required ? `'${f.min_plan_required}'` : 'NULL'}, '${dependsOn}'::jsonb, '${f.category || 'secondary'}', ${f.sort_order || 0}, ${f.is_beta || false}, '${f.current_version || '1.0.0'}') ON CONFLICT (feature_key) DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.description, is_globally_enabled = EXCLUDED.is_globally_enabled, min_plan_required = EXCLUDED.min_plan_required, depends_on = EXCLUDED.depends_on, category = EXCLUDED.category, is_beta = EXCLUDED.is_beta;\n`;
+      });
+
+      // Roadmap
+      sql += `\n-- ===============================\n-- ROADMAP ITEMS (${roadmap.data?.length || 0} rows)\n-- ===============================\n`;
+      roadmap.data?.forEach(r => {
+        const description = (r.description || '').replace(/'/g, "''").replace(/\n/g, ' ');
+        sql += `INSERT INTO roadmap_items (title, description, category, status, priority, target_version, estimated_effort) VALUES ('${r.title.replace(/'/g, "''")}', '${description}', '${r.category}', '${r.status}', '${r.priority}', ${r.target_version ? `'${r.target_version}'` : 'NULL'}, ${r.estimated_effort ? `'${r.estimated_effort}'` : 'NULL'}) ON CONFLICT (title) DO UPDATE SET description = EXCLUDED.description, category = EXCLUDED.category, status = EXCLUDED.status, priority = EXCLUDED.priority;\n`;
+      });
+
+      // Profiles
+      sql += `\n-- ===============================\n-- PROFILES (${profiles.data?.length || 0} rows)\n-- Note: Profiles are linked to auth.users, import carefully\n-- ===============================\n`;
+      profiles.data?.forEach(p => {
+        const notifSettings = JSON.stringify(p.notification_settings || {}).replace(/'/g, "''");
+        const invoiceSettings = JSON.stringify(p.invoice_settings || {}).replace(/'/g, "''");
+        sql += `-- Profile: ${p.shop_name || 'N/A'} (${p.phone || 'no phone'})\n`;
+        sql += `INSERT INTO profiles (user_id, shop_name, owner_name, phone, currency, referral_code, onboarding_completed, auto_deduct_stock, notification_settings, invoice_settings) VALUES ('${p.user_id}', '${(p.shop_name || '').replace(/'/g, "''")}', '${(p.owner_name || '').replace(/'/g, "''")}', '${p.phone || ''}', '${p.currency || 'XOF'}', '${p.referral_code || ''}', ${p.onboarding_completed || false}, ${p.auto_deduct_stock ?? true}, '${notifSettings}'::jsonb, '${invoiceSettings}'::jsonb) ON CONFLICT (user_id) DO UPDATE SET shop_name = EXCLUDED.shop_name, owner_name = EXCLUDED.owner_name, phone = EXCLUDED.phone, currency = EXCLUDED.currency, notification_settings = EXCLUDED.notification_settings, invoice_settings = EXCLUDED.invoice_settings;\n`;
+      });
+
+      // User Roles
+      sql += `\n-- ===============================\n-- USER ROLES (${userRoles.data?.length || 0} rows)\n-- ===============================\n`;
+      userRoles.data?.forEach(r => {
+        sql += `INSERT INTO user_roles (user_id, role) VALUES ('${r.user_id}', '${r.role}') ON CONFLICT (user_id, role) DO NOTHING;\n`;
+      });
+
+      // Commissions
+      sql += `\n-- ===============================\n-- COMMISSIONS (${commissions.data?.length || 0} rows)\n-- ===============================\n`;
+      commissions.data?.forEach(c => {
+        sql += `INSERT INTO commissions (name, type, value, applies_to, is_active) VALUES ('${c.name.replace(/'/g, "''")}', '${c.type}', ${c.value}, '${c.applies_to}', ${c.is_active}) ON CONFLICT (name) DO UPDATE SET type = EXCLUDED.type, value = EXCLUDED.value, applies_to = EXCLUDED.applies_to, is_active = EXCLUDED.is_active;\n`;
+      });
+
+      // Promo Codes
+      sql += `\n-- ===============================\n-- PROMO CODES (${promoCodes.data?.length || 0} rows)\n-- ===============================\n`;
+      promoCodes.data?.forEach(p => {
+        sql += `INSERT INTO promo_codes (code, discount_type, discount_value, max_uses, used_count, valid_from, valid_until, is_active, applies_to_plan, applies_to_duration) VALUES ('${p.code}', '${p.discount_type}', ${p.discount_value}, ${p.max_uses || 'NULL'}, ${p.used_count || 0}, ${p.valid_from ? `'${p.valid_from}'` : 'NULL'}, ${p.valid_until ? `'${p.valid_until}'` : 'NULL'}, ${p.is_active}, ${p.applies_to_plan ? `'${p.applies_to_plan}'` : 'NULL'}, ${p.applies_to_duration ? `'${p.applies_to_duration}'` : 'NULL'}) ON CONFLICT (code) DO UPDATE SET discount_value = EXCLUDED.discount_value, max_uses = EXCLUDED.max_uses, is_active = EXCLUDED.is_active;\n`;
+      });
+
+      // Recharge Codes
+      sql += `\n-- ===============================\n-- RECHARGE CODES (${rechargeCodes.data?.length || 0} rows)\n-- ===============================\n`;
+      rechargeCodes.data?.forEach(r => {
+        sql += `INSERT INTO recharge_codes (code, plan_id, is_used, created_by, expires_at, batch_name) VALUES ('${r.code}', ${r.plan_id ? `'${r.plan_id}'` : 'NULL'}, ${r.is_used}, ${r.created_by ? `'${r.created_by}'` : 'NULL'}, ${r.expires_at ? `'${r.expires_at}'` : 'NULL'}, ${r.batch_name ? `'${r.batch_name}'` : 'NULL'}) ON CONFLICT (code) DO UPDATE SET is_used = EXCLUDED.is_used;\n`;
+      });
+
+      // Regions
+      sql += `\n-- ===============================\n-- REGIONS (${regions.data?.length || 0} rows)\n-- ===============================\n`;
+      regions.data?.forEach(r => {
+        sql += `INSERT INTO regions (name, country_id, is_active) VALUES ('${r.name.replace(/'/g, "''")}', ${r.country_id ? `'${r.country_id}'` : 'NULL'}, ${r.is_active ?? true}) ON CONFLICT (name) DO UPDATE SET is_active = EXCLUDED.is_active;\n`;
+      });
+
+      const blob = new Blob([sql], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `caisse-plus-full-backup-${new Date().toISOString().split("T")[0]}.sql`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast.success("Fichier SQL complet exporté");
+    } catch (error) {
+      console.error("Error exporting SQL:", error);
+      toast.error("Erreur lors de l'export SQL");
+    } finally {
+      setExportingFullSQL(false);
+    }
+  };
+
+  const importFullBackup = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setImportingFull(true);
+    try {
+      const content = await file.text();
+      let backup;
+
+      try {
+        backup = JSON.parse(content);
+      } catch {
+        throw new Error("Fichier JSON invalide");
+      }
+
+      if (backup.type !== "full_system_backup") {
+        throw new Error("Ce n'est pas une sauvegarde système complète. Utilisez l'import JSON standard pour les configs.");
+      }
+
+      let importedCount = 0;
+      const errors: string[] = [];
+
+      // 1. Countries
+      if (backup.countries?.length > 0) {
+        try {
+          const { error } = await supabase.from("countries").upsert(
+            backup.countries.map((c: any) => ({
+              name: c.name,
+              code: c.code,
+              phone_prefix: c.phone_prefix,
+              currency: c.currency,
+              is_active: c.is_active ?? false,
+            })),
+            { onConflict: "code" }
+          );
+          if (error) throw error;
+          importedCount += backup.countries.length;
+        } catch (e: any) {
+          errors.push(`Countries: ${e.message}`);
+        }
+      }
+
+      // 2. Plans
+      if (backup.plans?.length > 0) {
+        try {
+          const { error } = await supabase.from("subscription_plans").upsert(
+            backup.plans.map((p: any) => ({
+              name: p.name,
+              price: p.price ?? 0,
+              duration_days: p.duration_days ?? 30,
+              currency: p.currency ?? 'XOF',
+              features: p.features ?? [],
+              is_active: p.is_active ?? true,
+              sort_order: p.sort_order ?? 0,
+              description: p.description ?? '',
+              max_clients: p.max_clients ?? null,
+              max_sales_per_day: p.max_sales_per_day ?? null,
+            })),
+            { onConflict: "name" }
+          );
+          if (error) throw error;
+          importedCount += backup.plans.length;
+        } catch (e: any) {
+          errors.push(`Plans: ${e.message}`);
+        }
+      }
+
+      // 3. Features
+      if (backup.features?.length > 0) {
+        try {
+          const { error } = await supabase.from("feature_flags").upsert(
+            backup.features.map((f: any) => ({
+              feature_key: f.feature_key,
+              name: f.name,
+              description: f.description ?? '',
+              is_globally_enabled: f.is_globally_enabled ?? true,
+              min_plan_required: f.min_plan_required ?? null,
+              depends_on: f.depends_on ?? [],
+              category: f.category ?? 'secondary',
+              sort_order: f.sort_order ?? 0,
+              is_beta: f.is_beta ?? false,
+              current_version: f.current_version ?? '1.0.0',
+            })),
+            { onConflict: "feature_key" }
+          );
+          if (error) throw error;
+          importedCount += backup.features.length;
+        } catch (e: any) {
+          errors.push(`Features: ${e.message}`);
+        }
+      }
+
+      // 4. Roadmap
+      if (backup.roadmap?.length > 0) {
+        try {
+          const { error } = await supabase.from("roadmap_items").upsert(
+            backup.roadmap.map((r: any) => ({
+              title: r.title,
+              description: r.description ?? '',
+              category: r.category ?? 'feature',
+              status: r.status ?? 'backlog',
+              priority: r.priority ?? 'medium',
+              target_version: r.target_version ?? null,
+              estimated_effort: r.estimated_effort ?? null,
+            })),
+            { onConflict: "title" }
+          );
+          if (error) throw error;
+          importedCount += backup.roadmap.length;
+        } catch (e: any) {
+          errors.push(`Roadmap: ${e.message}`);
+        }
+      }
+
+      // 5. Commissions
+      if (backup.commissions?.length > 0) {
+        try {
+          const { error } = await supabase.from("commissions").upsert(
+            backup.commissions.map((c: any) => ({
+              name: c.name,
+              type: c.type ?? 'percentage',
+              value: c.value ?? 0,
+              applies_to: c.applies_to ?? 'all_sales',
+              is_active: c.is_active ?? true,
+            })),
+            { onConflict: "name" }
+          );
+          if (error) throw error;
+          importedCount += backup.commissions.length;
+        } catch (e: any) {
+          errors.push(`Commissions: ${e.message}`);
+        }
+      }
+
+      // 6. Promo Codes
+      if (backup.promoCodes?.length > 0) {
+        try {
+          const { error } = await supabase.from("promo_codes").upsert(
+            backup.promoCodes.map((p: any) => ({
+              code: p.code,
+              discount_type: p.discount_type ?? 'percentage',
+              discount_value: p.discount_value ?? 0,
+              max_uses: p.max_uses ?? null,
+              used_count: p.used_count ?? 0,
+              valid_from: p.valid_from ?? null,
+              valid_until: p.valid_until ?? null,
+              is_active: p.is_active ?? true,
+              applies_to_plan: p.applies_to_plan ?? null,
+              applies_to_duration: p.applies_to_duration ?? null,
+            })),
+            { onConflict: "code" }
+          );
+          if (error) throw error;
+          importedCount += backup.promoCodes.length;
+        } catch (e: any) {
+          errors.push(`Promo Codes: ${e.message}`);
+        }
+      }
+
+      // 7. Recharge Codes
+      if (backup.rechargeCodes?.length > 0) {
+        try {
+          const { error } = await supabase.from("recharge_codes").upsert(
+            backup.rechargeCodes.map((r: any) => ({
+              code: r.code,
+              plan_id: r.plan_id ?? null,
+              is_used: r.is_used ?? false,
+              expires_at: r.expires_at ?? null,
+              batch_name: r.batch_name ?? null,
+            })),
+            { onConflict: "code" }
+          );
+          if (error) throw error;
+          importedCount += backup.rechargeCodes.length;
+        } catch (e: any) {
+          errors.push(`Recharge Codes: ${e.message}`);
+        }
+      }
+
+      // 8. Regions
+      if (backup.regions?.length > 0) {
+        try {
+          const { error } = await supabase.from("regions").upsert(
+            backup.regions.map((r: any) => ({
+              name: r.name,
+              country_id: r.country_id ?? null,
+              is_active: r.is_active ?? true,
+            })),
+            { onConflict: "name" }
+          );
+          if (error) throw error;
+          importedCount += backup.regions.length;
+        } catch (e: any) {
+          errors.push(`Regions: ${e.message}`);
+        }
+      }
+
+      // 9. Profiles (nécessite que les user_id existent dans auth.users)
+      if (backup.profiles?.length > 0) {
+        let profilesImported = 0;
+        for (const profile of backup.profiles) {
+          try {
+            const { error } = await supabase.from("profiles").upsert({
+              user_id: profile.user_id,
+              shop_name: profile.shop_name,
+              owner_name: profile.owner_name,
+              phone: profile.phone,
+              currency: profile.currency ?? 'XOF',
+              referral_code: profile.referral_code,
+              onboarding_completed: profile.onboarding_completed ?? false,
+              auto_deduct_stock: profile.auto_deduct_stock ?? true,
+              notification_settings: profile.notification_settings ?? {},
+              invoice_settings: profile.invoice_settings ?? {},
+            }, { onConflict: "user_id" });
+            if (!error) profilesImported++;
+          } catch {
+            // Ignore individual profile errors (user may not exist)
+          }
+        }
+        if (profilesImported > 0) {
+          importedCount += profilesImported;
+        } else if (backup.profiles.length > 0) {
+          errors.push(`Profiles: Aucun profil importé (les user_id doivent exister)`);
+        }
+      }
+
+      // 10. User Roles
+      if (backup.userRoles?.length > 0) {
+        let rolesImported = 0;
+        for (const role of backup.userRoles) {
+          try {
+            const { error } = await supabase.from("user_roles").upsert({
+              user_id: role.user_id,
+              role: role.role,
+            }, { onConflict: "user_id,role", ignoreDuplicates: true });
+            if (!error) rolesImported++;
+          } catch {
+            // Ignore individual role errors
+          }
+        }
+        if (rolesImported > 0) {
+          importedCount += rolesImported;
+        }
+      }
+
+      if (errors.length > 0) {
+        toast.warning(`${importedCount} éléments importés avec ${errors.length} avertissement(s): ${errors.slice(0, 3).join(', ')}${errors.length > 3 ? '...' : ''}`);
+      } else {
+        toast.success(`${importedCount} éléments importés avec succès`);
+      }
+
+      fetchStatus();
+    } catch (error) {
+      console.error("Error importing full backup:", error);
+      toast.error(error instanceof Error ? error.message : "Erreur lors de l'import");
+    } finally {
+      setImportingFull(false);
+      if (fullBackupInputRef.current) {
+        fullBackupInputRef.current.value = "";
+      }
+    }
+  };
+
   const StatusBadge = ({ count, expected }: { count: number; expected: number }) => {
     const hasData = count >= expected;
     return (
@@ -654,6 +1084,77 @@ export default function AdminSetup() {
           ))}
         </div>
 
+        {/* Full System Backup Section */}
+        <Card className="border-orange-500/50 bg-orange-500/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <HardDrive className="w-5 h-5 text-orange-500" />
+              Sauvegarde Système Complète
+            </CardTitle>
+            <CardDescription>
+              Export/Import de toutes les données système (config + profiles admin + commissions + codes promo)
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap gap-3">
+              <Button 
+                variant="outline" 
+                onClick={exportFullBackup}
+                disabled={exportingFull}
+                className="border-orange-500/30 hover:bg-orange-500/10"
+              >
+                {exportingFull ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4 mr-2" />
+                )}
+                Export Complet JSON
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={exportFullBackupSQL}
+                disabled={exportingFullSQL}
+                className="border-orange-500/30 hover:bg-orange-500/10"
+              >
+                {exportingFullSQL ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <FileCode className="w-4 h-4 mr-2" />
+                )}
+                Export Complet SQL
+              </Button>
+              <input
+                type="file"
+                ref={fullBackupInputRef}
+                onChange={importFullBackup}
+                accept=".json"
+                className="hidden"
+              />
+              <Button 
+                variant="outline" 
+                onClick={() => fullBackupInputRef.current?.click()}
+                disabled={importingFull}
+                className="border-orange-500/30 hover:bg-orange-500/10"
+              >
+                {importingFull ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Upload className="w-4 h-4 mr-2" />
+                )}
+                Import Complet
+              </Button>
+            </div>
+            <Alert className="border-orange-500/30 bg-orange-500/5">
+              <Shield className="h-4 w-4 text-orange-500" />
+              <AlertDescription className="text-sm">
+                <strong>Tables incluses :</strong> countries, plans, features, roadmap, profiles, user_roles, commissions, promo_codes, recharge_codes, regions
+                <br />
+                <strong className="text-orange-600">⚠️ L'import écrasera les données existantes</strong> si le même identifiant (user_id, code, name) est trouvé.
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>Instructions pour les remixes</CardTitle>
@@ -665,9 +1166,10 @@ export default function AdminSetup() {
               <li>Cliquez sur "Initialiser tout" ou créez chaque section individuellement</li>
               <li>Les données existantes ne seront pas dupliquées (upsert par clé unique)</li>
               <li>Les items de roadmap seront associés à votre compte admin</li>
-              <li><strong>Export JSON :</strong> Sauvegarde complète de la config (features, plans, pays, roadmap)</li>
+              <li><strong>Export JSON :</strong> Config seulement (features, plans, pays, roadmap)</li>
               <li><strong>Export SQL :</strong> Fichier .sql avec INSERT/UPSERT pour migration manuelle</li>
               <li><strong>Import JSON :</strong> Restaurer une configuration sauvegardée</li>
+              <li className="text-orange-600"><strong>Sauvegarde Complète :</strong> Inclut TOUTES les données système (profiles admin, commissions, codes)</li>
             </ol>
           </CardContent>
         </Card>
