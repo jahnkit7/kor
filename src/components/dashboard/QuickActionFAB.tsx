@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, UserPlus, Package, X } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Add01Icon, UserAdd01Icon, Package01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 
 interface QuickActionFABProps {
@@ -15,7 +16,7 @@ const QuickActionFAB = ({ className }: QuickActionFABProps) => {
   const actions = [
     {
       label: "Nouveau client",
-      icon: UserPlus,
+      icon: UserAdd01Icon,
       onClick: () => {
         setIsOpen(false);
         navigate("/clients/new");
@@ -24,7 +25,7 @@ const QuickActionFAB = ({ className }: QuickActionFABProps) => {
     },
     {
       label: "Nouveau produit",
-      icon: Package,
+      icon: Package01Icon,
       onClick: () => {
         setIsOpen(false);
         navigate("/stock");
@@ -80,7 +81,7 @@ const QuickActionFAB = ({ className }: QuickActionFABProps) => {
                         action.color
                       )}
                     >
-                      <action.icon className="w-5 h-5" />
+                      <HugeiconsIcon icon={action.icon} className="w-5 h-5" strokeWidth={1.5} />
                     </div>
                   </motion.button>
                 ))}
@@ -105,11 +106,11 @@ const QuickActionFAB = ({ className }: QuickActionFABProps) => {
               : "0 4px 20px rgba(34, 197, 94, 0.4)",
           }}
         >
-          {isOpen ? (
-            <X className="w-6 h-6 text-white" />
-          ) : (
-            <Plus className="w-7 h-7 text-white" />
-          )}
+          <HugeiconsIcon 
+            icon={isOpen ? Cancel01Icon : Add01Icon} 
+            className="w-6 h-6 text-white" 
+            strokeWidth={2}
+          />
         </motion.button>
       </div>
     </>

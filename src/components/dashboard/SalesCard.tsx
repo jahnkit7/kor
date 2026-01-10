@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
-import { Eye, EyeOff, Store } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Store01Icon, ViewIcon, ViewOffSlashIcon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 
 interface SalesCardProps {
@@ -37,7 +38,7 @@ const SalesCard = ({
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#4f7df3] to-[#3b6ce8] flex items-center justify-center">
-            <Store className="w-5 h-5 text-white" />
+            <HugeiconsIcon icon={Store01Icon} className="w-5 h-5 text-white" strokeWidth={1.5} />
           </div>
           <div>
             <p className="text-sm font-semibold text-[#2d3748]">{shopName}</p>
@@ -67,11 +68,11 @@ const SalesCard = ({
           onClick={onToggleHide}
           className="w-10 h-10 rounded-full bg-[#f8f9ff] flex items-center justify-center hover:bg-[#eef1fb] transition-colors"
         >
-          {hideAmounts ? (
-            <EyeOff className="w-5 h-5 text-[#718096]" />
-          ) : (
-            <Eye className="w-5 h-5 text-[#718096]" />
-          )}
+          <HugeiconsIcon 
+            icon={hideAmounts ? ViewOffSlashIcon : ViewIcon} 
+            className="w-5 h-5 text-[#718096]" 
+            strokeWidth={1.5}
+          />
         </button>
       </div>
 

@@ -1,4 +1,5 @@
-import { Bell } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Notification03Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -16,7 +17,7 @@ export function NotificationBell() {
     <Popover>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
+          <HugeiconsIcon icon={Notification03Icon} className="h-5 w-5" strokeWidth={1.5} />
           {unreadCount > 0 && (
             <Badge 
               variant="destructive" 
