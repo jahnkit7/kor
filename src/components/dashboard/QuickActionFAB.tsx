@@ -94,16 +94,16 @@ const QuickActionFAB = ({ className, inline = false }: QuickActionFABProps) => {
           )}
         </AnimatePresence>
 
-        {/* Main FAB Button */}
+        {/* Main FAB Button - Taille responsive avec clamp() */}
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.9 }}
           onClick={() => setIsOpen(!isOpen)}
           className={cn(
-            "flex items-center justify-center shadow-lg transition-all z-50",
+            "flex items-center justify-center shadow-lg transition-all z-50 rounded-full",
             inline 
-              ? "w-12 h-12 rounded-full" 
-              : "w-14 h-14 rounded-full",
+              ? "w-[clamp(2.75rem,10vw,3.25rem)] h-[clamp(2.75rem,10vw,3.25rem)]" 
+              : "w-14 h-14",
             isOpen
               ? "bg-[#718096]"
               : "bg-gradient-to-br from-[#22c55e] to-[#16a34a]"
@@ -120,7 +120,12 @@ const QuickActionFAB = ({ className, inline = false }: QuickActionFABProps) => {
           >
             <HugeiconsIcon 
               icon={isOpen ? Cancel01Icon : Add01Icon} 
-              className={inline ? "w-5 h-5 text-white" : "w-6 h-6 text-white"}
+              className={cn(
+                "text-white",
+                inline 
+                  ? "w-[clamp(1.125rem,4vw,1.375rem)] h-[clamp(1.125rem,4vw,1.375rem)]" 
+                  : "w-6 h-6"
+              )}
               strokeWidth={2}
             />
           </motion.div>
