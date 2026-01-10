@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface SubscriptionPlan {
@@ -15,16 +16,6 @@ export interface SubscriptionPlan {
   sort_order?: number;
 }
 
-// Features par plan (à synchroniser avec la base de données)
-const planFeaturesMap: Record<string, string[]> = {
-  gratuit: ["sales", "stock", "clients", "debts"],
-  free_trial: ["sales", "stock", "clients", "debts", "reports", "employees"],
-  starter: ["sales", "stock", "clients", "debts", "reports", "employees", "voice_input"],
-  premium: ["sales", "stock", "clients", "debts", "reports", "employees", "voice_input", "network", "analytics"],
-  annuel: ["sales", "stock", "clients", "debts", "reports", "employees", "voice_input", "network", "analytics"],
-  "annuel premium": ["sales", "stock", "clients", "debts", "reports", "employees", "voice_input", "network", "analytics"],
-};
-
 export function useSubscriptionPlans() {
   const query = useQuery({
     queryKey: ["subscription-plans"],
@@ -38,8 +29,20 @@ export function useSubscriptionPlans() {
       if (error) throw error;
       return data as SubscriptionPlan[];
     },
-    staleTime: 10 * 60 * 1000, // Cache for 10 minutes
+    staleTime: 2 * 60 * 1000, // Cache 2 minutes pour réactivité aux changements admin
   });
+
+  // Créer dynamiquement le map des features depuis les données de la BDD
+  const planFeaturesMap = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    for (const plan of query.data || []) {
+      const planName = plan.name?.toLowerCase() || "";
+      // features est stocké comme JSON array dans Supabase
+      const features = Array.isArray(plan.features) ? plan.features : [];
+      map[planName] = features.map((f: unknown) => String(f));
+    }
+    return map;
+  }, [query.data]);
 
   const getPlanFeatures = (planName: string | undefined | null): string[] => {
     if (!planName) return [];
@@ -58,6 +61,7 @@ export function useSubscriptionPlans() {
     error: query.error,
     getPlanFeatures,
     isPlanFeature,
+    planFeaturesMap,
     refetch: query.refetch,
   };
 }
