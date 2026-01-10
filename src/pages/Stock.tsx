@@ -159,14 +159,14 @@ export default function Stock() {
     <FeatureGate featureKey="stock" showUpgradePrompt>
     <AppLayout>
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-background border-b">
+      <header className="sticky top-0 z-10 bg-gradient-to-b from-[#f8f9ff] to-white border-b">
         <div className="flex items-center gap-4 p-4">
           <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-5 w-5 text-[#2d3748]" />
           </Button>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold">Stock</h1>
+              <h1 className="text-xl font-bold text-[#2d3748]">Stock</h1>
               {/* Sync Status Badge */}
               {unsyncedCount > 0 && (
                 <Badge variant="destructive" className="gap-1 text-xs">

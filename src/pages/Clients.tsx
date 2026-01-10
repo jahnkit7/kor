@@ -55,7 +55,7 @@ const Clients = () => {
     <AppLayout>
       <FeatureGate featureKey="clients" showUpgradePrompt>
       {/* Header */}
-      <div className="bg-card px-4 pt-4 pb-6 border-b border-border">
+      <div className="bg-gradient-to-b from-[#f8f9ff] to-white px-4 pt-4 pb-6 border-b border-border">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
             <Button
@@ -63,9 +63,9 @@ const Clients = () => {
               size="icon"
               onClick={() => navigate("/dashboard")}
             >
-              <ArrowLeft className="w-6 h-6" />
+              <ArrowLeft className="w-6 h-6 text-[#2d3748]" />
             </Button>
-            <h1 className="text-xl font-bold">Clients</h1>
+            <h1 className="text-xl font-bold text-[#2d3748]">Clients</h1>
           </div>
           <Button
             variant="action"

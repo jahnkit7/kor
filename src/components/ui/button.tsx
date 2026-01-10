@@ -9,16 +9,16 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground shadow-button hover:bg-primary/90",
+        default: "bg-gradient-to-r from-[#4f7df3] via-[#5b8af5] to-[#3b6ce8] text-white shadow-lg shadow-[#4f7df3]/25 hover:opacity-90",
         destructive: "bg-destructive text-destructive-foreground shadow-button hover:bg-destructive/90",
-        outline: "border-2 border-primary bg-transparent text-primary hover:bg-primary hover:text-primary-foreground",
+        outline: "border-2 border-[#4f7df3] bg-transparent text-[#4f7df3] hover:bg-[#4f7df3] hover:text-white",
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-secondary hover:text-secondary-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
+        link: "text-[#4f7df3] underline-offset-4 hover:underline",
         // CAISSE+ specific variants
         cash: "gradient-cash text-cash-foreground shadow-button hover:opacity-90",
         credit: "gradient-credit text-credit-foreground shadow-button hover:opacity-90",
-        action: "bg-accent text-accent-foreground shadow-glow hover:bg-accent/90",
+        action: "bg-gradient-to-r from-[#4f7df3] via-[#5b8af5] to-[#3b6ce8] text-white shadow-lg shadow-[#4f7df3]/25 hover:opacity-90",
         muted: "bg-muted text-muted-foreground hover:bg-muted/80",
       },
       size: {
