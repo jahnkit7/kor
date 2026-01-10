@@ -24,6 +24,7 @@ import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import Stock from "./pages/Stock";
 import SalesHistory from "./pages/SalesHistory";
+import InvoiceHistory from "./pages/InvoiceHistory";
 import EmployeeManagement from "./pages/EmployeeManagement";
 import AcceptInvite from "./pages/AcceptInvite";
 import Network from "./pages/Network";
@@ -177,6 +178,16 @@ const App = () => (
                 <RequireProfile>
                   <RequireSubscription>
                     <SalesHistory />
+                  </RequireSubscription>
+                </RequireProfile>
+              }
+            />
+            <Route
+              path="/invoices"
+              element={
+                <RequireProfile>
+                  <RequireSubscription>
+                    <InvoiceHistory />
                   </RequireSubscription>
                 </RequireProfile>
               }

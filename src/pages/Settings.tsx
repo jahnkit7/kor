@@ -22,7 +22,8 @@ import {
   Gift,
   Bell,
   Package,
-  Database
+  Database,
+  FileText
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { OwnerBadge, RoleBadge } from "@/components/RoleBadge";
@@ -40,6 +41,7 @@ import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { NotificationSettings } from "@/components/settings/NotificationSettings";
 import { CommissionPayment } from "@/components/settings/CommissionPayment";
 import { CacheManagement } from "@/components/settings/CacheManagement";
+import { InvoiceCustomization } from "@/components/settings/InvoiceCustomization";
 import { toast } from "sonner";
 
 const Settings = () => {
@@ -321,6 +323,34 @@ const Settings = () => {
           </p>
           <CacheManagement />
         </div>
+
+        {/* Invoice Customization */}
+        {canChangeSettings && (
+          <div>
+            <p className="text-sm font-semibold text-muted-foreground mb-3 px-1">
+              <FileText className="inline w-4 h-4 mr-1" />
+              Factures
+            </p>
+            <InvoiceCustomization />
+            <Card className="mt-3">
+              <CardContent className="p-0">
+                <button
+                  className="w-full flex items-center gap-4 p-4 text-left hover:bg-secondary/50 transition-colors"
+                  onClick={() => navigate("/invoices")}
+                >
+                  <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-foreground">Historique des factures</p>
+                    <p className="text-sm text-muted-foreground">Voir les factures générées</p>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                </button>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Theme / Appearance */}
         <div>

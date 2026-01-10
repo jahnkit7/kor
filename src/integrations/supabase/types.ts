@@ -985,6 +985,7 @@ export type Database = {
           currency: string
           hide_amounts: boolean | null
           id: string
+          invoice_settings: Json | null
           language: string
           linked_owner_id: string | null
           notification_settings: Json | null
@@ -1005,6 +1006,7 @@ export type Database = {
           currency?: string
           hide_amounts?: boolean | null
           id?: string
+          invoice_settings?: Json | null
           language?: string
           linked_owner_id?: string | null
           notification_settings?: Json | null
@@ -1025,6 +1027,7 @@ export type Database = {
           currency?: string
           hide_amounts?: boolean | null
           id?: string
+          invoice_settings?: Json | null
           language?: string
           linked_owner_id?: string | null
           notification_settings?: Json | null
@@ -1349,6 +1352,71 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      saved_invoices: {
+        Row: {
+          created_at: string
+          currency: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          html_content: string | null
+          id: string
+          invoice_date: string
+          invoice_number: string
+          items: Json
+          note: string | null
+          payment_type: string
+          sale_id: string | null
+          style: string
+          subtotal: number
+          total: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          html_content?: string | null
+          id?: string
+          invoice_date: string
+          invoice_number: string
+          items?: Json
+          note?: string | null
+          payment_type: string
+          sale_id?: string | null
+          style?: string
+          subtotal?: number
+          total?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          html_content?: string | null
+          id?: string
+          invoice_date?: string
+          invoice_number?: string
+          items?: Json
+          note?: string | null
+          payment_type?: string
+          sale_id?: string | null
+          style?: string
+          subtotal?: number
+          total?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_invoices_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
             referencedColumns: ["id"]
           },
         ]
