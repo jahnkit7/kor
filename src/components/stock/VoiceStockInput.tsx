@@ -579,13 +579,33 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
     if (items.length === 0) return;
 
     setIsSubmitting(true);
+    console.log("[VoiceStockInput] Submitting", items.length, "items");
+    
     try {
-      const stockItems: NewStockItem[] = items.map(({ tempId, isEditing, confidence, ...item }) => item);
+      const stockItems: NewStockItem[] = items.map(({ tempId, isEditing, confidence, ...item }) => ({
+        name: item.name,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        model: item.model || null,
+        source: item.source || "voice",
+      }));
+      
+      console.log("[VoiceStockInput] Stock items to add:", stockItems);
+      
       await onComplete(stockItems);
-      toast({ title: "Stock ajouté", description: `${stockItems.length} produit(s) enregistré(s).` });
+      
+      toast({ 
+        title: "Stock ajouté", 
+        description: `${stockItems.length} produit(s) enregistré(s). Vérifiez la liste.` 
+      });
     } catch (error) {
-      console.error("Error completing stock:", error);
-      toast({ title: "Erreur", description: "Impossible d'ajouter le stock", variant: "destructive" });
+      console.error("[VoiceStockInput] Error completing stock:", error);
+      const errorMessage = error instanceof Error ? error.message : "Erreur inconnue";
+      toast({ 
+        title: "Erreur d'enregistrement", 
+        description: `Impossible d'ajouter le stock: ${errorMessage}`, 
+        variant: "destructive" 
+      });
     } finally {
       setIsSubmitting(false);
     }
