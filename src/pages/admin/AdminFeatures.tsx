@@ -1,49 +1,37 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { useAdminFeatureFlags } from "@/hooks/use-admin-stats";
-import { BentoGrid } from "@/components/admin/BentoGrid";
-import { BentoCard } from "@/components/admin/BentoCard";
-import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { FeatureDependencyGraph } from "@/components/admin/FeatureDependencyGraph";
+import { DraggableFeatureCard } from "@/components/admin/DraggableFeatureCard";
 import { 
-  ToggleLeft, 
-  ShoppingCart, 
-  Package, 
-  Users, 
-  CreditCard, 
-  BarChart3, 
-  Globe, 
-  Mic, 
-  Brain, 
-  UserCog,
+  DndContext, 
+  closestCenter, 
+  KeyboardSensor, 
+  PointerSensor, 
+  useSensor, 
+  useSensors,
+  DragEndEvent,
+  DragOverEvent,
+  DragStartEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+} from '@dnd-kit/sortable';
+import { 
   Link,
-  AlertTriangle,
   Grid3X3,
-  GitBranch
+  GitBranch,
+  Star,
+  Sparkles
 } from "lucide-react";
-
-const featureIcons: Record<string, React.ReactNode> = {
-  sales: <ShoppingCart className="w-5 h-5" />,
-  stock: <Package className="w-5 h-5" />,
-  clients: <Users className="w-5 h-5" />,
-  debts: <CreditCard className="w-5 h-5" />,
-  reports: <BarChart3 className="w-5 h-5" />,
-  network: <Globe className="w-5 h-5" />,
-  voice_input: <Mic className="w-5 h-5" />,
-  ai_analysis: <Brain className="w-5 h-5" />,
-  employees: <UserCog className="w-5 h-5" />,
-};
-
-const planColors: Record<string, string> = {
-  starter: "bg-amber-500/10 text-amber-600 border-amber-500/20",
-  premium: "bg-violet-500/10 text-violet-600 border-violet-500/20",
-};
 
 interface FeatureFlag {
   id: string;
@@ -55,31 +43,59 @@ interface FeatureFlag {
   depends_on: string[] | null;
   enabled_for_users: string[] | null;
   disabled_countries: string[] | null;
+  category?: string | null;
+  sort_order?: number | null;
 }
 
 export default function AdminFeatures() {
   const { data: features, isLoading } = useAdminFeatureFlags();
   const queryClient = useQueryClient();
   const [togglingFeatures, setTogglingFeatures] = useState<Set<string>>(new Set());
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const typedFeatures = features as FeatureFlag[] | undefined;
+
+  // Séparer les features par catégorie
+  const { primaryFeatures, secondaryFeatures } = useMemo(() => {
+    if (!typedFeatures) return { primaryFeatures: [], secondaryFeatures: [] };
+    
+    const primary = typedFeatures
+      .filter(f => f.category === 'primary')
+      .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+    
+    const secondary = typedFeatures
+      .filter(f => f.category !== 'primary')
+      .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+    
+    return { primaryFeatures: primary, secondaryFeatures: secondary };
+  }, [typedFeatures]);
 
   const getFeatureByKey = (key: string) => {
-    return (features as FeatureFlag[] | undefined)?.find(f => f.feature_key === key);
+    return typedFeatures?.find(f => f.feature_key === key);
   };
 
   const getDependentFeatures = (featureKey: string): FeatureFlag[] => {
-    return ((features as FeatureFlag[] | undefined) || []).filter(f => 
+    return (typedFeatures || []).filter(f => 
       f.depends_on?.includes(featureKey)
     );
   };
 
   const toggleFeatureWithCascade = async (feature: FeatureFlag) => {
     const newStatus = !feature.is_globally_enabled;
-    
-    // Si on désactive, trouver toutes les features dépendantes à désactiver aussi
     const featuresToUpdate: string[] = [feature.id];
     
     if (!newStatus) {
-      // Désactivation: cascade vers les dépendances
       const findAllDependents = (key: string): string[] => {
         const dependents = getDependentFeatures(key);
         let allIds = dependents.map(d => d.id);
@@ -92,7 +108,6 @@ export default function AdminFeatures() {
       const dependentIds = findAllDependents(feature.feature_key);
       featuresToUpdate.push(...dependentIds);
     } else {
-      // Activation: vérifier que les dépendances sont activées
       if (feature.depends_on && feature.depends_on.length > 0) {
         for (const depKey of feature.depends_on) {
           const dep = getFeatureByKey(depKey);
@@ -104,7 +119,6 @@ export default function AdminFeatures() {
       }
     }
 
-    // Marquer comme en cours de modification
     setTogglingFeatures(prev => new Set([...prev, ...featuresToUpdate]));
 
     try {
@@ -133,7 +147,112 @@ export default function AdminFeatures() {
     }
   };
 
-  const typedFeatures = features as FeatureFlag[] | undefined;
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+    
+    if (!over || active.id === over.id) return;
+
+    const activeFeature = typedFeatures?.find(f => f.id === active.id);
+    const overFeature = typedFeatures?.find(f => f.id === over.id);
+    
+    if (!activeFeature || !overFeature) return;
+
+    // Déterminer la nouvelle catégorie
+    const newCategory = overFeature.category || 'secondary';
+    const categoryChanged = activeFeature.category !== newCategory;
+    
+    // Récupérer les features de la catégorie cible
+    const targetFeatures = newCategory === 'primary' ? [...primaryFeatures] : [...secondaryFeatures];
+    
+    // Si la catégorie change, retirer de l'ancienne liste
+    if (categoryChanged) {
+      const sourceFeatures = activeFeature.category === 'primary' ? primaryFeatures : secondaryFeatures;
+      const filteredSource = sourceFeatures.filter(f => f.id !== active.id);
+      
+      // Mettre à jour les sort_order de la liste source
+      const sourceUpdates = filteredSource.map((f, index) => ({
+        id: f.id,
+        sort_order: index,
+        category: f.category,
+      }));
+      
+      // Insérer dans la nouvelle liste à la position de over
+      const overIndex = targetFeatures.findIndex(f => f.id === over.id);
+      const newList = [...targetFeatures];
+      newList.splice(overIndex, 0, { ...activeFeature, category: newCategory });
+      
+      // Mettre à jour les sort_order de la liste cible
+      const targetUpdates = newList.map((f, index) => ({
+        id: f.id,
+        sort_order: index,
+        category: newCategory,
+      }));
+      
+      // Combiner les mises à jour
+      const allUpdates = [...sourceUpdates, ...targetUpdates];
+      
+      // Appliquer les mises à jour
+      try {
+        for (const update of allUpdates) {
+          await supabase
+            .from("feature_flags")
+            .update({ sort_order: update.sort_order, category: update.category })
+            .eq("id", update.id);
+        }
+        
+        queryClient.invalidateQueries({ queryKey: ["admin-feature-flags"] });
+        toast.success("Ordre mis à jour");
+      } catch (error) {
+        console.error("Error updating order:", error);
+        toast.error("Erreur lors de la mise à jour");
+      }
+    } else {
+      // Même catégorie, juste réordonner
+      const oldIndex = targetFeatures.findIndex(f => f.id === active.id);
+      const newIndex = targetFeatures.findIndex(f => f.id === over.id);
+      
+      if (oldIndex === -1 || newIndex === -1) return;
+      
+      const reorderedList = arrayMove(targetFeatures, oldIndex, newIndex);
+      
+      try {
+        for (let i = 0; i < reorderedList.length; i++) {
+          await supabase
+            .from("feature_flags")
+            .update({ sort_order: i })
+            .eq("id", reorderedList[i].id);
+        }
+        
+        queryClient.invalidateQueries({ queryKey: ["admin-feature-flags"] });
+        toast.success("Ordre mis à jour");
+      } catch (error) {
+        console.error("Error updating order:", error);
+        toast.error("Erreur lors de la mise à jour");
+      }
+    }
+  };
+
+  const renderFeatureCard = (feature: FeatureFlag) => {
+    const dependents = getDependentFeatures(feature.feature_key);
+    const isToggling = togglingFeatures.has(feature.id);
+    const dependenciesNames = feature.depends_on?.map(k => getFeatureByKey(k)?.name) || [];
+    
+    return (
+      <DraggableFeatureCard
+        key={feature.id}
+        feature={feature}
+        dependentsCount={dependents.length}
+        dependenciesNames={dependenciesNames}
+        isToggling={isToggling}
+        onToggle={() => toggleFeatureWithCascade(feature)}
+      />
+    );
+  };
 
   return (
     <AdminLayout>
@@ -142,7 +261,7 @@ export default function AdminFeatures() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Fonctionnalités</h1>
           <p className="text-muted-foreground">
-            Activez/désactivez les features avec gestion des dépendances
+            Activez/désactivez les features avec gestion des dépendances. Glissez-déposez pour réorganiser.
           </p>
         </div>
 
@@ -151,11 +270,11 @@ export default function AdminFeatures() {
           <Link className="w-5 h-5 text-primary mt-0.5" />
           <div>
             <p className="text-sm font-medium text-foreground">
-              Système de dépendances actif
+              Système de dépendances et catégories
             </p>
             <p className="text-xs text-muted-foreground mt-1">
               Désactiver une feature parent désactivera automatiquement ses dépendances. 
-              Par exemple, désactiver "Clients" désactivera aussi "Créances".
+              Glissez les features entre catégories (Primaires/Secondaires) pour les réorganiser.
             </p>
           </div>
         </div>
@@ -165,7 +284,7 @@ export default function AdminFeatures() {
           <TabsList>
             <TabsTrigger value="grid" className="gap-2">
               <Grid3X3 className="w-4 h-4" />
-              Grille
+              Catégories
             </TabsTrigger>
             <TabsTrigger value="graph" className="gap-2">
               <GitBranch className="w-4 h-4" />
@@ -175,92 +294,77 @@ export default function AdminFeatures() {
 
           <TabsContent value="grid">
             {isLoading ? (
-              <BentoGrid columns={3}>
-                {[...Array(9)].map((_, i) => (
-                  <Skeleton key={i} className="h-40 rounded-2xl" />
-                ))}
-              </BentoGrid>
+              <div className="space-y-8">
+                <div>
+                  <Skeleton className="h-6 w-40 mb-4" />
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {[...Array(5)].map((_, i) => (
+                      <Skeleton key={i} className="h-48 rounded-2xl" />
+                    ))}
+                  </div>
+                </div>
+              </div>
             ) : (
-              <BentoGrid columns={3}>
-                {typedFeatures?.map((feature) => {
-                  const dependents = getDependentFeatures(feature.feature_key);
-                  const isToggling = togglingFeatures.has(feature.id);
-                  const dependenciesNames = feature.depends_on?.map(k => getFeatureByKey(k)?.name).filter(Boolean);
-                  
-                  return (
-                    <BentoCard 
-                      key={feature.id}
-                      className={`transition-all duration-300 ${
-                        !feature.is_globally_enabled ? "opacity-50 grayscale" : ""
-                      } ${isToggling ? "animate-pulse" : ""}`}
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+              >
+                <div className="space-y-8">
+                  {/* Features Primaires */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-4">
+                      <Star className="w-5 h-5 text-amber-500" />
+                      <h2 className="text-lg font-semibold text-foreground">
+                        Features Primaires
+                      </h2>
+                      <span className="text-sm text-muted-foreground">
+                        (Obligatoires pour l'appli)
+                      </span>
+                    </div>
+                    <SortableContext
+                      items={primaryFeatures.map(f => f.id)}
+                      strategy={rectSortingStrategy}
                     >
-                      <div className="flex flex-col h-full">
-                        {/* Header */}
-                        <div className="flex items-start justify-between mb-3">
-                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                            feature.is_globally_enabled 
-                              ? "bg-primary/10 text-primary" 
-                              : "bg-muted text-muted-foreground"
-                          }`}>
-                            {featureIcons[feature.feature_key] || <ToggleLeft className="w-5 h-5" />}
-                          </div>
-                          <Switch
-                            checked={feature.is_globally_enabled}
-                            onCheckedChange={() => toggleFeatureWithCascade(feature)}
-                            disabled={isToggling}
-                          />
-                        </div>
-
-                        {/* Title & Description */}
-                        <h3 className="font-semibold text-foreground">{feature.name}</h3>
-                        <p className="text-sm text-muted-foreground mt-1 flex-1">
-                          {feature.description}
-                        </p>
-
-                        {/* Dependencies */}
-                        {dependenciesNames && dependenciesNames.length > 0 && (
-                          <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-                            <Link className="w-3 h-3" />
-                            <span>Dépend de: {dependenciesNames.join(", ")}</span>
-                          </div>
-                        )}
-
-                        {/* Dependents Warning */}
-                        {dependents.length > 0 && feature.is_globally_enabled && (
-                          <div className="mt-2 flex items-center gap-2 text-xs text-amber-600">
-                            <AlertTriangle className="w-3 h-3" />
-                            <span>
-                              {dependents.length} feature{dependents.length > 1 ? "s" : ""} dépendante{dependents.length > 1 ? "s" : ""}
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Badges */}
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          {feature.min_plan_required && (
-                            <Badge 
-                              variant="outline" 
-                              className={planColors[feature.min_plan_required] || ""}
-                            >
-                              Min: {feature.min_plan_required}
-                            </Badge>
-                          )}
-                          {feature.enabled_for_users && feature.enabled_for_users.length > 0 && (
-                            <Badge variant="secondary" className="text-xs">
-                              +{feature.enabled_for_users.length} users
-                            </Badge>
-                          )}
-                          {feature.disabled_countries && feature.disabled_countries.length > 0 && (
-                            <Badge variant="destructive" className="text-xs">
-                              -{feature.disabled_countries.length} pays
-                            </Badge>
-                          )}
-                        </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        {primaryFeatures.map(renderFeatureCard)}
                       </div>
-                    </BentoCard>
-                  );
-                })}
-              </BentoGrid>
+                    </SortableContext>
+                    {primaryFeatures.length === 0 && (
+                      <div className="border-2 border-dashed border-muted rounded-2xl p-8 text-center text-muted-foreground">
+                        Glissez des features ici pour les marquer comme primaires
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Features Secondaires */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-4">
+                      <Sparkles className="w-5 h-5 text-violet-500" />
+                      <h2 className="text-lg font-semibold text-foreground">
+                        Features Secondaires
+                      </h2>
+                      <span className="text-sm text-muted-foreground">
+                        (Valeur ajoutée)
+                      </span>
+                    </div>
+                    <SortableContext
+                      items={secondaryFeatures.map(f => f.id)}
+                      strategy={rectSortingStrategy}
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        {secondaryFeatures.map(renderFeatureCard)}
+                      </div>
+                    </SortableContext>
+                    {secondaryFeatures.length === 0 && (
+                      <div className="border-2 border-dashed border-muted rounded-2xl p-8 text-center text-muted-foreground">
+                        Glissez des features ici pour les marquer comme secondaires
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </DndContext>
             )}
           </TabsContent>
 

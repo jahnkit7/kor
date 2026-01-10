@@ -225,13 +225,16 @@ export function useAdminFeatureFlags() {
       const { data, error } = await supabase
         .from("feature_flags")
         .select("*")
-        .order("feature_key");
+        .order("category")
+        .order("sort_order");
 
       if (error) throw error;
       // Ensure depends_on is always an array
       return data?.map(f => ({
         ...f,
         depends_on: f.depends_on || [],
+        category: f.category || 'secondary',
+        sort_order: f.sort_order ?? 0,
       }));
     },
   });
