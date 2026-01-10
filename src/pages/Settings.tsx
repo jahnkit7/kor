@@ -34,6 +34,7 @@ import { ActivateCodeDialog } from "@/components/settings/ActivateCodeDialog";
 import { SubscriptionManagement } from "@/components/settings/SubscriptionManagement";
 import { ReferralSection } from "@/components/settings/ReferralSection";
 import { DeleteAccountDialog } from "@/components/settings/DeleteAccountDialog";
+import { FeatureGate } from "@/components/FeatureGate";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { NotificationSettings } from "@/components/settings/NotificationSettings";
 import { CommissionPayment } from "@/components/settings/CommissionPayment";
@@ -152,16 +153,20 @@ const Settings = () => {
         </div>
 
         {/* Commission Payment (only shows if user has balance) */}
-        <CommissionPayment />
+        <FeatureGate featureKey="commission_payment" silentFail>
+          <CommissionPayment />
+        </FeatureGate>
 
         {/* Referral Section */}
-        <div>
-          <p className="text-sm font-semibold text-muted-foreground mb-3 px-1">
-            <Gift className="inline w-4 h-4 mr-1" />
-            Parrainage
-          </p>
-          <ReferralSection />
-        </div>
+        <FeatureGate featureKey="referrals" showUpgradePrompt>
+          <div>
+            <p className="text-sm font-semibold text-muted-foreground mb-3 px-1">
+              <Gift className="inline w-4 h-4 mr-1" />
+              Parrainage
+            </p>
+            <ReferralSection />
+          </div>
+        </FeatureGate>
 
         {/* Role Display */}
         <Card>

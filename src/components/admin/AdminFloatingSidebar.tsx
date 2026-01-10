@@ -16,7 +16,8 @@ import {
   TrendingUp,
   Gift,
   Bell,
-  Map
+  Map,
+  Database
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -41,6 +42,7 @@ const support = [
   { to: "/admin/notifications", icon: Bell, label: "Notifications" },
   { to: "/admin/support", icon: MessageSquare, label: "Support" },
   { to: "/admin/logs", icon: FileText, label: "Logs" },
+  { to: "/admin/setup", icon: Database, label: "Config. Initiale" },
 ];
 
 interface NavItemProps {
