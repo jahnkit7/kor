@@ -1,5 +1,5 @@
 import { openDB, DBSchema, IDBPDatabase } from "idb";
-import type { Client, Sale, SaleItem, Debt, Payment, StockItem, SyncQueueItem, AppSettings } from "./types";
+import type { Client, Sale, SaleItem, Debt, Payment, StockItem, SyncQueueItem, AppSettings, AudioRecording, ProductDictionary } from "./types";
 
 interface CaissePlusDB extends DBSchema {
   clients: {
@@ -41,10 +41,20 @@ interface CaissePlusDB extends DBSchema {
     key: string;
     value: AppSettings;
   };
+  audio_recordings: {
+    key: string;
+    value: AudioRecording;
+    indexes: { "by-synced": number; "by-type": string };
+  };
+  product_dictionary: {
+    key: string;
+    value: ProductDictionary;
+    indexes: { "by-name": string; "by-category": string };
+  };
 }
 
 const DB_NAME = "caisse-plus-db";
-const DB_VERSION = 2; // Increment version for new stores
+const DB_VERSION = 3; // Increment version for new stores
 
 let dbInstance: IDBPDatabase<CaissePlusDB> | null = null;
 
@@ -106,6 +116,20 @@ export async function getDB(): Promise<IDBPDatabase<CaissePlusDB>> {
       // Settings store
       if (!db.objectStoreNames.contains("settings")) {
         db.createObjectStore("settings", { keyPath: "shopName" });
+      }
+
+      // Audio recordings store (for offline deferred transcription)
+      if (!db.objectStoreNames.contains("audio_recordings")) {
+        const audioStore = db.createObjectStore("audio_recordings", { keyPath: "id" });
+        audioStore.createIndex("by-synced", "synced");
+        audioStore.createIndex("by-type", "type");
+      }
+
+      // Product dictionary store (for local parsing)
+      if (!db.objectStoreNames.contains("product_dictionary")) {
+        const dictStore = db.createObjectStore("product_dictionary", { keyPath: "id" });
+        dictStore.createIndex("by-name", "name");
+        dictStore.createIndex("by-category", "category");
       }
     },
   });
@@ -439,4 +463,92 @@ export async function getDashboardStats() {
     clientsWithDebts,
     totalClients: clients.length,
   };
+}
+
+// Audio recording operations (for deferred offline transcription)
+export async function addAudioRecording(recording: Omit<AudioRecording, "id" | "createdAt" | "synced">): Promise<AudioRecording> {
+  const db = await getDB();
+  const newRecording: AudioRecording = {
+    ...recording,
+    id: generateId(),
+    createdAt: new Date().toISOString(),
+    synced: false,
+  };
+  await db.put("audio_recordings", newRecording);
+  return newRecording;
+}
+
+export async function getAudioRecordings(): Promise<AudioRecording[]> {
+  const db = await getDB();
+  return db.getAll("audio_recordings");
+}
+
+export async function getPendingAudioRecordings(): Promise<AudioRecording[]> {
+  const db = await getDB();
+  const all = await db.getAll("audio_recordings");
+  return all.filter(r => !r.synced);
+}
+
+export async function updateAudioRecording(id: string, updates: Partial<AudioRecording>): Promise<AudioRecording | undefined> {
+  const db = await getDB();
+  const recording = await db.get("audio_recordings", id);
+  if (!recording) return undefined;
+  
+  const updated: AudioRecording = {
+    ...recording,
+    ...updates,
+  };
+  await db.put("audio_recordings", updated);
+  return updated;
+}
+
+export async function deleteAudioRecording(id: string): Promise<boolean> {
+  const db = await getDB();
+  const recording = await db.get("audio_recordings", id);
+  if (!recording) return false;
+  await db.delete("audio_recordings", id);
+  return true;
+}
+
+// Product dictionary operations (for local parsing)
+export async function addProductToDictionary(product: Omit<ProductDictionary, "id" | "createdAt" | "updatedAt" | "usage_count">): Promise<ProductDictionary> {
+  const db = await getDB();
+  const now = new Date().toISOString();
+  const newProduct: ProductDictionary = {
+    ...product,
+    id: generateId(),
+    usage_count: 0,
+    createdAt: now,
+    updatedAt: now,
+  };
+  await db.put("product_dictionary", newProduct);
+  return newProduct;
+}
+
+export async function getProductDictionary(): Promise<ProductDictionary[]> {
+  const db = await getDB();
+  return db.getAll("product_dictionary");
+}
+
+export async function incrementProductUsage(id: string): Promise<void> {
+  const db = await getDB();
+  const product = await db.get("product_dictionary", id);
+  if (product) {
+    await db.put("product_dictionary", {
+      ...product,
+      usage_count: product.usage_count + 1,
+      updatedAt: new Date().toISOString(),
+    });
+  }
+}
+
+export async function findProductByName(searchName: string): Promise<ProductDictionary | undefined> {
+  const db = await getDB();
+  const all = await db.getAll("product_dictionary");
+  const normalized = searchName.toLowerCase().trim();
+  
+  return all.find(p => 
+    p.name.toLowerCase() === normalized ||
+    p.aliases.some(alias => alias.toLowerCase() === normalized)
+  );
 }
