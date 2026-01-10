@@ -576,10 +576,22 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
   };
 
   const handleComplete = async () => {
-    if (items.length === 0) return;
+    console.log("========================================");
+    console.log("[VoiceStockInput] HANDLE COMPLETE CALLED");
+    console.log("[VoiceStockInput] Items count:", items.length);
+    console.log("========================================");
+    
+    if (items.length === 0) {
+      console.log("[VoiceStockInput] ❌ No items to save");
+      toast({ 
+        title: "Aucun produit", 
+        description: "Ajoutez au moins un produit",
+        variant: "destructive" 
+      });
+      return;
+    }
 
     setIsSubmitting(true);
-    console.log("[VoiceStockInput] Submitting", items.length, "items");
     
     try {
       const stockItems: NewStockItem[] = items.map(({ tempId, isEditing, confidence, ...item }) => ({
@@ -587,27 +599,32 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
         quantity: item.quantity,
         unit_price: item.unit_price,
         model: item.model || null,
-        source: item.source || "voice",
+        source: "voice" as const,
       }));
       
-      console.log("[VoiceStockInput] Stock items to add:", stockItems);
+      console.log("[VoiceStockInput] ✅ Mapped stock items:", JSON.stringify(stockItems));
+      console.log("[VoiceStockInput] Calling onComplete...");
       
       await onComplete(stockItems);
       
+      console.log("[VoiceStockInput] ✅ onComplete finished successfully");
+      
       toast({ 
-        title: "Stock ajouté", 
-        description: `${stockItems.length} produit(s) enregistré(s). Vérifiez la liste.` 
+        title: "✅ Stock ajouté", 
+        description: `${stockItems.length} produit(s) enregistré(s)` 
       });
     } catch (error) {
-      console.error("[VoiceStockInput] Error completing stock:", error);
+      console.error("[VoiceStockInput] ❌ Error completing stock:", error);
       const errorMessage = error instanceof Error ? error.message : "Erreur inconnue";
       toast({ 
-        title: "Erreur d'enregistrement", 
-        description: `Impossible d'ajouter le stock: ${errorMessage}`, 
-        variant: "destructive" 
+        title: "❌ Erreur d'enregistrement", 
+        description: `Impossible d'ajouter: ${errorMessage}`, 
+        variant: "destructive",
+        duration: 10000,
       });
     } finally {
       setIsSubmitting(false);
+      console.log("[VoiceStockInput] ===== HANDLE COMPLETE END =====");
     }
   };
 
