@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, UserAdd01Icon, Package01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
+import { triggerHaptic } from "@/lib/haptics";
 
 interface QuickActionFABProps {
   className?: string;
@@ -73,7 +74,10 @@ const QuickActionFAB = ({ className, inline = false }: QuickActionFABProps) => {
                     exit={{ opacity: 0, x: 20 }}
                     transition={{ delay: index * 0.05 }}
                     whileTap={{ scale: 0.95 }}
-                    onClick={action.onClick}
+                    onClick={() => {
+                      triggerHaptic();
+                      action.onClick();
+                    }}
                     className="flex items-center gap-3 bg-white rounded-full pl-4 pr-3 py-2.5 shadow-lg shadow-[#4f7df3]/10 hover:shadow-xl transition-shadow"
                   >
                     <span className="text-sm font-semibold text-[#051425] whitespace-nowrap">
@@ -98,7 +102,10 @@ const QuickActionFAB = ({ className, inline = false }: QuickActionFABProps) => {
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.9 }}
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={() => {
+            triggerHaptic();
+            setIsOpen(!isOpen);
+          }}
           className={cn(
             "flex items-center justify-center shadow-lg transition-all z-50 rounded-full",
             inline 
