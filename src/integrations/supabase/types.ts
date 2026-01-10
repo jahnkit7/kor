@@ -1479,6 +1479,13 @@ export type Database = {
         }
         Returns: string
       }
+      validate_referral_code: {
+        Args: { code: string }
+        Returns: {
+          referrer_id: string
+          referrer_name: string
+        }[]
+      }
     }
     Enums: {
       app_role: "owner" | "employee" | "admin"

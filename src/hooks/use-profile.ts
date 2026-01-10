@@ -23,6 +23,7 @@ export interface Profile {
   onboarding_completed: boolean;
   notification_settings: NotificationSettings | null;
   auto_deduct_stock: boolean;
+  referred_by: string | null;
 }
 
 interface ProfileState {
@@ -74,6 +75,7 @@ export function useProfile(): ProfileState {
           onboarding_completed: data.onboarding_completed,
           notification_settings: data.notification_settings as unknown as NotificationSettings | null,
           auto_deduct_stock: data.auto_deduct_stock ?? true,
+          referred_by: data.referred_by ?? null,
         };
         setProfile(profileData);
       }

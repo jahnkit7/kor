@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useMemo, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +20,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { PaymentMethodDialog } from "@/components/payment/PaymentMethodDialog";
-import { useReferralDiscount, convertReferral } from "@/hooks/use-referral-validation";
+import { useReferralDiscount, convertReferral, recordReferral } from "@/hooks/use-referral-validation";
+import { useProfile } from "@/hooks/use-profile";
 
 // Configuration des icônes et couleurs par plan
 const planConfig: Record<string, { icon: any; color: string; popular: boolean }> = {
@@ -83,14 +84,48 @@ interface PlanUI {
 
 export default function Subscriptions() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const urlRefCode = searchParams.get("ref") || localStorage.getItem("pendingReferralCode");
+  
   const { user } = useAuth();
+  const { profile, refetch: refetchProfile } = useProfile();
   const { data: currentSubscription, isLoading: subLoading, refetch } = useUserSubscription();
   const { plans: dbPlans, loading: plansLoading } = useSubscriptionPlans();
-  const { data: referralDiscount } = useReferralDiscount();
+  const { data: referralDiscount, refetch: refetchReferralDiscount } = useReferralDiscount();
   const [subscribing, setSubscribing] = useState<string | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<PlanUI | null>(null);
   const [justActivated, setJustActivated] = useState(false);
+  const [applyingReferral, setApplyingReferral] = useState(false);
+
+  // Auto-apply referral code from URL if user doesn't have referred_by yet
+  useEffect(() => {
+    const applyReferralFromUrl = async () => {
+      if (!user || !urlRefCode || profile?.referred_by || applyingReferral) return;
+      
+      console.log("[Subscriptions] Attempting to apply referral code:", urlRefCode);
+      setApplyingReferral(true);
+      
+      try {
+        const success = await recordReferral(user.id, urlRefCode);
+        if (success) {
+          console.log("[Subscriptions] Referral applied successfully");
+          toast.success("🎁 Code de parrainage appliqué ! -10% sur votre abonnement");
+          localStorage.removeItem("pendingReferralCode");
+          await refetchProfile();
+          await refetchReferralDiscount();
+        } else {
+          console.warn("[Subscriptions] Failed to apply referral code");
+        }
+      } catch (error) {
+        console.error("[Subscriptions] Error applying referral:", error);
+      } finally {
+        setApplyingReferral(false);
+      }
+    };
+    
+    applyReferralFromUrl();
+  }, [user, urlRefCode, profile?.referred_by]);
 
   // Mapper les plans de la base de données avec la configuration UI
   const plans: PlanUI[] = useMemo(() => {
