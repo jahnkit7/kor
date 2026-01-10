@@ -6,7 +6,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Search, Plus, Package, AlertTriangle, Check, X, Trash2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Search, Plus, Package, AlertTriangle, Check, Trash2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface StockItem {
@@ -28,6 +29,7 @@ interface ProductSelectorProps {
   stockItems: StockItem[];
   selectedProducts: SaleProduct[];
   onProductsChange: (products: SaleProduct[]) => void;
+  onCreateStockItem?: (item: { name: string; quantity: number; unit_price: number }) => Promise<{ id: string } | null>;
   compact?: boolean;
 }
 
@@ -35,10 +37,13 @@ export function ProductSelector({
   stockItems,
   selectedProducts,
   onProductsChange,
+  onCreateStockItem,
   compact = false,
 }: ProductSelectorProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [addToStock, setAddToStock] = useState(true);
+  const [isCreatingStock, setIsCreatingStock] = useState(false);
   const [newProduct, setNewProduct] = useState<SaleProduct>({
     product_name: "",
     quantity: 1,
@@ -89,20 +94,44 @@ export function ProductSelector({
     setSearchQuery("");
   };
 
-  const addCustomProduct = () => {
+  const addCustomProduct = async () => {
     if (!newProduct.product_name.trim() || newProduct.quantity <= 0) return;
+    
+    setIsCreatingStock(true);
+    let stockItemId: string | null = null;
 
-    onProductsChange([
-      ...selectedProducts,
-      {
-        product_name: newProduct.product_name.trim(),
-        quantity: newProduct.quantity,
-        unit_price: newProduct.unit_price,
-      },
-    ]);
+    try {
+      // Create stock item if option enabled and callback exists
+      if (addToStock && onCreateStockItem) {
+        console.log("[ProductSelector] Creating stock item:", newProduct.product_name);
+        const created = await onCreateStockItem({
+          name: newProduct.product_name.trim(),
+          quantity: newProduct.quantity,
+          unit_price: newProduct.unit_price,
+        });
+        if (created) {
+          stockItemId = created.id;
+          console.log("[ProductSelector] Stock item created with ID:", stockItemId);
+        }
+      }
 
-    setNewProduct({ product_name: "", quantity: 1, unit_price: 0 });
-    setShowAddDialog(false);
+      onProductsChange([
+        ...selectedProducts,
+        {
+          stock_item_id: stockItemId,
+          product_name: newProduct.product_name.trim(),
+          quantity: newProduct.quantity,
+          unit_price: newProduct.unit_price,
+        },
+      ]);
+
+      setNewProduct({ product_name: "", quantity: 1, unit_price: 0 });
+      setShowAddDialog(false);
+    } catch (error) {
+      console.error("[ProductSelector] Error creating stock item:", error);
+    } finally {
+      setIsCreatingStock(false);
+    }
   };
 
   const updateProductQuantity = (index: number, quantity: number) => {
@@ -309,7 +338,7 @@ export function ProductSelector({
                 }
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Quantité</Label>
                 <Input
@@ -339,6 +368,25 @@ export function ProductSelector({
                 />
               </div>
             </div>
+
+            {/* Add to stock toggle */}
+            {onCreateStockItem && (
+              <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
+                <div>
+                  <Label htmlFor="add-to-stock" className="text-sm font-medium">
+                    Ajouter au stock
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Le produit sera aussi créé dans votre inventaire
+                  </p>
+                </div>
+                <Switch
+                  id="add-to-stock"
+                  checked={addToStock}
+                  onCheckedChange={setAddToStock}
+                />
+              </div>
+            )}
           </div>
 
           <DialogFooter>
@@ -347,10 +395,14 @@ export function ProductSelector({
             </Button>
             <Button
               onClick={addCustomProduct}
-              disabled={!newProduct.product_name.trim() || newProduct.quantity <= 0}
+              disabled={!newProduct.product_name.trim() || newProduct.quantity <= 0 || isCreatingStock}
             >
-              <Check className="w-4 h-4 mr-2" />
-              Ajouter
+              {isCreatingStock ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Check className="w-4 h-4 mr-2" />
+              )}
+              {isCreatingStock ? "Création..." : "Ajouter"}
             </Button>
           </DialogFooter>
         </DialogContent>
