@@ -157,14 +157,26 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("app:sync-needed", handleSyncNeeded);
   }, [isOnline, userId, performSync]);
 
-  // Periodic pending count update
+  // Periodic pending count update AND auto-sync every 30 seconds
   useEffect(() => {
-    const interval = setInterval(() => {
+    // Update pending count every 10 seconds
+    const countInterval = setInterval(() => {
       updatePendingCount();
-    }, 10000); // Every 10 seconds
+    }, 10000);
 
-    return () => clearInterval(interval);
-  }, []);
+    // Auto-sync every 30 seconds if online and has pending items
+    const syncInterval = setInterval(() => {
+      if (isOnline && pendingCount > 0 && !isSyncing && userId) {
+        console.log("Auto-sync triggered: pending =", pendingCount);
+        performSync();
+      }
+    }, 30000); // Every 30 seconds
+
+    return () => {
+      clearInterval(countInterval);
+      clearInterval(syncInterval);
+    };
+  }, [isOnline, pendingCount, isSyncing, userId, performSync]);
 
   return (
     <OfflineContext.Provider
