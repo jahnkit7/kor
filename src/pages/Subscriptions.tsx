@@ -12,11 +12,11 @@ import {
   ArrowRight,
   Sparkles
 } from "lucide-react";
-import { useSubscriptionPlans } from "@/hooks/use-subscription-plans";
 import { useUserSubscription } from "@/hooks/use-feature-access";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { PaymentMethodDialog } from "@/components/payment/PaymentMethodDialog";
 
 // Plans statiques avec détails
 const staticPlans = [
@@ -75,45 +75,84 @@ export default function Subscriptions() {
   const { user } = useAuth();
   const { data: currentSubscription, isLoading: subLoading } = useUserSubscription();
   const [subscribing, setSubscribing] = useState<string | null>(null);
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<typeof staticPlans[0] | null>(null);
 
-  const handleSubscribe = async (planName: string, price: number, durationDays: number) => {
+  const handleSelectPlan = (plan: typeof staticPlans[0]) => {
     if (!user) {
       navigate("/auth");
       return;
     }
 
-    setSubscribing(planName);
+    setSelectedPlan(plan);
+
+    // If free plan, subscribe directly
+    if (plan.price === 0) {
+      handleFreeSubscribe(plan);
+    } else {
+      setPaymentOpen(true);
+    }
+  };
+
+  const handleFreeSubscribe = async (plan: typeof staticPlans[0]) => {
+    if (!user) return;
+    setSubscribing(plan.name);
 
     try {
-      // Calculate dates
       const startDate = new Date().toISOString();
       const endDate = new Date();
-      endDate.setDate(endDate.getDate() + durationDays);
+      endDate.setDate(endDate.getDate() + plan.duration_days);
 
-      // Upsert subscription
       const { error } = await supabase
         .from("subscriptions")
         .upsert({
           user_id: user.id,
-          plan: planName.toLowerCase(),
+          plan: plan.id,
           is_active: true,
-          start_date: startDate,
-          end_date: endDate.toISOString(),
+          trial_started_at: startDate,
+          trial_ends_at: endDate.toISOString(),
         }, {
           onConflict: "user_id",
         });
 
       if (error) throw error;
 
-      toast.success(`Abonnement ${planName} activé !`);
-      
-      // Navigate to dashboard after subscription
-      setTimeout(() => {
-        navigate("/dashboard");
-      }, 500);
-    } catch (error: any) {
-      console.error("Error subscribing:", error);
+      toast.success(`Plan ${plan.name} activé !`);
+      setTimeout(() => navigate("/dashboard"), 500);
+    } catch (error) {
       toast.error("Erreur lors de l'abonnement");
+    } finally {
+      setSubscribing(null);
+    }
+  };
+
+  const handlePaymentSuccess = async () => {
+    if (!user || !selectedPlan) return;
+
+    try {
+      const startDate = new Date().toISOString();
+      const endDate = new Date();
+      endDate.setDate(endDate.getDate() + selectedPlan.duration_days);
+
+      const { error } = await supabase
+        .from("subscriptions")
+        .upsert({
+          user_id: user.id,
+          plan: selectedPlan.id,
+          is_active: true,
+          trial_started_at: startDate,
+          trial_ends_at: endDate.toISOString(),
+        }, {
+          onConflict: "user_id",
+        });
+
+      if (error) throw error;
+
+      toast.success(`Plan ${selectedPlan.name} activé !`);
+      setPaymentOpen(false);
+      setTimeout(() => navigate("/dashboard"), 500);
+    } catch (error) {
+      toast.error("Erreur lors de l'activation");
     } finally {
       setSubscribing(null);
     }
@@ -215,10 +254,10 @@ export default function Subscriptions() {
                   }`}
                   variant={plan.color === "secondary" ? "secondary" : "default"}
                   size="lg"
-                  disabled={isCurrentPlan || subscribing === plan.id}
-                  onClick={() => handleSubscribe(plan.name, plan.price, plan.duration_days)}
+                  disabled={isCurrentPlan || subscribing === plan.name}
+                  onClick={() => handleSelectPlan(plan)}
                 >
-                  {subscribing === plan.id ? (
+                  {subscribing === plan.name ? (
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
                   ) : isCurrentPlan ? (
                     "Plan actuel"
@@ -245,6 +284,17 @@ export default function Subscriptions() {
             Retour au tableau de bord
           </Button>
         </div>
+      )}
+
+      {/* Payment Dialog */}
+      {selectedPlan && (
+        <PaymentMethodDialog
+          open={paymentOpen}
+          onOpenChange={setPaymentOpen}
+          planName={selectedPlan.name}
+          price={selectedPlan.price}
+          onPaymentSuccess={handlePaymentSuccess}
+        />
       )}
     </div>
   );
