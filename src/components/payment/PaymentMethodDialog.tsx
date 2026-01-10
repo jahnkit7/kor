@@ -8,8 +8,13 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Loader2, Check, Smartphone, Wallet, CreditCard } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Loader2, Check, Smartphone, Wallet, CreditCard, Tag, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useValidatePromoCode, useIncrementPromoCodeUsage, PromoCode } from "@/hooks/use-promo-codes";
+import { supabase } from "@/integrations/supabase/client";
+import { generateInvoiceNumber } from "@/lib/invoice-generator";
 
 interface PaymentMethod {
   id: string;
@@ -55,7 +60,9 @@ interface PaymentMethodDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   planName: string;
+  planId?: string;
   price: number;
+  subscriptionId?: string;
   onPaymentSuccess: () => void;
 }
 
@@ -63,12 +70,57 @@ export function PaymentMethodDialog({
   open,
   onOpenChange,
   planName,
+  planId,
   price,
+  subscriptionId,
   onPaymentSuccess,
 }: PaymentMethodDialogProps) {
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [promoCodeInput, setPromoCodeInput] = useState("");
+  const [appliedPromo, setAppliedPromo] = useState<PromoCode | null>(null);
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [validatingPromo, setValidatingPromo] = useState(false);
+
+  const validatePromoCode = useValidatePromoCode();
+  const incrementPromoUsage = useIncrementPromoCodeUsage();
+
+  const calculateDiscount = () => {
+    if (!appliedPromo) return 0;
+    if (appliedPromo.discount_type === "percentage") {
+      return Math.round((price * appliedPromo.discount_value) / 100);
+    }
+    return Math.min(appliedPromo.discount_value, price);
+  };
+
+  const discount = calculateDiscount();
+  const finalPrice = Math.max(0, price - discount);
+
+  const handleApplyPromoCode = async () => {
+    if (!promoCodeInput.trim()) return;
+    
+    setValidatingPromo(true);
+    setPromoError(null);
+
+    try {
+      const promo = await validatePromoCode.mutateAsync({
+        code: promoCodeInput,
+        planId,
+      });
+      setAppliedPromo(promo);
+      setPromoCodeInput("");
+    } catch (error) {
+      setPromoError(error instanceof Error ? error.message : "Code invalide");
+    } finally {
+      setValidatingPromo(false);
+    }
+  };
+
+  const handleRemovePromo = () => {
+    setAppliedPromo(null);
+    setPromoError(null);
+  };
 
   const handlePayment = async () => {
     if (!selectedMethod) return;
@@ -78,16 +130,52 @@ export function PaymentMethodDialog({
     // Simulate payment processing (2 seconds)
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    setProcessing(false);
-    setSuccess(true);
+    try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Non authentifié");
 
-    // Wait a moment to show success, then trigger callback
-    setTimeout(() => {
-      onPaymentSuccess();
-      // Reset state for next use
-      setSelectedMethod(null);
-      setSuccess(false);
-    }, 1500);
+      // Record payment in history
+      const invoiceNumber = generateInvoiceNumber();
+      const transactionRef = `TXN${Date.now().toString(36).toUpperCase()}`;
+      const methodName = paymentMethods.find(m => m.id === selectedMethod)?.name || selectedMethod;
+
+      await supabase.from("payment_history").insert({
+        user_id: user.id,
+        subscription_id: subscriptionId || null,
+        plan_name: planName,
+        amount_original: price,
+        discount_applied: discount,
+        promo_code_used: appliedPromo?.code || null,
+        amount_paid: finalPrice,
+        payment_method: methodName,
+        transaction_ref: transactionRef,
+        status: "success",
+        invoice_number: invoiceNumber,
+      });
+
+      // Increment promo code usage if used
+      if (appliedPromo) {
+        await incrementPromoUsage.mutateAsync(appliedPromo.code);
+      }
+
+      setProcessing(false);
+      setSuccess(true);
+
+      // Wait a moment to show success, then trigger callback
+      setTimeout(() => {
+        onPaymentSuccess();
+        // Reset state for next use
+        setSelectedMethod(null);
+        setSuccess(false);
+        setAppliedPromo(null);
+        setPromoCodeInput("");
+        setPromoError(null);
+      }, 1500);
+    } catch (error) {
+      console.error("Payment error:", error);
+      setProcessing(false);
+    }
   };
 
   const handleClose = (isOpen: boolean) => {
@@ -95,6 +183,9 @@ export function PaymentMethodDialog({
       onOpenChange(isOpen);
       if (!isOpen) {
         setSelectedMethod(null);
+        setAppliedPromo(null);
+        setPromoCodeInput("");
+        setPromoError(null);
       }
     }
   };
@@ -115,7 +206,14 @@ export function PaymentMethodDialog({
             ) : (
               <>
                 Plan <strong>{planName}</strong> -{" "}
-                <strong>{price.toLocaleString()} CFA</strong>
+                {discount > 0 ? (
+                  <>
+                    <span className="line-through text-muted-foreground">{price.toLocaleString()} CFA</span>{" "}
+                    <strong className="text-green-600">{finalPrice.toLocaleString()} CFA</strong>
+                  </>
+                ) : (
+                  <strong>{price.toLocaleString()} CFA</strong>
+                )}
               </>
             )}
           </DialogDescription>
@@ -142,6 +240,51 @@ export function PaymentMethodDialog({
           </div>
         ) : (
           <div className="space-y-4">
+            {/* Promo Code Section */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Tag className="w-4 h-4" />
+                Code promo
+              </Label>
+              {appliedPromo ? (
+                <div className="flex items-center justify-between p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                  <div>
+                    <span className="font-mono font-bold text-green-600">{appliedPromo.code}</span>
+                    <span className="text-sm text-green-600 ml-2">
+                      -{appliedPromo.discount_type === "percentage" 
+                        ? `${appliedPromo.discount_value}%` 
+                        : `${appliedPromo.discount_value.toLocaleString()} CFA`}
+                    </span>
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={handleRemovePromo}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Input
+                    value={promoCodeInput}
+                    onChange={(e) => {
+                      setPromoCodeInput(e.target.value.toUpperCase());
+                      setPromoError(null);
+                    }}
+                    placeholder="Entrer un code promo"
+                    className="font-mono uppercase"
+                  />
+                  <Button 
+                    variant="outline" 
+                    onClick={handleApplyPromoCode}
+                    disabled={!promoCodeInput.trim() || validatingPromo}
+                  >
+                    {validatingPromo ? <Loader2 className="w-4 h-4 animate-spin" /> : "Appliquer"}
+                  </Button>
+                </div>
+              )}
+              {promoError && (
+                <p className="text-sm text-destructive">{promoError}</p>
+              )}
+            </div>
+
             <div className="grid grid-cols-1 gap-3">
               {paymentMethods.map((method) => (
                 <Card
@@ -180,7 +323,10 @@ export function PaymentMethodDialog({
               disabled={!selectedMethod}
               onClick={handlePayment}
             >
-              Payer {price.toLocaleString()} CFA
+              Payer {finalPrice.toLocaleString()} CFA
+              {discount > 0 && (
+                <span className="ml-2 text-xs opacity-75">(-{discount.toLocaleString()} CFA)</span>
+              )}
             </Button>
 
             <p className="text-xs text-center text-muted-foreground">

@@ -40,6 +40,7 @@ import AdminSupport from "./pages/admin/AdminSupport";
 import AdminLogs from "./pages/admin/AdminLogs";
 import AdminCommissions from "./pages/admin/AdminCommissions";
 import AdminFeatureAnalytics from "./pages/admin/AdminFeatureAnalytics";
+import AdminPromoCodes from "./pages/admin/AdminPromoCodes";
 
 const queryClient = new QueryClient();
 
@@ -202,6 +203,7 @@ const App = () => (
             <Route path="/admin/features" element={<AdminFeatures />} />
             <Route path="/admin/commissions" element={<AdminCommissions />} />
             <Route path="/admin/feature-analytics" element={<AdminFeatureAnalytics />} />
+            <Route path="/admin/promo-codes" element={<AdminPromoCodes />} />
             <Route path="/admin/support" element={<AdminSupport />} />
             <Route path="/admin/logs" element={<AdminLogs />} />
 
