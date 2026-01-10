@@ -8,6 +8,7 @@ interface AdminStats {
   activeCountries: number;
   totalCountries: number;
   activePlans: number;
+  activeSubscriptions: number;
   usedCodes: number;
   totalCodes: number;
   openTickets: number;
@@ -62,6 +63,12 @@ export function useAdminStats() {
         .select("*", { count: "exact", head: true })
         .eq("is_active", true);
 
+      // Get active subscriptions (clients who have an active subscription)
+      const { count: activeSubscriptions } = await supabase
+        .from("subscriptions")
+        .select("*", { count: "exact", head: true })
+        .eq("is_active", true);
+
       // Get recharge codes
       const { data: codes } = await supabase
         .from("recharge_codes")
@@ -83,6 +90,7 @@ export function useAdminStats() {
         activeCountries,
         totalCountries,
         activePlans: activePlans || 0,
+        activeSubscriptions: activeSubscriptions || 0,
         usedCodes,
         totalCodes,
         openTickets: openTickets || 0,

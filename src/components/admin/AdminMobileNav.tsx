@@ -14,7 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Globe, ToggleLeft, Percent, MessageSquare, FileText, Gift } from "lucide-react";
+import { Globe, ToggleLeft, Percent, MessageSquare, FileText, Gift, Map } from "lucide-react";
 
 const mainItems = [
   { to: "/admin", icon: LayoutDashboard, label: "Dashboard", exact: true },
@@ -27,6 +27,7 @@ const moreItems = [
   { to: "/admin/subscriptions", icon: CreditCard, label: "Abonnements" },
   { to: "/admin/geography", icon: Globe, label: "Géographie" },
   { to: "/admin/features", icon: ToggleLeft, label: "Features" },
+  { to: "/admin/roadmap", icon: Map, label: "Roadmap" },
   { to: "/admin/commissions", icon: Gift, label: "Commissions" },
   { to: "/admin/promo-codes", icon: Percent, label: "Codes Promo" },
   { to: "/admin/support", icon: MessageSquare, label: "Support" },

@@ -135,8 +135,8 @@ export function CommissionPayment() {
     );
   }
 
-  // Ne pas afficher si pas de solde de commission
-  if (!balance || balance.balance === 0) {
+  // Ne pas afficher si pas de record de commission
+  if (!balance) {
     return null;
   }
 
@@ -150,27 +150,43 @@ export function CommissionPayment() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Balance Display */}
-          <div className="p-4 rounded-xl bg-primary/10 border border-primary/20">
-            <p className="text-sm text-muted-foreground">Solde à payer</p>
-            <p className="text-2xl font-bold text-primary">
-              {formatCFA(balance.balance)}
-            </p>
-            <div className="flex gap-4 mt-2 text-sm text-muted-foreground">
-              <span>Total gagné: {formatCFA(balance.total_earned)}</span>
-              <span>Total payé: {formatCFA(balance.total_paid)}</span>
+          {balance.balance === 0 ? (
+            // État aucune commission
+            <div className="text-center py-6">
+              <Wallet className="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
+              <p className="font-medium text-muted-foreground">Aucune commission à payer</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Vos commissions s'accumulent via le parrainage d'utilisateurs
+              </p>
+              <div className="flex justify-center gap-4 mt-4 text-sm text-muted-foreground">
+                <span>Total gagné: {formatCFA(balance.total_earned)}</span>
+                <span>Total payé: {formatCFA(balance.total_paid)}</span>
+              </div>
             </div>
-          </div>
+          ) : (
+            <>
+              {/* Balance Display */}
+              <div className="p-4 rounded-xl bg-primary/10 border border-primary/20">
+                <p className="text-sm text-muted-foreground">Solde à payer</p>
+                <p className="text-2xl font-bold text-primary">
+                  {formatCFA(balance.balance)}
+                </p>
+                <div className="flex gap-4 mt-2 text-sm text-muted-foreground">
+                  <span>Total gagné: {formatCFA(balance.total_earned)}</span>
+                  <span>Total payé: {formatCFA(balance.total_paid)}</span>
+                </div>
+              </div>
 
-          {/* Pay Button */}
-          <Button 
-            className="w-full" 
-            onClick={() => setDialogOpen(true)}
-            disabled={balance.balance <= 0}
-          >
-            <CreditCard className="w-4 h-4 mr-2" />
-            Payer mes commissions
-          </Button>
+              {/* Pay Button */}
+              <Button 
+                className="w-full" 
+                onClick={() => setDialogOpen(true)}
+              >
+                <CreditCard className="w-4 h-4 mr-2" />
+                Payer mes commissions
+              </Button>
+            </>
+          )}
 
           {/* Payment History */}
           {payments && payments.length > 0 && (
