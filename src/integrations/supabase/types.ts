@@ -104,6 +104,75 @@ export type Database = {
         }
         Relationships: []
       }
+      commission_balances: {
+        Row: {
+          balance: number | null
+          created_at: string | null
+          id: string
+          total_earned: number | null
+          total_paid: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          balance?: number | null
+          created_at?: string | null
+          id?: string
+          total_earned?: number | null
+          total_paid?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          balance?: number | null
+          created_at?: string | null
+          id?: string
+          total_earned?: number | null
+          total_paid?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      commission_payments: {
+        Row: {
+          amount: number
+          created_at: string | null
+          id: string
+          notes: string | null
+          payment_method: string | null
+          proof_url: string | null
+          status: string | null
+          user_id: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          proof_url?: string | null
+          status?: string | null
+          user_id: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          proof_url?: string | null
+          status?: string | null
+          user_id?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: []
+      }
       commissions: {
         Row: {
           applies_to: string
@@ -1040,6 +1109,7 @@ export type Database = {
       }
       subscription_plans: {
         Row: {
+          commission_reduction: number | null
           country_id: string | null
           created_at: string
           currency: string
@@ -1056,6 +1126,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          commission_reduction?: number | null
           country_id?: string | null
           created_at?: string
           currency?: string
@@ -1072,6 +1143,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          commission_reduction?: number | null
           country_id?: string | null
           created_at?: string
           currency?: string
