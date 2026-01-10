@@ -159,8 +159,8 @@ export function CommissionPayment() {
                 Vos commissions s'accumulent via le parrainage d'utilisateurs
               </p>
               <div className="flex justify-center gap-4 mt-4 text-sm text-muted-foreground">
-                <span>Total gagné: {formatCFA(balance.total_earned)}</span>
-                <span>Total payé: {formatCFA(balance.total_paid)}</span>
+                <span>Commissions gagnées: {formatCFA(balance.total_earned)}</span>
+                <span>Commissions payées: {formatCFA(balance.total_paid)}</span>
               </div>
             </div>
           ) : (
@@ -172,8 +172,8 @@ export function CommissionPayment() {
                   {formatCFA(balance.balance)}
                 </p>
                 <div className="flex gap-4 mt-2 text-sm text-muted-foreground">
-                  <span>Total gagné: {formatCFA(balance.total_earned)}</span>
-                  <span>Total payé: {formatCFA(balance.total_paid)}</span>
+                  <span>Commissions gagnées: {formatCFA(balance.total_earned)}</span>
+                  <span>Commissions payées: {formatCFA(balance.total_paid)}</span>
                 </div>
               </div>
 

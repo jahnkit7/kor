@@ -183,19 +183,24 @@ export async function fullSync(userId: string): Promise<{ pushed: number; failed
 }
 
 // Push all unsynced items directly from stores (not just queue)
-export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: number; failed: number }> {
+export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: number; failed: number; details: { sales: number; clients: number; debts: number; payments: number; stock: number } }> {
   const supabase = await getSupabaseClient();
   const db = await getDB();
   
   let pushed = 0;
   let failed = 0;
+  const details = { sales: 0, clients: 0, debts: 0, payments: 0, stock: 0 };
+
+  console.log("[SYNC] Starting pushUnsyncedToCloud for user:", userId);
 
   // 1. Push unsynced sales
   const allSales = await db.getAll("sales");
   const unsyncedSales = allSales.filter(s => !s.synced);
+  console.log(`[SYNC] Found ${unsyncedSales.length} unsynced sales`);
   
   for (const sale of unsyncedSales) {
     try {
+      console.log(`[SYNC] Pushing sale: ${sale.id}, amount: ${sale.amount}`);
       const { error } = await supabase
         .from("sales")
         .upsert({
@@ -211,12 +216,14 @@ export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: num
       if (!error) {
         await db.put("sales", { ...sale, synced: true });
         pushed++;
+        details.sales++;
+        console.log(`[SYNC] ✓ Sale ${sale.id} synced successfully`);
       } else {
-        console.error("Error syncing sale:", error);
+        console.error(`[SYNC] ✗ Error syncing sale ${sale.id}:`, error);
         failed++;
       }
     } catch (err) {
-      console.error("Error syncing sale:", err);
+      console.error(`[SYNC] ✗ Exception syncing sale ${sale.id}:`, err);
       failed++;
     }
   }
@@ -224,6 +231,7 @@ export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: num
   // 2. Push unsynced clients
   const allClients = await db.getAll("clients");
   const unsyncedClients = allClients.filter(c => !c.synced);
+  console.log(`[SYNC] Found ${unsyncedClients.length} unsynced clients`);
   
   for (const client of unsyncedClients) {
     try {
@@ -243,12 +251,13 @@ export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: num
       if (!error) {
         await db.put("clients", { ...client, synced: true });
         pushed++;
+        details.clients++;
       } else {
-        console.error("Error syncing client:", error);
+        console.error(`[SYNC] ✗ Error syncing client ${client.id}:`, error);
         failed++;
       }
     } catch (err) {
-      console.error("Error syncing client:", err);
+      console.error(`[SYNC] ✗ Exception syncing client ${client.id}:`, err);
       failed++;
     }
   }
@@ -256,6 +265,7 @@ export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: num
   // 3. Push unsynced debts
   const allDebts = await db.getAll("debts");
   const unsyncedDebts = allDebts.filter(d => !d.synced);
+  console.log(`[SYNC] Found ${unsyncedDebts.length} unsynced debts`);
   
   for (const debt of unsyncedDebts) {
     try {
@@ -274,12 +284,13 @@ export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: num
       if (!error) {
         await db.put("debts", { ...debt, synced: true });
         pushed++;
+        details.debts++;
       } else {
-        console.error("Error syncing debt:", error);
+        console.error(`[SYNC] ✗ Error syncing debt ${debt.id}:`, error);
         failed++;
       }
     } catch (err) {
-      console.error("Error syncing debt:", err);
+      console.error(`[SYNC] ✗ Exception syncing debt ${debt.id}:`, err);
       failed++;
     }
   }
@@ -287,6 +298,7 @@ export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: num
   // 4. Push unsynced payments
   const allPayments = await db.getAll("payments");
   const unsyncedPayments = allPayments.filter(p => !p.synced);
+  console.log(`[SYNC] Found ${unsyncedPayments.length} unsynced payments`);
   
   for (const payment of unsyncedPayments) {
     try {
@@ -304,12 +316,13 @@ export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: num
       if (!error) {
         await db.put("payments", { ...payment, synced: true });
         pushed++;
+        details.payments++;
       } else {
-        console.error("Error syncing payment:", error);
+        console.error(`[SYNC] ✗ Error syncing payment ${payment.id}:`, error);
         failed++;
       }
     } catch (err) {
-      console.error("Error syncing payment:", err);
+      console.error(`[SYNC] ✗ Exception syncing payment ${payment.id}:`, err);
       failed++;
     }
   }
@@ -317,6 +330,7 @@ export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: num
   // 5. Push unsynced stock items
   const allStock = await db.getAll("stock_items");
   const unsyncedStock = allStock.filter(s => !s.synced);
+  console.log(`[SYNC] Found ${unsyncedStock.length} unsynced stock items`);
   
   for (const stock of unsyncedStock) {
     try {
@@ -337,16 +351,17 @@ export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: num
       if (!error) {
         await db.put("stock_items", { ...stock, synced: true });
         pushed++;
+        details.stock++;
       } else {
-        console.error("Error syncing stock:", error);
+        console.error(`[SYNC] ✗ Error syncing stock ${stock.id}:`, error);
         failed++;
       }
     } catch (err) {
-      console.error("Error syncing stock:", err);
+      console.error(`[SYNC] ✗ Exception syncing stock ${stock.id}:`, err);
       failed++;
     }
   }
 
-  console.log(`Pushed ${pushed} items, ${failed} failed`);
-  return { pushed, failed };
+  console.log(`[SYNC] Complete: ${pushed} pushed, ${failed} failed`, details);
+  return { pushed, failed, details };
 }
