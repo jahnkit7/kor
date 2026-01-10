@@ -92,16 +92,32 @@ export function useUserSubscription() {
     queryFn: async () => {
       if (!user?.id) return null;
 
-      const { data, error } = await supabase
-        .from("subscriptions")
-        .select("*")
-        .eq("user_id", user.id)
-        .single();
+      // Timeout pour éviter une requête qui pend indéfiniment (3s)
+      const timeoutPromise = new Promise<null>((resolve) => {
+        setTimeout(() => {
+          console.warn("[useUserSubscription] Request timeout - returning null");
+          resolve(null);
+        }, 3000);
+      });
 
-      if (error && error.code !== "PGRST116") throw error;
-      return data as UserSubscription | null;
+      const queryPromise = (async () => {
+        const { data, error } = await supabase
+          .from("subscriptions")
+          .select("*")
+          .eq("user_id", user.id)
+          .single();
+
+        if (error && error.code !== "PGRST116") throw error;
+        return data as UserSubscription | null;
+      })();
+
+      // Race: soit la requête réussit, soit timeout
+      return Promise.race([queryPromise, timeoutPromise]);
     },
     enabled: !!user?.id,
+    retry: 1, // Maximum 1 retry pour éviter les boucles
+    staleTime: 30 * 1000, // Cache 30s
+    gcTime: 5 * 60 * 1000, // Keep in cache 5min
   });
 
   // CRITICAL FIX: isLoading doit être true tant que:
