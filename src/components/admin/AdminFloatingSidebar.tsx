@@ -66,8 +66,8 @@ function NavItem({ to, icon: Icon, label, exact }: NavItemProps) {
         cn(
           "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
           isActive
-            ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
-            : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+            ? "bg-gradient-to-r from-[#4f7df3] via-[#5b8af5] to-[#3b6ce8] text-white shadow-lg shadow-[#4f7df3]/25"
+            : "text-[#718096] hover:bg-[#f8f9ff] hover:text-[#2d3748]"
         )
       }
     >
@@ -79,7 +79,7 @@ function NavItem({ to, icon: Icon, label, exact }: NavItemProps) {
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60 px-3 mb-2">
+    <p className="text-[10px] font-semibold uppercase tracking-wider text-[#718096]/60 px-3 mb-2">
       {children}
     </p>
   );
@@ -101,29 +101,29 @@ export function AdminFloatingSidebar() {
   };
 
   return (
-    <aside className="hidden lg:flex lg:flex-col lg:w-72 lg:fixed lg:top-4 lg:left-4 lg:bottom-4 bg-card/80 backdrop-blur-xl border border-border/50 rounded-3xl shadow-2xl shadow-primary/5 overflow-hidden">
+    <aside className="hidden lg:flex lg:flex-col lg:w-72 lg:fixed lg:top-4 lg:left-4 lg:bottom-4 bg-white/80 backdrop-blur-xl border border-[#e2e8f0]/50 rounded-3xl shadow-2xl shadow-[#4f7df3]/5 overflow-hidden">
       {/* Header - Branding + Admin Info */}
-      <div className="p-6 border-b border-border/50">
+      <div className="p-6 border-b border-[#e2e8f0]/50">
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/30">
-            <Sparkles className="w-5 h-5 text-primary-foreground" />
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#4f7df3] to-[#3b6ce8] flex items-center justify-center shadow-lg shadow-[#4f7df3]/30">
+            <Sparkles className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="font-bold text-lg text-foreground tracking-tight">DÉKON</h1>
-            <p className="text-[11px] text-muted-foreground font-medium">Control Center</p>
+            <h1 className="font-bold text-lg text-[#2d3748] tracking-tight">DÉKON</h1>
+            <p className="text-[11px] text-[#718096] font-medium">Control Center</p>
           </div>
         </div>
         
         {/* Admin Info */}
-        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-secondary/50">
-          <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
-            <User className="w-4 h-4 text-primary" />
+        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#f8f9ff]">
+          <div className="w-7 h-7 rounded-full bg-[#4f7df3]/10 flex items-center justify-center">
+            <User className="w-4 h-4 text-[#4f7df3]" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-foreground truncate">
+            <p className="text-xs font-medium text-[#2d3748] truncate">
               {profile?.owner_name || "Administrateur"}
             </p>
-            <p className="text-[10px] text-muted-foreground">Admin</p>
+            <p className="text-[10px] text-[#718096]">Admin</p>
           </div>
         </div>
       </div>

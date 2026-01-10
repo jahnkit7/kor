@@ -38,7 +38,7 @@ const BottomNav = () => {
   const visibleItems = navItems.filter(item => item.show);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#e2e8f0]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       {/* Sync status bar - shown when pending items exist */}
       {pendingCount > 0 && (
         <div 
@@ -87,8 +87,8 @@ const BottomNav = () => {
               onClick={() => navigate(path)}
               className={`relative flex flex-col items-center justify-center w-16 h-full transition-colors ${
                 isActive 
-                  ? "text-primary" 
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "text-[#4f7df3]" 
+                  : "text-[#718096] hover:text-[#2d3748]"
               }`}
             >
               <div className="relative">

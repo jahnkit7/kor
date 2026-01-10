@@ -81,7 +81,7 @@ const Dashboard = () => {
   return (
     <AppLayout>
       {/* Header */}
-      <div className="gradient-hero px-5 pt-6 pb-8 text-primary-foreground">
+      <div className="bg-gradient-to-r from-[#4f7df3] via-[#5b8af5] to-[#3b6ce8] px-5 pt-6 pb-8 text-white">
         <div className="flex items-center justify-between mb-6">
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -114,7 +114,7 @@ const Dashboard = () => {
                 className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10 h-7 text-xs"
               />
             </div>
-            <p className="text-money-xl text-primary-foreground">
+            <p className="text-money-xl text-white">
               {formatMoney(todayStats.total)} <span className="text-lg">{!hideAmounts && "CFA"}</span>
             </p>
             <div className="flex gap-4 mt-4">
