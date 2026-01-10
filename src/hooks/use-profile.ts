@@ -22,6 +22,7 @@ export interface Profile {
   hide_amounts: boolean;
   onboarding_completed: boolean;
   notification_settings: NotificationSettings | null;
+  auto_deduct_stock: boolean;
 }
 
 interface ProfileState {
@@ -72,6 +73,7 @@ export function useProfile(): ProfileState {
           hide_amounts: data.hide_amounts,
           onboarding_completed: data.onboarding_completed,
           notification_settings: data.notification_settings as unknown as NotificationSettings | null,
+          auto_deduct_stock: data.auto_deduct_stock ?? true,
         };
         setProfile(profileData);
       }

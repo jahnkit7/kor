@@ -498,6 +498,33 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
     return "needs_action";
   };
 
+  // Check if any product in a sale has insufficient stock
+  const getStockWarnings = (sale: ParsedSale): Array<{ productName: string; stockAfter: number; currentStock: number }> => {
+    if (!stockItems) return [];
+    
+    const warnings: Array<{ productName: string; stockAfter: number; currentStock: number }> = [];
+    
+    sale.products?.forEach(product => {
+      if (product.stock_item_id) {
+        const stockItem = stockItems.find(s => s.id === product.stock_item_id);
+        if (stockItem && stockItem.quantity < product.quantity) {
+          warnings.push({
+            productName: product.name,
+            currentStock: stockItem.quantity,
+            stockAfter: stockItem.quantity - product.quantity,
+          });
+        }
+      }
+    });
+    
+    return warnings;
+  };
+
+  // Check if there are any stock warnings across all sales
+  const hasAnyStockWarnings = useMemo(() => {
+    return parsedSales.some(sale => getStockWarnings(sale).length > 0);
+  }, [parsedSales, stockItems]);
+
   const allSalesReady = () => {
     return parsedSales.every(sale => getSaleStatus(sale) === "ready");
   };
@@ -1051,6 +1078,25 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
                         {sale.products.map(p => `${p.quantity}x ${p.name}`).join(", ")}
                       </p>
                     )}
+
+                    {/* Stock warnings */}
+                    {(() => {
+                      const warnings = getStockWarnings(sale);
+                      if (warnings.length === 0) return null;
+                      return (
+                        <div className="mt-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                          {warnings.map((w, idx) => (
+                            <p key={idx} className="text-xs text-amber-600 flex items-center gap-1">
+                              <AlertTriangle className="w-3 h-3" />
+                              <span>
+                                <strong>{w.productName}</strong>: stock actuel {w.currentStock}, 
+                                sera <strong className="text-destructive">{w.stockAfter}</strong> après vente
+                              </span>
+                            </p>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   <div className="flex items-center gap-1 shrink-0">
@@ -1139,6 +1185,22 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
           </div>
         </Card>
 
+        {/* Global stock warning */}
+        {hasAnyStockWarnings && (
+          <Card className="p-3 bg-amber-500/10 border-amber-500/30">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium text-amber-600 text-sm">Stock insuffisant</p>
+                <p className="text-xs text-amber-600/80">
+                  Certains produits ont un stock inférieur à la quantité vendue. 
+                  Le stock deviendra négatif après cette vente.
+                </p>
+              </div>
+            </div>
+          </Card>
+        )}
+
         {/* Action buttons */}
         <div className="grid grid-cols-2 gap-3 pt-2">
           <Button variant="outline" onClick={() => setStep("record")} disabled={isSubmitting}>
@@ -1148,14 +1210,14 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
           <Button 
             onClick={handleConfirmAll} 
             disabled={isSubmitting}
-            className="bg-success hover:bg-success/90"
+            className={hasAnyStockWarnings ? "bg-amber-500 hover:bg-amber-600" : "bg-success hover:bg-success/90"}
           >
             {isSubmitting ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
             ) : (
               <Check className="w-4 h-4 mr-2" />
             )}
-            Confirmer tout
+            {hasAnyStockWarnings ? "Confirmer quand même" : "Confirmer tout"}
           </Button>
         </div>
 

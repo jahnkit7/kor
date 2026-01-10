@@ -15,7 +15,8 @@ import {
   BarChart2,
   TrendingUp,
   Gift,
-  Bell
+  Bell,
+  Map
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +31,7 @@ const modules = [
 
 const features = [
   { to: "/admin/features", icon: ToggleLeft, label: "Features" },
+  { to: "/admin/roadmap", icon: Map, label: "Roadmap" },
   { to: "/admin/feature-analytics", icon: BarChart2, label: "Analytics" },
   { to: "/admin/commissions", icon: Gift, label: "Commissions" },
   { to: "/admin/promo-codes", icon: Percent, label: "Codes Promo" },
