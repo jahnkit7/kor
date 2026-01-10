@@ -10,9 +10,10 @@ import { toast } from "sonner";
 
 interface ActivateCodeDialogProps {
   onSuccess?: () => void;
+  variant?: "default" | "compact";
 }
 
-export function ActivateCodeDialog({ onSuccess }: ActivateCodeDialogProps) {
+export function ActivateCodeDialog({ onSuccess, variant = "default" }: ActivateCodeDialogProps) {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState("");
@@ -135,16 +136,22 @@ export function ActivateCodeDialog({ onSuccess }: ActivateCodeDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <button className="w-full flex items-center gap-4 p-4 text-left hover:bg-secondary/50 transition-colors">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
-            <Gift className="w-5 h-5 text-white" />
-          </div>
-          <div className="flex-1">
-            <p className="font-semibold text-foreground">Activer un code prépayé</p>
-            <p className="text-sm text-muted-foreground">Recharger votre abonnement</p>
-          </div>
-          <CreditCard className="w-5 h-5 text-muted-foreground" />
-        </button>
+        {variant === "compact" ? (
+          <button className="text-xs font-medium text-primary hover:underline">
+            Activer un code
+          </button>
+        ) : (
+          <button className="w-full flex items-center gap-4 p-4 text-left hover:bg-secondary/50 transition-colors">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
+              <Gift className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-foreground">Activer un code prépayé</p>
+              <p className="text-sm text-muted-foreground">Recharger votre abonnement</p>
+            </div>
+            <CreditCard className="w-5 h-5 text-muted-foreground" />
+          </button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>

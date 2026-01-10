@@ -28,6 +28,7 @@ import InvoiceHistory from "./pages/InvoiceHistory";
 import EmployeeManagement from "./pages/EmployeeManagement";
 import AcceptInvite from "./pages/AcceptInvite";
 import Network from "./pages/Network";
+import Referrals from "./pages/Referrals";
 import NotFound from "./pages/NotFound";
 
 // Admin pages
@@ -208,6 +209,16 @@ const App = () => (
                 <RequireProfile>
                   <RequireSubscription>
                     <Network />
+                  </RequireSubscription>
+                </RequireProfile>
+              }
+            />
+            <Route
+              path="/referrals"
+              element={
+                <RequireProfile>
+                  <RequireSubscription>
+                    <Referrals />
                   </RequireSubscription>
                 </RequireProfile>
               }

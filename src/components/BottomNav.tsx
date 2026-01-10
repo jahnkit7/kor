@@ -123,7 +123,7 @@ const BottomNav = () => {
         )}
       </AnimatePresence>
       
-      <div className="flex items-center justify-around h-14 pb-1">
+      <div className="flex items-center justify-around h-16 pb-1">
         {visibleItems.map(({ icon, label, path, badge, isBeta }) => {
           const isActive = location.pathname === path || 
             (path !== "/dashboard" && location.pathname.startsWith(path));
@@ -140,17 +140,17 @@ const BottomNav = () => {
             >
               <motion.div 
                 className={cn(
-                  "relative flex flex-col items-center px-3 py-1.5 rounded-xl transition-all",
-                  isActive && "bg-gradient-to-br from-[#4f7df3]/15 to-[#3b6ce8]/10"
+                  "relative flex flex-col items-center gap-0.5 px-4 py-2 rounded-2xl transition-all",
+                  isActive && "bg-[#e8f0fe]"
                 )}
-                animate={{ scale: isActive ? 1.05 : 1 }}
+                animate={{ scale: isActive ? 1.02 : 1 }}
                 transition={{ type: "spring", stiffness: 400, damping: 20 }}
               >
                 <HugeiconsIcon 
                   icon={icon}
                   className={cn(
                     "w-6 h-6 transition-colors",
-                    isActive ? "text-[#4f7df3]" : "text-[#718096] hover:text-[#051425]"
+                    isActive ? "text-[#4f7df3]" : "text-[#6F7A95]"
                   )}
                   strokeWidth={isActive ? 2 : 1.5}
                 />
@@ -183,17 +183,20 @@ const BottomNav = () => {
                   </span>
                 )}
 
-                {/* Label - only shown for active item */}
+                {/* Label and dot - only shown for active item */}
                 <AnimatePresence>
                   {isActive && (
-                    <motion.span 
+                    <motion.div
                       initial={{ opacity: 0, y: -2 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -2 }}
-                      className="text-[10px] font-semibold mt-0.5 text-[#4f7df3]"
+                      className="flex flex-col items-center gap-0.5"
                     >
-                      {label}
-                    </motion.span>
+                      <span className="text-[10px] font-semibold text-[#4f7df3]">
+                        {label}
+                      </span>
+                      <div className="w-1 h-1 rounded-full bg-[#4f7df3]" />
+                    </motion.div>
                   )}
                 </AnimatePresence>
               </motion.div>
