@@ -83,7 +83,7 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
 
   const formatCFA = (amount: number) => {
-    return new Intl.NumberFormat("fr-FR").format(amount) + " F";
+    return new Intl.NumberFormat("fr-FR").format(amount) + " FCFA";
   };
 
   return (

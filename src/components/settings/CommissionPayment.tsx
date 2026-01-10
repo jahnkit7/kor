@@ -57,7 +57,7 @@ export function CommissionPayment() {
   const [reference, setReference] = useState("");
 
   const formatCFA = (value: number) => {
-    return new Intl.NumberFormat("fr-FR").format(value) + " F";
+    return new Intl.NumberFormat("fr-FR").format(value) + " FCFA";
   };
 
   const handleSubmitPayment = async () => {

@@ -75,10 +75,11 @@ serve(async (req) => {
     console.log("analyze-sale-voice: User authenticated:", user.id);
 
     const body = await req.json();
-    const { transcript, clients } = body;
+    const { transcript, clients, stockItems } = body;
     
     console.log("analyze-sale-voice: Transcript received, length:", transcript?.length || 0);
     console.log("analyze-sale-voice: Clients provided:", clients?.length || 0);
+    console.log("analyze-sale-voice: Stock items provided:", stockItems?.length || 0);
     
     if (!transcript || typeof transcript !== "string") {
       console.error("analyze-sale-voice: Invalid transcript");
@@ -104,6 +105,13 @@ serve(async (req) => {
         ).join("\n")
       : "Aucun client enregistré";
 
+    // Build stock list for AI matching
+    const stockList = stockItems && stockItems.length > 0
+      ? stockItems.map((s: { id: string; name: string; quantity: number; unit_price: number; model?: string }) => 
+          `- "${s.name}"${s.model ? ` (${s.model})` : ""} | ID: ${s.id} | Qté: ${s.quantity} | Prix: ${s.unit_price} FCFA`
+        ).join("\n")
+      : "Aucun produit en stock";
+
     console.log("analyze-sale-voice: Calling AI gateway...");
 
     const systemPrompt = `Tu es un assistant spécialisé dans l'analyse de dictées vocales pour les ventes de boutiques africaines.
@@ -113,6 +121,9 @@ L'utilisateur va te donner une transcription vocale brute où il décrit UNE OU 
 LISTE DES CLIENTS CONNUS:
 ${clientsList}
 
+LISTE DES PRODUITS EN STOCK:
+${stockList}
+
 RÈGLES IMPORTANTES:
 1. Extrais TOUTES les ventes mentionnées dans la dictée (il peut y en avoir plusieurs)
 2. Pour chaque vente, extrais: produit(s), quantité, prix unitaire, prix total, client, montant payé, montant restant
@@ -121,13 +132,17 @@ RÈGLES IMPORTANTES:
    - "found": le nom correspond exactement à UN client dans la liste (utilise son ID)
    - "ambiguous": le nom correspond à PLUSIEURS clients dans la liste (liste les candidats)
    - "not_found": le nom ne correspond à aucun client dans la liste
-5. Calcule automatiquement le montant restant si paiement partiel
-6. Les prix peuvent être en CFA, FCFA, francs - normalise tout en nombre entier
-7. Adapte-toi au français africain et aux expressions locales
-8. "rendu" peut signifier "vendu" (erreur de transcription courante)
+5. Pour CHAQUE produit mentionné, essaie de le matcher avec un produit en stock:
+   - Si le nom du produit correspond (même approximativement) à un produit en stock, retourne son stock_item_id
+   - Si le produit n'est pas trouvé dans le stock, laisse stock_item_id à null
+   - Utilise le prix du stock si le prix n'est pas mentionné dans la dictée
+6. Calcule automatiquement le montant restant si paiement partiel
+7. Les prix peuvent être en CFA, FCFA, francs - normalise tout en nombre entier
+8. Adapte-toi au français africain et aux expressions locales
+9. "rendu" peut signifier "vendu" (erreur de transcription courante)
 
 EXEMPLES:
-- "J'ai vendu 5 chargeurs à 1500 à Kofi, il a payé cash" → 1 vente cash de 7500 pour Kofi
+- "J'ai vendu 5 chargeurs à 1500 à Kofi, il a payé cash" → 1 vente cash de 7500 pour Kofi, matcher "chargeurs" avec le stock
 - "Mamadou a pris 3 écrans à 5000, il a payé 10000, et Fatou a pris 2 batteries à 2000" → 2 ventes séparées
 - "Jacob m'a pris des produits" (et il y a 3 Jacob dans la liste) → status: "ambiguous" avec les 3 candidats
 - "Awa a pris 3 sachets à 500" (et Awa n'est pas dans la liste) → status: "not_found"
@@ -148,7 +163,7 @@ Réponds UNIQUEMENT avec un JSON valide dans ce format:
           {"id": "string", "name": "string", "phone": "string ou null"}
         ]
       },
-      "products": [{"name": "string", "quantity": number, "unit_price": number}],
+      "products": [{"name": "string", "quantity": number, "unit_price": number, "stock_item_id": "string ou null"}],
       "note": "string ou null"
     }
   ],

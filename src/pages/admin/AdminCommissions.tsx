@@ -90,7 +90,7 @@ export default function AdminCommissions() {
   });
 
   const formatCFA = (amount: number) => {
-    return new Intl.NumberFormat("fr-FR").format(amount) + " F";
+    return new Intl.NumberFormat("fr-FR").format(amount) + " FCFA";
   };
 
   const getUserName = (userId: string) => {

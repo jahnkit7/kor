@@ -15,11 +15,25 @@ export interface Sale {
   client_name?: string;
 }
 
+export interface SaleItem {
+  stock_item_id?: string | null;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+}
+
 interface SalesState {
   sales: Sale[];
   loading: boolean;
   refetch: () => Promise<void>;
-  addSale: (sale: { type: "cash" | "credit"; amount: number; paid?: number; note?: string; client_id?: string }) => Promise<Sale | null>;
+  addSale: (sale: { 
+    type: "cash" | "credit"; 
+    amount: number; 
+    paid?: number; 
+    note?: string; 
+    client_id?: string;
+    items?: SaleItem[];
+  }) => Promise<Sale | null>;
   deleteSale: (id: string) => Promise<void>;
   getTodayStats: () => { total: number; cash: number; credit: number };
   getPeriodStats: (period: "day" | "week" | "month") => { total: number; cash: number; credit: number };
@@ -75,7 +89,8 @@ export function useSales(): SalesState {
     amount: number; 
     paid?: number;
     note?: string; 
-    client_id?: string 
+    client_id?: string;
+    items?: SaleItem[];
   }): Promise<Sale | null> => {
     if (!user || !isSupabaseConfigured()) return null;
 
@@ -97,6 +112,27 @@ export function useSales(): SalesState {
         console.error("Error adding sale:", error);
         toast.error("Erreur lors de l'ajout de la vente");
         return null;
+      }
+
+      // Insert sale items if provided (triggers automatic stock deduction)
+      if (saleData.items && saleData.items.length > 0) {
+        const saleItemsToInsert = saleData.items.map(item => ({
+          sale_id: data.id,
+          stock_item_id: item.stock_item_id || null,
+          product_name: item.product_name,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          user_id: user.id,
+        }));
+
+        const { error: itemsError } = await supabase
+          .from("sale_items")
+          .insert(saleItemsToInsert);
+
+        if (itemsError) {
+          console.error("Error adding sale items:", itemsError);
+          // Sale was created but items weren't - log but don't fail
+        }
       }
 
       // Create debt record for credit sales
