@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_logs: {
+        Row: {
+          action_data: Json | null
+          action_type: string
+          created_at: string | null
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          action_data?: Json | null
+          action_type: string
+          created_at?: string | null
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          action_data?: Json | null
+          action_type?: string
+          created_at?: string | null
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       admin_logs: {
         Row: {
           action: string
@@ -488,6 +512,62 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_history: {
+        Row: {
+          amount_original: number
+          amount_paid: number
+          created_at: string | null
+          discount_applied: number | null
+          id: string
+          invoice_number: string
+          payment_method: string
+          plan_name: string
+          promo_code_used: string | null
+          status: string | null
+          subscription_id: string | null
+          transaction_ref: string | null
+          user_id: string
+        }
+        Insert: {
+          amount_original: number
+          amount_paid: number
+          created_at?: string | null
+          discount_applied?: number | null
+          id?: string
+          invoice_number: string
+          payment_method: string
+          plan_name: string
+          promo_code_used?: string | null
+          status?: string | null
+          subscription_id?: string | null
+          transaction_ref?: string | null
+          user_id: string
+        }
+        Update: {
+          amount_original?: number
+          amount_paid?: number
+          created_at?: string | null
+          discount_applied?: number | null
+          id?: string
+          invoice_number?: string
+          payment_method?: string
+          plan_name?: string
+          promo_code_used?: string | null
+          status?: string | null
+          subscription_id?: string | null
+          transaction_ref?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_history_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           amount: number
@@ -628,6 +708,62 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      promo_codes: {
+        Row: {
+          applies_to_duration: string | null
+          applies_to_plan: string | null
+          code: string
+          created_at: string | null
+          created_by: string
+          discount_type: string
+          discount_value: number
+          id: string
+          is_active: boolean | null
+          max_uses: number | null
+          used_count: number | null
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          applies_to_duration?: string | null
+          applies_to_plan?: string | null
+          code: string
+          created_at?: string | null
+          created_by: string
+          discount_type: string
+          discount_value: number
+          id?: string
+          is_active?: boolean | null
+          max_uses?: number | null
+          used_count?: number | null
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          applies_to_duration?: string | null
+          applies_to_plan?: string | null
+          code?: string
+          created_at?: string | null
+          created_by?: string
+          discount_type?: string
+          discount_value?: number
+          id?: string
+          is_active?: boolean | null
+          max_uses?: number | null
+          used_count?: number | null
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promo_codes_applies_to_plan_fkey"
+            columns: ["applies_to_plan"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       recharge_codes: {
         Row: {
