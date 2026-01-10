@@ -11,7 +11,8 @@ import {
   Loader2,
   ArrowRight,
   Sparkles,
-  CalendarCheck
+  CalendarCheck,
+  UserPlus
 } from "lucide-react";
 import { useUserSubscription } from "@/hooks/use-feature-access";
 import { useSubscriptionPlans } from "@/hooks/use-subscription-plans";
@@ -19,6 +20,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { PaymentMethodDialog } from "@/components/payment/PaymentMethodDialog";
+import { useReferralDiscount, convertReferral } from "@/hooks/use-referral-validation";
 
 // Configuration des icônes et couleurs par plan
 const planConfig: Record<string, { icon: any; color: string; popular: boolean }> = {
@@ -84,6 +86,7 @@ export default function Subscriptions() {
   const { user } = useAuth();
   const { data: currentSubscription, isLoading: subLoading, refetch } = useUserSubscription();
   const { plans: dbPlans, loading: plansLoading } = useSubscriptionPlans();
+  const { data: referralDiscount } = useReferralDiscount();
   const [subscribing, setSubscribing] = useState<string | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<PlanUI | null>(null);
@@ -112,6 +115,12 @@ export default function Subscriptions() {
       };
     });
   }, [dbPlans]);
+
+  // Calculate discounted price for a plan
+  const getDiscountedPrice = (price: number) => {
+    if (!referralDiscount || price === 0) return price;
+    return Math.round(price * (1 - referralDiscount.discountPercent / 100));
+  };
 
   const handleSelectPlan = (plan: PlanUI) => {
     if (!user) {
@@ -186,6 +195,11 @@ export default function Subscriptions() {
 
       if (error) throw error;
 
+      // Convert referral if user was referred
+      if (referralDiscount) {
+        await convertReferral(user.id);
+      }
+
       toast.success(`Plan ${selectedPlan.name} activé pour ${selectedPlan.duration_days} jours !`);
       setPaymentOpen(false);
       setJustActivated(true);
@@ -222,12 +236,37 @@ export default function Subscriptions() {
         </p>
       </div>
 
+      {/* Referral Discount Banner */}
+      {referralDiscount && (
+        <div className="px-4 -mt-4 mb-4">
+          <Card className="border-green-500/30 bg-green-500/10">
+            <CardContent className="py-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                  <UserPlus className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="font-semibold text-green-700">
+                    Parrainage de {referralDiscount.referrerName}
+                  </p>
+                  <p className="text-sm text-green-600">
+                    Vous bénéficiez de -{referralDiscount.discountPercent}% sur votre premier abonnement payant !
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Plans */}
-      <div className="px-4 -mt-8 pb-8 space-y-4">
+      <div className={`px-4 ${referralDiscount ? '' : '-mt-8'} pb-8 space-y-4`}>
         {plans.map((plan) => {
           const Icon = plan.icon;
           const isCurrentPlan = currentPlan === plan.name.toLowerCase();
           const isPopular = plan.popular;
+          const discountedPrice = getDiscountedPrice(plan.price);
+          const hasDiscount = referralDiscount && plan.price > 0 && discountedPrice < plan.price;
 
           return (
             <Card 
@@ -244,7 +283,15 @@ export default function Subscriptions() {
                 </div>
               )}
 
-              <CardHeader className="pb-2">
+              {hasDiscount && (
+                <div className="absolute top-0 left-0">
+                  <Badge className="rounded-none rounded-br-lg bg-green-500 text-white">
+                    -{referralDiscount.discountPercent}% Parrainage
+                  </Badge>
+                </div>
+              )}
+
+              <CardHeader className={`pb-2 ${hasDiscount ? 'pt-8' : ''}`}>
                 <div className="flex items-center gap-3">
                   <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
                     plan.color === "accent" 
@@ -267,9 +314,20 @@ export default function Subscriptions() {
                     </CardDescription>
                   </div>
                   <div className="text-right">
-                    <p className="text-2xl font-bold">
-                      {plan.price === 0 ? "Gratuit" : `${plan.price.toLocaleString()} CFA`}
-                    </p>
+                    {hasDiscount ? (
+                      <>
+                        <p className="text-sm line-through text-muted-foreground">
+                          {plan.price.toLocaleString()} CFA
+                        </p>
+                        <p className="text-2xl font-bold text-green-600">
+                          {discountedPrice.toLocaleString()} CFA
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-2xl font-bold">
+                        {plan.price === 0 ? "Gratuit" : `${plan.price.toLocaleString()} CFA`}
+                      </p>
+                    )}
                     {plan.price > 0 && plan.duration_days <= 31 && (
                       <p className="text-xs text-muted-foreground">/mois</p>
                     )}
@@ -339,7 +397,14 @@ export default function Subscriptions() {
           open={paymentOpen}
           onOpenChange={setPaymentOpen}
           planName={selectedPlan.name}
-          price={selectedPlan.price}
+          price={referralDiscount && selectedPlan.price > 0 
+            ? getDiscountedPrice(selectedPlan.price) 
+            : selectedPlan.price}
+          referralDiscount={referralDiscount ? {
+            percent: referralDiscount.discountPercent,
+            referrerName: referralDiscount.referrerName || "Parrain",
+            originalPrice: selectedPlan.price,
+          } : undefined}
           onPaymentSuccess={handlePaymentSuccess}
         />
       )}
