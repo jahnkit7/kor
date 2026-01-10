@@ -18,6 +18,7 @@ import {
 import AppLayout from "@/components/layout/AppLayout";
 import { useHiddenAmount } from "@/components/HideAmountsToggle";
 import { useSales } from "@/hooks/use-sales";
+import { FeatureGate } from "@/components/FeatureGate";
 
 type Period = "day" | "week" | "month" | "all";
 
@@ -113,6 +114,7 @@ const SalesHistory = () => {
 
   return (
     <AppLayout>
+      <FeatureGate featureKey="sales" showUpgradePrompt>
       {/* Header */}
       <div className="bg-card px-4 pt-4 pb-6 border-b border-border">
         <div className="flex items-center gap-4 mb-4">
@@ -260,6 +262,7 @@ const SalesHistory = () => {
           </div>
         </ScrollArea>
       </div>
+      </FeatureGate>
     </AppLayout>
   );
 };

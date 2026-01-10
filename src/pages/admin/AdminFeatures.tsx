@@ -39,6 +39,7 @@ interface FeatureFlag {
   name: string;
   description: string | null;
   is_globally_enabled: boolean;
+  is_beta: boolean;
   min_plan_required: string | null;
   depends_on: string[] | null;
   enabled_for_users: string[] | null;
@@ -51,6 +52,7 @@ export default function AdminFeatures() {
   const { data: features, isLoading } = useAdminFeatureFlags();
   const queryClient = useQueryClient();
   const [togglingFeatures, setTogglingFeatures] = useState<Set<string>>(new Set());
+  const [betaTogglingFeatures, setBetaTogglingFeatures] = useState<Set<string>>(new Set());
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(
@@ -147,6 +149,29 @@ export default function AdminFeatures() {
     }
   };
 
+  const toggleBeta = async (feature: FeatureFlag) => {
+    const newStatus = !feature.is_beta;
+    setBetaTogglingFeatures(prev => new Set([...prev, feature.id]));
+
+    try {
+      const { error } = await supabase
+        .from("feature_flags")
+        .update({ is_beta: newStatus })
+        .eq("id", feature.id);
+
+      if (error) throw error;
+      
+      queryClient.invalidateQueries({ queryKey: ["admin-feature-flags"] });
+      queryClient.invalidateQueries({ queryKey: ["feature-flags"] });
+      
+      toast.success(newStatus ? "Feature marquée comme Bêta" : "Mode Bêta retiré");
+    } catch (error) {
+      toast.error("Erreur lors de la mise à jour");
+    } finally {
+      setBetaTogglingFeatures(new Set());
+    }
+  };
+
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
   };
@@ -240,6 +265,7 @@ export default function AdminFeatures() {
   const renderFeatureCard = (feature: FeatureFlag) => {
     const dependents = getDependentFeatures(feature.feature_key);
     const isToggling = togglingFeatures.has(feature.id);
+    const isBetaToggling = betaTogglingFeatures.has(feature.id);
     const dependenciesNames = feature.depends_on?.map(k => getFeatureByKey(k)?.name) || [];
     
     return (
@@ -250,6 +276,8 @@ export default function AdminFeatures() {
         dependenciesNames={dependenciesNames}
         isToggling={isToggling}
         onToggle={() => toggleFeatureWithCascade(feature)}
+        onToggleBeta={() => toggleBeta(feature)}
+        isBetaToggling={isBetaToggling}
       />
     );
   };

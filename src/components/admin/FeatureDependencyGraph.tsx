@@ -32,6 +32,7 @@ interface FeatureFlag {
   name: string;
   description: string | null;
   is_globally_enabled: boolean;
+  is_beta: boolean;
   min_plan_required: string | null;
   depends_on: string[] | null;
 }

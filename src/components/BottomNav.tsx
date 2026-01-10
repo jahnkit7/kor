@@ -14,8 +14,10 @@ const BottomNav = () => {
   const { conversations } = useMerchantMessages();
   const { isOnline, pendingCount, isSyncing } = useOffline();
   
-  // Check if network feature is globally disabled
+  // Check if features are globally disabled
   const { isGloballyDisabled: networkDisabled, loading: networkLoading } = useFeatureAccess("network");
+  const { isGloballyDisabled: debtsDisabled, loading: debtsLoading } = useFeatureAccess("debts");
+  const { isGloballyDisabled: clientsDisabled, loading: clientsLoading } = useFeatureAccess("clients");
 
   // Count unread messages for network badge
   const unreadCount = useMemo(() => {
@@ -24,10 +26,12 @@ const BottomNav = () => {
 
   const navItems = [
     { icon: Home, label: "Accueil", path: "/dashboard", show: true, badge: 0 },
-    { icon: CreditCard, label: "Dettes", path: "/debts", show: true, badge: 0 },
+    // Hide "Dettes" if debts feature is globally disabled
+    { icon: CreditCard, label: "Dettes", path: "/debts", show: !debtsDisabled && !debtsLoading, badge: 0 },
     // Hide "Réseau" if network feature is globally disabled
     { icon: Radio, label: "Réseau", path: "/network", show: !networkDisabled && !networkLoading, badge: unreadCount },
-    { icon: Users, label: "Clients", path: "/clients", show: true, badge: 0 },
+    // Hide "Clients" if clients feature is globally disabled
+    { icon: Users, label: "Clients", path: "/clients", show: !clientsDisabled && !clientsLoading, badge: 0 },
     { icon: Settings, label: "Réglages", path: "/settings", show: true, badge: 0 },
   ];
 

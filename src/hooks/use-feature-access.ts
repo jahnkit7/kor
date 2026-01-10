@@ -7,6 +7,7 @@ interface FeatureFlag {
   feature_key: string;
   name: string;
   is_globally_enabled: boolean;
+  is_beta: boolean;
   min_plan_required: string | null;
   depends_on: string[] | null;
   enabled_for_users: string[] | null;
@@ -115,13 +116,32 @@ export function useUserSubscription() {
   };
 }
 
+// Plan order for determining next higher plan
+const planOrder = ["gratuit", "starter", "premium"];
+
+function getNextHigherPlan(currentPlan: string | undefined): string {
+  const normalizedPlan = (currentPlan || "gratuit").toLowerCase();
+  // Handle special cases
+  if (normalizedPlan === "free_trial") return "Starter";
+  
+  const currentIndex = planOrder.indexOf(normalizedPlan);
+  
+  if (currentIndex === -1) return "Starter";
+  if (currentIndex >= planOrder.length - 1) return "Premium"; // Already at max
+  
+  const nextPlan = planOrder[currentIndex + 1];
+  return nextPlan.charAt(0).toUpperCase() + nextPlan.slice(1);
+}
+
 export interface FeatureAccessResult {
   hasAccess: boolean;
   loading: boolean;
   reason: string | null;
   isGloballyDisabled: boolean;
   isNotInPlan: boolean;
+  isBeta: boolean;
   requiredPlan: string | null;
+  nextPlan: string | null;
   currentPlan?: string;
   missingDependency?: string;
 }
@@ -142,11 +162,15 @@ export function useFeatureAccess(featureKey: string): FeatureAccessResult {
       reason: null,
       isGloballyDisabled: false,
       isNotInPlan: false,
+      isBeta: false,
       requiredPlan: null,
+      nextPlan: null,
     };
   }
 
   const feature = features.find(f => f.feature_key === featureKey);
+  const currentPlan = subscription?.plan;
+  const nextPlan = getNextHigherPlan(currentPlan);
 
   if (!feature) {
     return { 
@@ -155,9 +179,13 @@ export function useFeatureAccess(featureKey: string): FeatureAccessResult {
       reason: "feature_not_found",
       isGloballyDisabled: false,
       isNotInPlan: false,
+      isBeta: false,
       requiredPlan: null,
+      nextPlan,
     };
   }
+
+  const isBeta = feature.is_beta || false;
 
   // 1. Check if globally disabled
   if (!feature.is_globally_enabled) {
@@ -171,7 +199,9 @@ export function useFeatureAccess(featureKey: string): FeatureAccessResult {
         reason: "globally_disabled",
         isGloballyDisabled: true,
         isNotInPlan: false,
+        isBeta,
         requiredPlan: null,
+        nextPlan,
       };
     }
   }
@@ -184,7 +214,9 @@ export function useFeatureAccess(featureKey: string): FeatureAccessResult {
       reason: "no_subscription",
       isGloballyDisabled: false,
       isNotInPlan: false,
+      isBeta,
       requiredPlan: null,
+      nextPlan,
     };
   }
 
@@ -208,7 +240,9 @@ export function useFeatureAccess(featureKey: string): FeatureAccessResult {
       reason: "not_in_plan",
       isGloballyDisabled: false,
       isNotInPlan: true,
+      isBeta,
       requiredPlan,
+      nextPlan,
       currentPlan: subscription.plan,
     };
   }
@@ -226,7 +260,9 @@ export function useFeatureAccess(featureKey: string): FeatureAccessResult {
         reason: "plan_required",
         isGloballyDisabled: false,
         isNotInPlan: true,
+        isBeta,
         requiredPlan: feature.min_plan_required,
+        nextPlan,
       };
     }
   }
@@ -242,7 +278,9 @@ export function useFeatureAccess(featureKey: string): FeatureAccessResult {
           reason: "dependency_disabled",
           isGloballyDisabled: false,
           isNotInPlan: false,
+          isBeta,
           requiredPlan: null,
+          nextPlan,
           missingDependency: depKey,
         };
       }
@@ -256,7 +294,9 @@ export function useFeatureAccess(featureKey: string): FeatureAccessResult {
     reason: null,
     isGloballyDisabled: false,
     isNotInPlan: false,
+    isBeta,
     requiredPlan: null,
+    nextPlan,
   };
 }
 

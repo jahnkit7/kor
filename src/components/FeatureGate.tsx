@@ -2,7 +2,8 @@ import { ReactNode } from "react";
 import { useFeatureAccess } from "@/hooks/use-feature-access";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Lock, Zap } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Lock, Zap, FlaskConical } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface FeatureGateProps {
@@ -16,6 +17,10 @@ interface FeatureGateProps {
    * If false, shows "temporarily unavailable" message
    */
   hideWhenDisabled?: boolean;
+  /**
+   * If true, shows the beta badge when the feature is in beta
+   */
+  showBetaBadge?: boolean;
 }
 
 export function FeatureGate({ 
@@ -25,8 +30,9 @@ export function FeatureGate({
   showUpgradePrompt = true,
   silentFail = false,
   hideWhenDisabled = true,
+  showBetaBadge = true,
 }: FeatureGateProps) {
-  const { hasAccess, loading, reason, requiredPlan, isGloballyDisabled, isNotInPlan } = useFeatureAccess(featureKey);
+  const { hasAccess, loading, reason, nextPlan, isGloballyDisabled, isNotInPlan, isBeta } = useFeatureAccess(featureKey);
   const navigate = useNavigate();
 
   // While loading, show nothing or a skeleton
@@ -47,8 +53,22 @@ export function FeatureGate({
     return null;
   }
 
-  // User has access - render children
+  // User has access - render children with optional beta badge
   if (hasAccess) {
+    if (isBeta && showBetaBadge) {
+      return (
+        <div className="relative">
+          <Badge 
+            variant="beta" 
+            className="absolute top-2 right-2 z-10 flex items-center gap-1"
+          >
+            <FlaskConical className="w-3 h-3" />
+            Bêta
+          </Badge>
+          {children}
+        </div>
+      );
+    }
     return <>{children}</>;
   }
 
@@ -62,7 +82,7 @@ export function FeatureGate({
     return <>{fallback}</>;
   }
 
-  // NOT IN PLAN: Show upgrade prompt with overlay style
+  // NOT IN PLAN: Show upgrade prompt with next higher plan
   if (isNotInPlan && showUpgradePrompt) {
     return (
       <Card className="border-dashed border-2 bg-muted/20">
@@ -71,12 +91,12 @@ export function FeatureGate({
             <Lock className="w-6 h-6 text-primary" />
           </div>
           <h3 className="font-semibold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-2">
-            Disponible pour {requiredPlan}
+            Passez au plan {nextPlan}
           </h3>
           <p className="text-sm text-muted-foreground mb-4 max-w-xs">
             Cette fonctionnalité nécessite un abonnement{" "}
             <span className="font-medium text-foreground capitalize">
-              {requiredPlan}
+              {nextPlan}
             </span>{" "}
             ou supérieur.
           </p>
@@ -85,7 +105,7 @@ export function FeatureGate({
             className="gap-2"
           >
             <Zap className="w-4 h-4" />
-            Passer au plan {requiredPlan}
+            Passer au plan {nextPlan}
           </Button>
         </CardContent>
       </Card>
