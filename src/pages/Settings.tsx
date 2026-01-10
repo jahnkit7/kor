@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,7 +17,8 @@ import {
   UserCheck,
   Users,
   Palette,
-  Gift
+  Gift,
+  Bell
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { OwnerBadge, RoleBadge } from "@/components/RoleBadge";
@@ -30,6 +30,8 @@ import { ThemeSelector } from "@/components/ThemeSelector";
 import { ActivateCodeDialog } from "@/components/settings/ActivateCodeDialog";
 import { SubscriptionManagement } from "@/components/settings/SubscriptionManagement";
 import { ReferralSection } from "@/components/settings/ReferralSection";
+import { DeleteAccountDialog } from "@/components/settings/DeleteAccountDialog";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { toast } from "sonner";
 
 const Settings = () => {
@@ -97,15 +99,18 @@ const Settings = () => {
     <AppLayout>
       {/* Header */}
       <div className="bg-card px-4 pt-4 pb-6 border-b border-border">
-        <div className="flex items-center gap-4 mb-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate("/dashboard")}
-          >
-            <ArrowLeft className="w-6 h-6" />
-          </Button>
-          <h1 className="text-xl font-bold">Réglages</h1>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/dashboard")}
+            >
+              <ArrowLeft className="w-6 h-6" />
+            </Button>
+            <h1 className="text-xl font-bold">Réglages</h1>
+          </div>
+          <NotificationBell />
         </div>
       </div>
 
@@ -311,16 +316,26 @@ const Settings = () => {
           </Card>
         </div>
 
-        {/* Logout Button */}
-        <Button
-          variant="destructive"
-          size="lg"
-          className="w-full"
-          onClick={handleLogout}
-        >
-          <LogOut className="w-5 h-5 mr-2" />
-          Déconnexion
-        </Button>
+        {/* Danger Zone */}
+        <div>
+          <p className="text-sm font-semibold text-destructive mb-3 px-1">
+            Zone de danger
+          </p>
+          <Card className="border-destructive/50">
+            <CardContent className="p-4 space-y-3">
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full"
+                onClick={handleLogout}
+              >
+                <LogOut className="w-5 h-5 mr-2" />
+                Déconnexion
+              </Button>
+              <DeleteAccountDialog />
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Version */}
         <p className="text-center text-sm text-muted-foreground">
