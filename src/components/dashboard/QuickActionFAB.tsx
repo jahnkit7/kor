@@ -102,7 +102,7 @@ const QuickActionFAB = ({ className, inline = false }: QuickActionFABProps) => {
           className={cn(
             "flex items-center justify-center shadow-lg transition-all z-50",
             inline 
-              ? "w-12 h-12 rounded-xl" 
+              ? "w-12 h-12 rounded-full" 
               : "w-14 h-14 rounded-full",
             isOpen
               ? "bg-[#718096]"
