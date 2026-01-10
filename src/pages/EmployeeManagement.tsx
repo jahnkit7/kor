@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useEmployees, type EmployeeInvite } from "@/hooks/use-employees";
 import { useProfile } from "@/hooks/use-profile";
+import { FeatureGate } from "@/components/FeatureGate";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
@@ -149,6 +150,7 @@ ${inviteLink}
   }
 
   return (
+    <FeatureGate featureKey="employees" showUpgradePrompt>
     <div className="min-h-screen bg-background pb-8">
       {/* Header */}
       <div className="bg-card px-4 pt-4 pb-6 border-b border-border">
@@ -373,6 +375,7 @@ ${inviteLink}
         </div>
       )}
     </div>
+    </FeatureGate>
   );
 };
 

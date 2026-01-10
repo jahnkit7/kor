@@ -27,6 +27,23 @@ const planHierarchy: Record<string, number> = {
   "annuel premium": 2,
 };
 
+// Features par plan - source de vérité
+const planFeaturesMap: Record<string, string[]> = {
+  gratuit: ["sales", "stock", "clients", "debts"],
+  free_trial: ["sales", "stock", "clients", "debts", "reports", "employees"],
+  starter: ["sales", "stock", "clients", "debts", "reports", "employees", "voice_input"],
+  premium: ["sales", "stock", "clients", "debts", "reports", "employees", "voice_input", "network", "analytics"],
+  annuel: ["sales", "stock", "clients", "debts", "reports", "employees", "voice_input", "network", "analytics"],
+  "annuel premium": ["sales", "stock", "clients", "debts", "reports", "employees", "voice_input", "network", "analytics"],
+};
+
+// Helper pour obtenir les features d'un plan
+export function getPlanFeatures(planName: string | undefined | null): string[] {
+  if (!planName) return [];
+  const normalizedPlan = planName.toLowerCase();
+  return planFeaturesMap[normalizedPlan] || [];
+}
+
 export function useFeatureFlags() {
   return useQuery({
     queryKey: ["feature-flags"],
@@ -91,10 +108,31 @@ export function useFeatureAccess(featureKey: string) {
     }
   }
 
-  // 3. Check minimum plan requirement
+  // 2. Check if user has NO active subscription
+  if (!subscription || !subscription.is_active) {
+    return { 
+      hasAccess: false, 
+      loading: false, 
+      reason: "no_subscription",
+    };
+  }
+
+  // 3. Check if feature is included in user's plan
+  const userPlan = subscription.plan?.toLowerCase() || "gratuit";
+  const planFeatures = getPlanFeatures(userPlan);
+  
+  if (!planFeatures.includes(featureKey)) {
+    return { 
+      hasAccess: false, 
+      loading: false, 
+      reason: "not_in_plan",
+      currentPlan: subscription.plan,
+    };
+  }
+
+  // 4. Check minimum plan requirement (for upgraded features within plan)
   if (feature.min_plan_required) {
     const requiredLevel = planHierarchy[feature.min_plan_required.toLowerCase()] ?? 0;
-    const userPlan = subscription?.plan?.toLowerCase() || "free_trial";
     const userLevel = planHierarchy[userPlan] ?? 0;
 
     if (userLevel < requiredLevel) {
@@ -107,7 +145,7 @@ export function useFeatureAccess(featureKey: string) {
     }
   }
 
-  // 4. Check dependencies
+  // 5. Check dependencies
   if (feature.depends_on && feature.depends_on.length > 0) {
     for (const depKey of feature.depends_on) {
       const depFeature = features.find(f => f.feature_key === depKey);
@@ -138,6 +176,9 @@ export function useAllFeatureAccess() {
   }
 
   const accessMap: Record<string, boolean> = {};
+  const userPlan = subscription?.plan?.toLowerCase() || "";
+  const planFeatures = getPlanFeatures(userPlan);
+  const hasActiveSubscription = subscription?.is_active === true;
 
   for (const feature of features) {
     let hasAccess = true;
@@ -151,10 +192,19 @@ export function useAllFeatureAccess() {
       }
     }
 
+    // Check active subscription
+    if (hasAccess && !hasActiveSubscription) {
+      hasAccess = false;
+    }
+
+    // Check if feature is in plan
+    if (hasAccess && !planFeatures.includes(feature.feature_key)) {
+      hasAccess = false;
+    }
+
     // Check plan requirement
     if (hasAccess && feature.min_plan_required) {
       const requiredLevel = planHierarchy[feature.min_plan_required.toLowerCase()] ?? 0;
-      const userPlan = subscription?.plan?.toLowerCase() || "free_trial";
       const userLevel = planHierarchy[userPlan] ?? 0;
       
       if (userLevel < requiredLevel) {

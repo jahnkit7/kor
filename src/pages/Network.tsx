@@ -29,6 +29,7 @@ import { MerchantFilters, type MerchantFiltersState } from "@/components/network
 import { MerchantChat } from "@/components/network/MerchantChat";
 import { NegotiationCard } from "@/components/network/NegotiationCard";
 import { ProposalDialog } from "@/components/network/ProposalDialog";
+import { FeatureGate } from "@/components/FeatureGate";
 import { useMerchantProfile, useMerchants } from "@/hooks/use-merchant-profile";
 import { useProductRequests } from "@/hooks/use-product-requests";
 import { useMerchantOffers } from "@/hooks/use-merchant-offers";
@@ -170,6 +171,7 @@ const Network = () => {
   ];
 
   return (
+    <FeatureGate featureKey="network" showUpgradePrompt>
     <NetworkLayout>
       {/* Custom Header */}
       <NetworkHeader
@@ -681,6 +683,7 @@ const Network = () => {
         requestName={chatPartner?.requestName}
       />
     </NetworkLayout>
+    </FeatureGate>
   );
 };
 

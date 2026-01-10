@@ -26,6 +26,7 @@ import { ManualStockInput } from "@/components/stock/ManualStockInput";
 import { VoiceStockInput } from "@/components/stock/VoiceStockInput";
 import { VoiceEntriesHistory } from "@/components/stock/VoiceEntriesHistory";
 import { EditStockDialog } from "@/components/stock/EditStockDialog";
+import { FeatureGate } from "@/components/FeatureGate";
 
 export default function Stock() {
   useRequireAuth();
@@ -89,6 +90,7 @@ export default function Stock() {
   };
 
   return (
+    <FeatureGate featureKey="stock" showUpgradePrompt>
     <AppLayout>
       {/* Header */}
       <header className="sticky top-0 z-10 bg-background border-b">
@@ -258,5 +260,6 @@ export default function Stock() {
         }}
       />
     </AppLayout>
+    </FeatureGate>
   );
 }

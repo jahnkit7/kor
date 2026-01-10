@@ -7,9 +7,11 @@ import { OfflineProvider } from "./contexts/OfflineContext";
 import { FeatureNotificationsProvider } from "./contexts/FeatureNotificationsContext";
 import { PWAStatus } from "./components/PWAStatus";
 import { RequireProfile } from "./components/RequireProfile";
+import { RequireSubscription } from "./components/RequireSubscription";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import ProfileSetup from "./pages/ProfileSetup";
+import Subscriptions from "./pages/Subscriptions";
 import Dashboard from "./pages/Dashboard";
 import Sale from "./pages/Sale";
 import Debts from "./pages/Debts";
@@ -55,13 +57,16 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/invite" element={<AcceptInvite />} />
             <Route path="/profile-setup" element={<ProfileSetup />} />
+            <Route path="/subscriptions" element={<Subscriptions />} />
 
-            {/* Protected routes - require complete profile */}
+            {/* Protected routes - require complete profile and subscription */}
             <Route
               path="/dashboard"
               element={
                 <RequireProfile>
-                  <Dashboard />
+                  <RequireSubscription>
+                    <Dashboard />
+                  </RequireSubscription>
                 </RequireProfile>
               }
             />
@@ -69,7 +74,9 @@ const App = () => (
               path="/sale/:type"
               element={
                 <RequireProfile>
-                  <Sale />
+                  <RequireSubscription>
+                    <Sale />
+                  </RequireSubscription>
                 </RequireProfile>
               }
             />
@@ -77,7 +84,9 @@ const App = () => (
               path="/debts"
               element={
                 <RequireProfile>
-                  <Debts />
+                  <RequireSubscription>
+                    <Debts />
+                  </RequireSubscription>
                 </RequireProfile>
               }
             />
@@ -85,7 +94,9 @@ const App = () => (
               path="/debts/:id"
               element={
                 <RequireProfile>
-                  <DebtDetail />
+                  <RequireSubscription>
+                    <DebtDetail />
+                  </RequireSubscription>
                 </RequireProfile>
               }
             />
@@ -93,7 +104,9 @@ const App = () => (
               path="/clients"
               element={
                 <RequireProfile>
-                  <Clients />
+                  <RequireSubscription>
+                    <Clients />
+                  </RequireSubscription>
                 </RequireProfile>
               }
             />
@@ -101,7 +114,9 @@ const App = () => (
               path="/clients/new"
               element={
                 <RequireProfile>
-                  <NewClient />
+                  <RequireSubscription>
+                    <NewClient />
+                  </RequireSubscription>
                 </RequireProfile>
               }
             />
@@ -109,7 +124,9 @@ const App = () => (
               path="/clients/:id"
               element={
                 <RequireProfile>
-                  <ClientDetail />
+                  <RequireSubscription>
+                    <ClientDetail />
+                  </RequireSubscription>
                 </RequireProfile>
               }
             />
@@ -117,7 +134,9 @@ const App = () => (
               path="/reports"
               element={
                 <RequireProfile>
-                  <Reports />
+                  <RequireSubscription>
+                    <Reports />
+                  </RequireSubscription>
                 </RequireProfile>
               }
             />
@@ -125,7 +144,9 @@ const App = () => (
               path="/settings"
               element={
                 <RequireProfile>
-                  <Settings />
+                  <RequireSubscription>
+                    <Settings />
+                  </RequireSubscription>
                 </RequireProfile>
               }
             />
@@ -133,7 +154,9 @@ const App = () => (
               path="/stock"
               element={
                 <RequireProfile>
-                  <Stock />
+                  <RequireSubscription>
+                    <Stock />
+                  </RequireSubscription>
                 </RequireProfile>
               }
             />
@@ -141,7 +164,9 @@ const App = () => (
               path="/sales/history"
               element={
                 <RequireProfile>
-                  <SalesHistory />
+                  <RequireSubscription>
+                    <SalesHistory />
+                  </RequireSubscription>
                 </RequireProfile>
               }
             />
@@ -149,7 +174,9 @@ const App = () => (
               path="/employees"
               element={
                 <RequireProfile>
-                  <EmployeeManagement />
+                  <RequireSubscription>
+                    <EmployeeManagement />
+                  </RequireSubscription>
                 </RequireProfile>
               }
             />
@@ -157,7 +184,9 @@ const App = () => (
               path="/network"
               element={
                 <RequireProfile>
-                  <Network />
+                  <RequireSubscription>
+                    <Network />
+                  </RequireSubscription>
                 </RequireProfile>
               }
             />
