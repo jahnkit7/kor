@@ -8,9 +8,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Download, MessageCircle, Printer, Phone } from "lucide-react";
+import { Download, MessageCircle, Phone, Save, Loader2 } from "lucide-react";
 import { InvoicePreview } from "./InvoicePreview";
 import { useSaleInvoice } from "@/hooks/use-sale-invoice";
+import { useSavedInvoices } from "@/hooks/use-saved-invoices";
 import { Sale, SaleItem } from "@/hooks/use-sales";
 import { InvoiceStyle, SaleInvoiceData } from "@/lib/sale-invoice-generator";
 import { toast } from "sonner";
@@ -28,8 +29,10 @@ export function InvoiceDialog({ open, onOpenChange, sale }: InvoiceDialogProps) 
   const [style, setStyle] = useState<InvoiceStyle>("modern");
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [invoiceData, setInvoiceData] = useState<SaleInvoiceData | null>(null);
   const { generateInvoiceData, handleDownload, handleWhatsAppShare } = useSaleInvoice();
+  const { saveInvoice } = useSavedInvoices();
   const { isOnline } = useNetworkStatus();
 
   // Fetch sale items when dialog opens
@@ -95,14 +98,31 @@ export function InvoiceDialog({ open, onOpenChange, sale }: InvoiceDialogProps) 
 
   if (!sale || !invoiceData) return null;
 
-  const onDownload = () => {
+  const onSaveAndDownload = async () => {
+    // Save invoice to database
+    setSaving(true);
+    const saved = await saveInvoice(invoiceData, style, sale.id);
+    setSaving(false);
+
+    if (saved) {
+      toast.success("Facture sauvegardée", {
+        description: `N° ${saved.invoice_number}`,
+      });
+    }
+
+    // Then download
     handleDownload(invoiceData, style);
     toast.success("Facture générée", {
       description: "La fenêtre d'impression s'est ouverte",
     });
   };
 
-  const onWhatsApp = () => {
+  const onWhatsApp = async () => {
+    // Save invoice first
+    setSaving(true);
+    await saveInvoice(invoiceData, style, sale.id);
+    setSaving(false);
+
     handleWhatsAppShare(invoiceData);
     toast.success("Ouverture de WhatsApp", {
       description: invoiceData.customerPhone
@@ -171,14 +191,19 @@ export function InvoiceDialog({ open, onOpenChange, sale }: InvoiceDialogProps) 
 
           {/* Actions */}
           <div className="grid grid-cols-2 gap-3 pt-2">
-            <Button onClick={onDownload} className="gap-2">
-              <Download className="w-4 h-4" />
+            <Button onClick={onSaveAndDownload} className="gap-2" disabled={saving}>
+              {saving ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
               Télécharger / Imprimer
             </Button>
             <Button
               variant="outline"
               onClick={onWhatsApp}
               className="gap-2 border-green-500 text-green-600 hover:bg-green-50"
+              disabled={saving}
             >
               <MessageCircle className="w-4 h-4" />
               Envoyer WhatsApp
