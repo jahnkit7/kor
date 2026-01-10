@@ -320,6 +320,7 @@ export type Database = {
       }
       feature_flags: {
         Row: {
+          category: string | null
           created_at: string
           depends_on: string[] | null
           description: string | null
@@ -330,9 +331,11 @@ export type Database = {
           is_globally_enabled: boolean
           min_plan_required: string | null
           name: string
+          sort_order: number | null
           updated_at: string
         }
         Insert: {
+          category?: string | null
           created_at?: string
           depends_on?: string[] | null
           description?: string | null
@@ -343,9 +346,11 @@ export type Database = {
           is_globally_enabled?: boolean
           min_plan_required?: string | null
           name: string
+          sort_order?: number | null
           updated_at?: string
         }
         Update: {
+          category?: string | null
           created_at?: string
           depends_on?: string[] | null
           description?: string | null
@@ -356,6 +361,7 @@ export type Database = {
           is_globally_enabled?: boolean
           min_plan_required?: string | null
           name?: string
+          sort_order?: number | null
           updated_at?: string
         }
         Relationships: []

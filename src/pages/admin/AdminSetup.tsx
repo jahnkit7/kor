@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
-import { Database, Globe, CreditCard, ToggleLeft, Map, CheckCircle2, XCircle, Loader2, RefreshCw } from "lucide-react";
+import { Database, Globe, CreditCard, ToggleLeft, Map, CheckCircle2, XCircle, Loader2, RefreshCw, Download, Upload } from "lucide-react";
 
 interface DataStatus {
   countries: number;
@@ -34,24 +34,23 @@ const SEED_PLANS = [
 ];
 
 const SEED_FEATURES = [
-  // Basiques (Gratuit)
-  { feature_key: 'sales', name: 'Ventes', description: 'Enregistrement et suivi des ventes', is_globally_enabled: true, min_plan_required: null, depends_on: [] },
-  { feature_key: 'stock', name: 'Stock', description: 'Gestion du stock et inventaire', is_globally_enabled: true, min_plan_required: null, depends_on: [] },
-  { feature_key: 'clients', name: 'Clients', description: 'Gestion de la base clients', is_globally_enabled: true, min_plan_required: null, depends_on: [] },
-  { feature_key: 'debts', name: 'Créances', description: 'Suivi des dettes clients', is_globally_enabled: true, min_plan_required: null, depends_on: ['clients'] },
-  { feature_key: 'offline_mode', name: 'Mode Hors Ligne', description: 'Synchronisation des données en mode offline', is_globally_enabled: true, min_plan_required: null, depends_on: [] },
-  { feature_key: 'referrals', name: 'Parrainage', description: 'Système de parrainage et commissions affiliés', is_globally_enabled: true, min_plan_required: null, depends_on: [] },
-  { feature_key: 'commission_payment', name: 'Paiement Commissions', description: 'Gestion des paiements de commissions', is_globally_enabled: true, min_plan_required: null, depends_on: ['referrals'] },
-  // Starter
-  { feature_key: 'reports', name: 'Rapports', description: 'Rapports et statistiques avancés', is_globally_enabled: true, min_plan_required: 'starter', depends_on: ['sales'] },
-  { feature_key: 'voice_input', name: 'Entrée vocale', description: 'Saisie vocale des ventes et stock', is_globally_enabled: true, min_plan_required: 'starter', depends_on: [] },
-  { feature_key: 'alerts', name: 'Alertes', description: 'Rappels automatiques pour dettes et expiration', is_globally_enabled: true, min_plan_required: 'starter', depends_on: [] },
-  // Premium
-  { feature_key: 'ai_analysis', name: 'Analyse IA', description: 'Analyse intelligente des données', is_globally_enabled: true, min_plan_required: 'premium', depends_on: ['voice_input'] },
-  { feature_key: 'network', name: 'Réseau Marchands', description: 'Réseau B2B entre marchands', is_globally_enabled: true, min_plan_required: 'premium', depends_on: ['clients'] },
-  { feature_key: 'employees', name: 'Gestion Employés', description: 'Gestion des employés et permissions', is_globally_enabled: true, min_plan_required: 'premium', depends_on: [] },
-  { feature_key: 'invoices', name: 'Factures', description: 'Génération de factures PDF professionnelles', is_globally_enabled: true, min_plan_required: 'premium', depends_on: ['sales'] },
-  { feature_key: 'multi_currency', name: 'Multi-devises', description: 'Support de plusieurs devises et taux de change', is_globally_enabled: true, min_plan_required: 'premium', depends_on: [] },
+  // Primaires (Obligatoires)
+  { feature_key: 'sales', name: 'Ventes', description: 'Enregistrement et suivi des ventes', is_globally_enabled: true, min_plan_required: null, depends_on: [], category: 'primary', sort_order: 0 },
+  { feature_key: 'stock', name: 'Stock', description: 'Gestion du stock et inventaire', is_globally_enabled: true, min_plan_required: null, depends_on: [], category: 'primary', sort_order: 1 },
+  { feature_key: 'clients', name: 'Clients', description: 'Gestion de la base clients', is_globally_enabled: true, min_plan_required: null, depends_on: [], category: 'primary', sort_order: 2 },
+  { feature_key: 'debts', name: 'Créances', description: 'Suivi des dettes clients', is_globally_enabled: true, min_plan_required: null, depends_on: ['clients'], category: 'primary', sort_order: 3 },
+  { feature_key: 'offline_mode', name: 'Mode Hors Ligne', description: 'Synchronisation des données en mode offline', is_globally_enabled: true, min_plan_required: null, depends_on: [], category: 'primary', sort_order: 4 },
+  // Secondaires (Valeur ajoutée)
+  { feature_key: 'referrals', name: 'Parrainage', description: 'Système de parrainage et commissions affiliés', is_globally_enabled: true, min_plan_required: null, depends_on: [], category: 'secondary', sort_order: 0 },
+  { feature_key: 'commission_payment', name: 'Paiement Commissions', description: 'Gestion des paiements de commissions', is_globally_enabled: true, min_plan_required: null, depends_on: ['referrals'], category: 'secondary', sort_order: 1 },
+  { feature_key: 'reports', name: 'Rapports', description: 'Rapports et statistiques avancés', is_globally_enabled: true, min_plan_required: 'starter', depends_on: ['sales'], category: 'secondary', sort_order: 2 },
+  { feature_key: 'voice_input', name: 'Entrée vocale', description: 'Saisie vocale des ventes et stock', is_globally_enabled: true, min_plan_required: 'starter', depends_on: [], category: 'secondary', sort_order: 3 },
+  { feature_key: 'alerts', name: 'Alertes', description: 'Rappels automatiques pour dettes et expiration', is_globally_enabled: true, min_plan_required: 'starter', depends_on: [], category: 'secondary', sort_order: 4 },
+  { feature_key: 'ai_analysis', name: 'Analyse IA', description: 'Analyse intelligente des données', is_globally_enabled: true, min_plan_required: 'premium', depends_on: ['voice_input'], category: 'secondary', sort_order: 5 },
+  { feature_key: 'network', name: 'Réseau Marchands', description: 'Réseau B2B entre marchands', is_globally_enabled: true, min_plan_required: 'premium', depends_on: ['clients'], category: 'secondary', sort_order: 6 },
+  { feature_key: 'employees', name: 'Gestion Employés', description: 'Gestion des employés et permissions', is_globally_enabled: true, min_plan_required: 'premium', depends_on: [], category: 'secondary', sort_order: 7 },
+  { feature_key: 'invoices', name: 'Factures', description: 'Génération de factures PDF professionnelles', is_globally_enabled: true, min_plan_required: 'premium', depends_on: ['sales'], category: 'secondary', sort_order: 8 },
+  { feature_key: 'multi_currency', name: 'Multi-devises', description: 'Support de plusieurs devises et taux de change', is_globally_enabled: true, min_plan_required: 'premium', depends_on: [], category: 'secondary', sort_order: 9 },
 ];
 
 const SEED_ROADMAP = [
@@ -69,6 +68,9 @@ export default function AdminSetup() {
   const [status, setStatus] = useState<DataStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [seeding, setSeeding] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchStatus = async () => {
     setLoading(true);
@@ -174,6 +176,151 @@ export default function AdminSetup() {
     toast.success("Toutes les données ont été initialisées !");
   };
 
+  // Export configuration as JSON
+  const exportConfiguration = async () => {
+    setExporting(true);
+    try {
+      const [features, plans, countries, roadmap] = await Promise.all([
+        supabase.from("feature_flags").select("*"),
+        supabase.from("subscription_plans").select("*"),
+        supabase.from("countries").select("*"),
+        supabase.from("roadmap_items").select("*"),
+      ]);
+
+      if (features.error) throw features.error;
+      if (plans.error) throw plans.error;
+      if (countries.error) throw countries.error;
+      if (roadmap.error) throw roadmap.error;
+
+      const config = {
+        version: "1.0",
+        exportDate: new Date().toISOString(),
+        features: features.data,
+        plans: plans.data,
+        countries: countries.data,
+        roadmap: roadmap.data,
+      };
+
+      const blob = new Blob([JSON.stringify(config, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `admin-config-${new Date().toISOString().split("T")[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast.success("Configuration exportée avec succès");
+    } catch (error) {
+      console.error("Error exporting configuration:", error);
+      toast.error("Erreur lors de l'export");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // Import configuration from JSON
+  const importConfiguration = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    try {
+      const content = await file.text();
+      const config = JSON.parse(content);
+
+      // Validate structure
+      if (!config.version || !config.exportDate) {
+        throw new Error("Format de fichier invalide");
+      }
+
+      let importedCount = 0;
+
+      // Import countries
+      if (config.countries && Array.isArray(config.countries) && config.countries.length > 0) {
+        const countriesData = config.countries.map((c: any) => ({
+          name: c.name,
+          code: c.code,
+          phone_prefix: c.phone_prefix,
+          currency: c.currency,
+          is_active: c.is_active,
+        }));
+        const { error } = await supabase.from("countries").upsert(countriesData, { onConflict: "code" });
+        if (error) throw error;
+        importedCount += countriesData.length;
+      }
+
+      // Import plans
+      if (config.plans && Array.isArray(config.plans) && config.plans.length > 0) {
+        const plansData = config.plans.map((p: any) => ({
+          name: p.name,
+          price: p.price,
+          duration_days: p.duration_days,
+          currency: p.currency,
+          features: p.features,
+          is_active: p.is_active,
+          sort_order: p.sort_order,
+          description: p.description,
+          max_clients: p.max_clients,
+          max_sales_per_day: p.max_sales_per_day,
+          commission_reduction: p.commission_reduction,
+        }));
+        const { error } = await supabase.from("subscription_plans").upsert(plansData, { onConflict: "name" });
+        if (error) throw error;
+        importedCount += plansData.length;
+      }
+
+      // Import features
+      if (config.features && Array.isArray(config.features) && config.features.length > 0) {
+        const featuresData = config.features.map((f: any) => ({
+          feature_key: f.feature_key,
+          name: f.name,
+          description: f.description,
+          is_globally_enabled: f.is_globally_enabled,
+          min_plan_required: f.min_plan_required,
+          depends_on: f.depends_on,
+          category: f.category,
+          sort_order: f.sort_order,
+          enabled_for_users: f.enabled_for_users,
+          disabled_countries: f.disabled_countries,
+        }));
+        const { error } = await supabase.from("feature_flags").upsert(featuresData, { onConflict: "feature_key" });
+        if (error) throw error;
+        importedCount += featuresData.length;
+      }
+
+      // Import roadmap
+      if (config.roadmap && Array.isArray(config.roadmap) && config.roadmap.length > 0 && user?.id) {
+        const roadmapData = config.roadmap.map((r: any) => ({
+          title: r.title,
+          description: r.description,
+          category: r.category,
+          status: r.status,
+          priority: r.priority,
+          target_version: r.target_version,
+          estimated_effort: r.estimated_effort,
+          created_by: user.id,
+        }));
+        const { error } = await supabase.from("roadmap_items").upsert(roadmapData, { onConflict: "title" });
+        if (error) throw error;
+        importedCount += roadmapData.length;
+      }
+
+      toast.success(`${importedCount} éléments importés avec succès`);
+      fetchStatus();
+    } catch (error) {
+      console.error("Error importing configuration:", error);
+      toast.error(error instanceof Error ? error.message : "Erreur lors de l'import");
+    } finally {
+      setImporting(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
   const StatusBadge = ({ count, expected }: { count: number; expected: number }) => {
     const hasData = count >= expected;
     return (
@@ -207,7 +354,7 @@ export default function AdminSetup() {
       key: "features",
       icon: ToggleLeft,
       title: "Feature Flags",
-      description: "15 fonctionnalités avec dépendances",
+      description: "15 fonctionnalités avec dépendances et catégories",
       count: status?.features || 0,
       expected: 15,
       onSeed: seedFeatures,
@@ -244,6 +391,59 @@ export default function AdminSetup() {
             </Button>
           </div>
         </div>
+
+        {/* Export/Import Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Database className="w-5 h-5" />
+              Sauvegarde & Restauration
+            </CardTitle>
+            <CardDescription>
+              Exportez ou importez la configuration complète (features, plans, pays, roadmap)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-4">
+              <Button 
+                variant="outline" 
+                onClick={exportConfiguration} 
+                disabled={exporting || loading}
+                className="flex-1"
+              >
+                {exporting ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4 mr-2" />
+                )}
+                Exporter JSON
+              </Button>
+              <div className="flex-1">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".json"
+                  onChange={importConfiguration}
+                  className="hidden"
+                  id="import-config"
+                />
+                <Button 
+                  variant="outline" 
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={importing || loading}
+                  className="w-full"
+                >
+                  {importing ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Upload className="w-4 h-4 mr-2" />
+                  )}
+                  Importer JSON
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="grid gap-4 md:grid-cols-2">
           {seedItems.map((item) => (
@@ -302,6 +502,8 @@ export default function AdminSetup() {
               <li>Cliquez sur "Initialiser tout" ou créez chaque section individuellement</li>
               <li>Les données existantes ne seront pas dupliquées (upsert par clé unique)</li>
               <li>Les items de roadmap seront associés à votre compte admin</li>
+              <li><strong>Nouveau :</strong> Utilisez "Exporter JSON" pour sauvegarder la config avant modifications</li>
+              <li><strong>Nouveau :</strong> Utilisez "Importer JSON" pour restaurer une configuration sauvegardée</li>
             </ol>
           </CardContent>
         </Card>
