@@ -18,7 +18,8 @@ import {
   UserPlus,
   BarChart3,
   Bell,
-  FlaskConical
+  FlaskConical,
+  GitBranch
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +35,7 @@ const navItems = [
   { to: "/admin/features", icon: ToggleLeft, label: "Fonctionnalités" },
   { to: "/admin/feature-analytics", icon: BarChart3, label: "Analytics Features" },
   { to: "/admin/beta-analytics", icon: FlaskConical, label: "Analytics Bêta" },
+  { to: "/admin/ab-testing", icon: GitBranch, label: "A/B Testing" },
   { to: "/admin/roadmap", icon: Map, label: "Roadmap" },
   { to: "/admin/commissions", icon: Gift, label: "Commissions Plateforme" },
   { to: "/admin/notifications", icon: Bell, label: "Notifications" },

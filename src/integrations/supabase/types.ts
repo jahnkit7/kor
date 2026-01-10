@@ -14,6 +14,76 @@ export type Database = {
   }
   public: {
     Tables: {
+      ab_test_assignments: {
+        Row: {
+          assigned_at: string | null
+          feature_key: string
+          id: string
+          user_id: string
+          variant_id: string
+        }
+        Insert: {
+          assigned_at?: string | null
+          feature_key: string
+          id?: string
+          user_id: string
+          variant_id: string
+        }
+        Update: {
+          assigned_at?: string | null
+          feature_key?: string
+          id?: string
+          user_id?: string
+          variant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ab_test_assignments_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "feature_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ab_test_metrics: {
+        Row: {
+          created_at: string | null
+          feature_key: string
+          id: string
+          metric_name: string
+          metric_value: number | null
+          user_id: string
+          variant_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          feature_key: string
+          id?: string
+          metric_name: string
+          metric_value?: number | null
+          user_id: string
+          variant_id: string
+        }
+        Update: {
+          created_at?: string | null
+          feature_key?: string
+          id?: string
+          metric_name?: string
+          metric_value?: number | null
+          user_id?: string
+          variant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ab_test_metrics_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "feature_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       activity_logs: {
         Row: {
           action_data: Json | null
@@ -100,6 +170,35 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      changelog_views: {
+        Row: {
+          changelog_id: string
+          id: string
+          user_id: string
+          viewed_at: string | null
+        }
+        Insert: {
+          changelog_id: string
+          id?: string
+          user_id: string
+          viewed_at?: string | null
+        }
+        Update: {
+          changelog_id?: string
+          id?: string
+          user_id?: string
+          viewed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "changelog_views_changelog_id_fkey"
+            columns: ["changelog_id"]
+            isOneToOne: false
+            referencedRelation: "feature_changelogs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       clients: {
         Row: {
@@ -348,10 +447,47 @@ export type Database = {
         }
         Relationships: []
       }
+      feature_changelogs: {
+        Row: {
+          change_type: string
+          content_md: string
+          created_at: string | null
+          created_by: string | null
+          feature_key: string
+          id: string
+          published_at: string | null
+          title: string
+          version: string
+        }
+        Insert: {
+          change_type: string
+          content_md: string
+          created_at?: string | null
+          created_by?: string | null
+          feature_key: string
+          id?: string
+          published_at?: string | null
+          title: string
+          version: string
+        }
+        Update: {
+          change_type?: string
+          content_md?: string
+          created_at?: string | null
+          created_by?: string | null
+          feature_key?: string
+          id?: string
+          published_at?: string | null
+          title?: string
+          version?: string
+        }
+        Relationships: []
+      }
       feature_flags: {
         Row: {
           category: string | null
           created_at: string
+          current_version: string | null
           depends_on: string[] | null
           description: string | null
           disabled_countries: string[] | null
@@ -368,6 +504,7 @@ export type Database = {
         Insert: {
           category?: string | null
           created_at?: string
+          current_version?: string | null
           depends_on?: string[] | null
           description?: string | null
           disabled_countries?: string[] | null
@@ -384,6 +521,7 @@ export type Database = {
         Update: {
           category?: string | null
           created_at?: string
+          current_version?: string | null
           depends_on?: string[] | null
           description?: string | null
           disabled_countries?: string[] | null
@@ -423,6 +561,45 @@ export type Database = {
           id?: string
           metadata?: Json | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      feature_variants: {
+        Row: {
+          config: Json | null
+          created_at: string | null
+          description: string | null
+          feature_key: string
+          id: string
+          is_active: boolean | null
+          is_control: boolean | null
+          name: string
+          traffic_percentage: number | null
+          variant_key: string
+        }
+        Insert: {
+          config?: Json | null
+          created_at?: string | null
+          description?: string | null
+          feature_key: string
+          id?: string
+          is_active?: boolean | null
+          is_control?: boolean | null
+          name: string
+          traffic_percentage?: number | null
+          variant_key: string
+        }
+        Update: {
+          config?: Json | null
+          created_at?: string | null
+          description?: string | null
+          feature_key?: string
+          id?: string
+          is_active?: boolean | null
+          is_control?: boolean | null
+          name?: string
+          traffic_percentage?: number | null
+          variant_key?: string
         }
         Relationships: []
       }
