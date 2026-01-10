@@ -27,6 +27,64 @@ export interface LocalParseResult {
   suggestions: string[];
 }
 
+// Common African/West African products dictionary with aliases
+export const PRODUCT_DICTIONARY: Array<{
+  name: string;
+  aliases: string[];
+  category: string;
+  default_unit?: string;
+  typical_prices?: number[];
+}> = [
+  // Alimentation de base
+  { name: "Riz", aliases: ["riz", "ris", "rice", "riz local", "riz importé", "riz parfumé"], category: "alimentation", default_unit: "sac", typical_prices: [15000, 18000, 25000] },
+  { name: "Sucre", aliases: ["sucre", "sucr", "sugar"], category: "alimentation", default_unit: "sachet", typical_prices: [500, 1000, 1200] },
+  { name: "Huile", aliases: ["huile", "huil", "oil", "huile de palme", "huile végétale", "huile d'arachide"], category: "alimentation", default_unit: "bidon", typical_prices: [1500, 2500, 5000] },
+  { name: "Sel", aliases: ["sel", "salt"], category: "alimentation", default_unit: "sachet", typical_prices: [100, 200, 500] },
+  { name: "Farine", aliases: ["farine", "farin", "flour"], category: "alimentation", default_unit: "sachet", typical_prices: [500, 1000, 2000] },
+  { name: "Maïs", aliases: ["mais", "maïs", "mais", "corn"], category: "alimentation", default_unit: "sac", typical_prices: [10000, 15000, 20000] },
+  { name: "Mil", aliases: ["mil", "millet"], category: "alimentation", default_unit: "sac", typical_prices: [8000, 12000] },
+  { name: "Haricot", aliases: ["haricot", "haricots", "beans", "niébé"], category: "alimentation", default_unit: "sac", typical_prices: [15000, 25000] },
+  { name: "Pâtes", aliases: ["pates", "pâtes", "pasta", "spaghetti", "macaroni", "coquillette"], category: "alimentation", default_unit: "paquet", typical_prices: [250, 500, 1000] },
+  { name: "Tomate concentrée", aliases: ["tomate", "concentré de tomate", "tomato paste"], category: "alimentation", default_unit: "boite", typical_prices: [200, 500, 1000] },
+  { name: "Cube Maggi", aliases: ["maggi", "cube", "cube maggi", "arôme"], category: "alimentation", default_unit: "paquet", typical_prices: [25, 50, 100] },
+  
+  // Boissons
+  { name: "Fanta", aliases: ["fanta", "fenta"], category: "boisson", default_unit: "casier", typical_prices: [6000, 8000] },
+  { name: "Coca-Cola", aliases: ["coca", "coca cola", "cocacola", "coke"], category: "boisson", default_unit: "casier", typical_prices: [6000, 8000] },
+  { name: "Sprite", aliases: ["sprite", "sprit"], category: "boisson", default_unit: "casier", typical_prices: [6000, 8000] },
+  { name: "Bière", aliases: ["biere", "bière", "beer", "flag", "castel", "33 export"], category: "boisson", default_unit: "casier", typical_prices: [8000, 10000, 12000] },
+  { name: "Eau minérale", aliases: ["eau", "eau minerale", "eau minérale", "water", "tangui", "voltic"], category: "boisson", default_unit: "pack", typical_prices: [1500, 2500, 3000] },
+  { name: "Jus", aliases: ["jus", "juice", "jus de fruit"], category: "boisson", default_unit: "pack", typical_prices: [1000, 2000, 3000] },
+  
+  // Hygiène et entretien
+  { name: "Savon", aliases: ["savon", "savons", "soap", "savon lux", "savon palmolive", "savon dettol"], category: "hygiene", default_unit: "piece", typical_prices: [200, 500, 1000] },
+  { name: "Lessive", aliases: ["lessive", "omo", "ariel", "tide", "détergent"], category: "hygiene", default_unit: "sachet", typical_prices: [100, 250, 500] },
+  { name: "Dentifrice", aliases: ["dentifrice", "colgate", "close up", "pate dentifrice"], category: "hygiene", default_unit: "tube", typical_prices: [500, 1000, 1500] },
+  { name: "Shampoing", aliases: ["shampoing", "shampooing", "shampoo"], category: "hygiene", default_unit: "bouteille", typical_prices: [500, 1000, 2000] },
+  { name: "Papier hygiénique", aliases: ["papier", "papier toilette", "toilet paper", "pq"], category: "hygiene", default_unit: "rouleau", typical_prices: [100, 200, 500] },
+  { name: "Couches", aliases: ["couches", "pampers", "couches bébé", "diapers"], category: "hygiene", default_unit: "paquet", typical_prices: [2000, 5000, 10000] },
+  
+  // Construction
+  { name: "Ciment", aliases: ["ciment", "cement", "sac de ciment"], category: "construction", default_unit: "sac", typical_prices: [4500, 5000, 5500] },
+  { name: "Fer à béton", aliases: ["fer", "fer à béton", "fer béton", "rebar"], category: "construction", default_unit: "barre", typical_prices: [2000, 3500, 5000] },
+  { name: "Sable", aliases: ["sable", "sand"], category: "construction", default_unit: "camion", typical_prices: [25000, 35000, 50000] },
+  { name: "Gravier", aliases: ["gravier", "gravel"], category: "construction", default_unit: "camion", typical_prices: [30000, 40000, 60000] },
+  { name: "Tôle", aliases: ["tole", "tôle", "tole bac", "tôle bac"], category: "construction", default_unit: "piece", typical_prices: [5000, 8000, 12000] },
+  
+  // Électronique
+  { name: "Chargeur", aliases: ["chargeur", "charger", "chargeur téléphone"], category: "electronique", default_unit: "piece", typical_prices: [1000, 2000, 5000] },
+  { name: "Écouteurs", aliases: ["ecouteur", "écouteur", "ecouteurs", "écouteurs", "earphones", "casque"], category: "electronique", default_unit: "piece", typical_prices: [500, 1500, 5000] },
+  { name: "Câble USB", aliases: ["cable", "câble", "usb", "cable usb"], category: "electronique", default_unit: "piece", typical_prices: [500, 1000, 2000] },
+  { name: "Batterie", aliases: ["batterie", "battery", "pile", "piles"], category: "electronique", default_unit: "piece", typical_prices: [2000, 5000, 15000] },
+  { name: "Écran", aliases: ["ecran", "écran", "screen"], category: "electronique", default_unit: "piece", typical_prices: [5000, 10000, 25000] },
+  { name: "Téléphone", aliases: ["telephone", "téléphone", "phone", "portable"], category: "electronique", default_unit: "piece", typical_prices: [15000, 50000, 150000] },
+  
+  // Vêtements
+  { name: "Pagne", aliases: ["pagne", "pagnes", "wax", "tissu"], category: "vetement", default_unit: "piece", typical_prices: [2000, 5000, 15000] },
+  { name: "T-shirt", aliases: ["tshirt", "t-shirt", "t shirt", "tricot"], category: "vetement", default_unit: "piece", typical_prices: [1500, 3000, 5000] },
+  { name: "Chaussures", aliases: ["chaussure", "chaussures", "shoes", "sandales"], category: "vetement", default_unit: "paire", typical_prices: [5000, 15000, 30000] },
+];
+
 // Normalize text for parsing
 function normalizeText(text: string): string {
   return text
@@ -118,6 +176,8 @@ const UNITS = [
   "barre", "barres",
   "palette", "palettes",
   "plateau", "plateaux",
+  "paire", "paires",
+  "camion", "camions",
 ];
 
 // Separator keywords (product boundaries)
@@ -134,6 +194,23 @@ const SEPARATORS = [
   "terminé",
   "fini",
 ];
+
+/**
+ * Find product from dictionary
+ */
+export function findProductInDictionary(text: string): typeof PRODUCT_DICTIONARY[0] | null {
+  const normalized = normalizeText(text);
+  
+  for (const product of PRODUCT_DICTIONARY) {
+    for (const alias of product.aliases) {
+      if (normalized.includes(normalizeText(alias))) {
+        return product;
+      }
+    }
+  }
+  
+  return null;
+}
 
 /**
  * Parse French number words to actual numbers

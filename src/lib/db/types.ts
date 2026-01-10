@@ -86,3 +86,28 @@ export interface AppSettings {
   language: string;
   pin?: string;
 }
+
+export interface AudioRecording {
+  id: string;
+  audio_blob: Blob;
+  type: "sale" | "stock" | "request";
+  duration: number;
+  createdAt: string;
+  synced: boolean;
+  transcription?: string;
+  analysis_result?: unknown;
+  error?: string;
+}
+
+export interface ProductDictionary {
+  id: string;
+  name: string;
+  aliases: string[];
+  category: string;
+  default_price?: number;
+  default_unit?: string;
+  usage_count: number;
+  user_id?: string;
+  createdAt: string;
+  updatedAt: string;
+}

@@ -9,14 +9,16 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Mic, Square, Loader2, Check, X, Edit2, User, Wallet, CreditCard, AlertTriangle, UserPlus, Users, History, RotateCcw, Pencil, Trash2, Search, FileText, ChevronDown } from "lucide-react";
+import { Mic, Square, Loader2, Check, X, Edit2, User, Wallet, CreditCard, AlertTriangle, UserPlus, Users, History, RotateCcw, Pencil, Trash2, Search, FileText, ChevronDown, WifiOff, Keyboard } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useNetworkStatus } from "@/hooks/use-network-status";
 import { useFeatureTracking } from "@/hooks/use-feature-tracking";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { parseSalesLocally } from "@/lib/local-sale-parser";
 
 // Voice history storage key
 const VOICE_HISTORY_KEY = "voice_sale_history";
@@ -117,9 +119,10 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
     trackFeature("sales", { action: "voice_input" });
   }, [trackFeature]);
 
-  const [step, setStep] = useState<"record" | "analyzing" | "validate" | "saving">("record");
+  const [step, setStep] = useState<"record" | "analyzing" | "validate" | "saving" | "text-input">("record");
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState("");
+  const [manualText, setManualText] = useState("");
   const [parsedSales, setParsedSales] = useState<ParsedSale[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -128,6 +131,7 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
   const [isSupported, setIsSupported] = useState(true);
   const [lastTranscript, setLastTranscript] = useState<string | null>(null);
   const [canRetry, setCanRetry] = useState(false);
+  const [useLocalParser, setUseLocalParser] = useState(false);
   
   // Disambiguation state
   const [disambiguationSaleIndex, setDisambiguationSaleIndex] = useState<number | null>(null);
@@ -380,11 +384,52 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
   }, [transcript, stopTimer]);
 
   const analyzeTranscript = useCallback(async (text: string, saveToHistory = true) => {
-    if (!isOnline) {
-      setErrorMessage("Connexion internet requise pour l'analyse vocale des ventes.");
-      setLastTranscript(text);
-      setCanRetry(true);
-      return;
+    // If offline or local parser enabled, use local parsing
+    if (!isOnline || useLocalParser) {
+      setStep("analyzing");
+      
+      try {
+        const result = parseSalesLocally(text);
+        
+        if (result.sales.length === 0) {
+          setErrorMessage("Aucune vente détectée. Essayez: 'J'ai vendu 5 chargeurs à 1500 à Kofi'");
+          setStep("record");
+          return;
+        }
+        
+        // Convert local parsed sales to the expected format
+        const processedSales: ParsedSale[] = result.sales.map(sale => ({
+          type: sale.type,
+          amount: sale.amount,
+          paid: sale.paid,
+          remaining: sale.remaining,
+          client_match: {
+            status: sale.client_name ? "not_found" : "found",
+            client_id: null,
+            client_name: sale.client_name,
+            candidates: [],
+          },
+          products: sale.products,
+          note: sale.note,
+          resolved_client_id: undefined,
+          resolved_client_name: sale.client_name,
+        }));
+        
+        setParsedSales(processedSales);
+        setSuggestions(result.suggestions);
+        setStep("validate");
+        
+        toast({
+          title: `${result.sales.length} vente(s) détectée(s) (local)`,
+          description: "Analyse hors-ligne - vérifiez les détails",
+        });
+        return;
+      } catch (error) {
+        console.error("Local parse error:", error);
+        setErrorMessage("Erreur d'analyse locale");
+        setStep("record");
+        return;
+      }
     }
 
     setStep("analyzing");
@@ -833,6 +878,63 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
     }
   };
 
+  // Text input mode for offline
+  if (step === "text-input") {
+    return (
+      <div className="space-y-4 p-4">
+        <div className="text-center">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <WifiOff className="w-5 h-5 text-amber-500" />
+            <h2 className="text-xl font-bold">Mode texte (hors-ligne)</h2>
+          </div>
+          <p className="text-muted-foreground text-sm">
+            Décrivez vos ventes en texte, l'analyse sera faite localement
+          </p>
+        </div>
+
+        <Textarea
+          placeholder="Ex: J'ai vendu 5 chargeurs à 1500 à Kofi, il a payé cash. Ensuite Mamadou a pris 3 écrans à 5000, il a payé 10000 sur 15000."
+          value={manualText}
+          onChange={(e) => setManualText(e.target.value)}
+          className="min-h-[150px]"
+        />
+
+        <div className="flex gap-3">
+          <Button
+            variant="outline"
+            onClick={() => {
+              setStep("record");
+              setManualText("");
+            }}
+            className="flex-1"
+          >
+            Retour
+          </Button>
+          <Button
+            onClick={() => {
+              if (manualText.trim().length >= 10) {
+                analyzeTranscript(manualText.trim());
+              } else {
+                toast({ title: "Texte trop court", variant: "destructive" });
+              }
+            }}
+            disabled={manualText.trim().length < 10}
+            className="flex-1"
+          >
+            Analyser
+          </Button>
+        </div>
+
+        <Card className="p-3 bg-amber-500/10 border-amber-500/20">
+          <p className="text-xs text-amber-600">
+            💡 L'analyse locale fonctionne sans internet mais peut être moins précise. 
+            Vérifiez bien les montants et clients détectés.
+          </p>
+        </Card>
+      </div>
+    );
+  }
+
   // Record step
   if (step === "record") {
     return (
@@ -843,6 +945,30 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
             Décrivez vos ventes naturellement
           </p>
         </div>
+
+        {/* Offline warning with text mode button */}
+        {!isOnline && (
+          <Card className="p-4 bg-amber-500/10 border-amber-500/20">
+            <div className="flex items-start gap-3">
+              <WifiOff className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-amber-700">Mode hors-ligne</p>
+                <p className="text-xs text-amber-600 mt-1">
+                  La reconnaissance vocale nécessite internet. Utilisez le mode texte pour saisir vos ventes.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setStep("text-input")}
+                  className="mt-2 gap-2"
+                >
+                  <Keyboard className="w-4 h-4" />
+                  Mode texte
+                </Button>
+              </div>
+            </div>
+          </Card>
+        )}
 
         {/* Microphone button */}
         <div className="flex justify-center">
