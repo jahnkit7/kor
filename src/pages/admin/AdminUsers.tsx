@@ -30,7 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, User, Phone, MapPin, Calendar, MoreVertical, Loader2, CreditCard } from "lucide-react";
+import { Search, User, Phone, MapPin, Calendar, MoreVertical, Loader2, CreditCard, Briefcase } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -197,8 +197,9 @@ export default function AdminUsers() {
                     <TableRow>
                       <TableHead>Boutique</TableHead>
                       <TableHead>Téléphone</TableHead>
-                      <TableHead className="hidden lg:table-cell">Ville</TableHead>
-                      <TableHead className="hidden lg:table-cell">Inscription</TableHead>
+                      <TableHead className="hidden md:table-cell">Ville</TableHead>
+                      <TableHead className="hidden lg:table-cell">Spécialité</TableHead>
+                      <TableHead className="hidden xl:table-cell">Inscription</TableHead>
                       <TableHead>Statut</TableHead>
                       <TableHead className="w-10"></TableHead>
                     </TableRow>
@@ -229,13 +230,21 @@ export default function AdminUsers() {
                             {user.phone || "-"}
                           </div>
                         </TableCell>
-                        <TableCell className="hidden lg:table-cell">
+                        <TableCell className="hidden md:table-cell">
                           <div className="flex items-center gap-2">
                             <MapPin className="w-4 h-4 text-muted-foreground" />
-                            {(user as any).city || "-"}
+                            {user.city || "-"}
                           </div>
                         </TableCell>
                         <TableCell className="hidden lg:table-cell">
+                          <div className="flex items-center gap-2">
+                            <Briefcase className="w-4 h-4 text-muted-foreground" />
+                            <span className="truncate max-w-[120px]">
+                              {user.specialty || "-"}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden xl:table-cell">
                           <div className="flex items-center gap-2">
                             <Calendar className="w-4 h-4 text-muted-foreground" />
                             {user.created_at
