@@ -170,8 +170,183 @@ export async function fullSync(userId: string): Promise<{ pushed: number; failed
   // First push local changes
   const result = await processSyncQueue(userId);
   
+  // Then push all unsynced items from stores
+  const directPushResult = await pushUnsyncedToCloud(userId);
+  
   // Then pull remote changes
   await pullFromCloud(userId);
 
-  return { pushed: result.success, failed: result.failed };
+  return { 
+    pushed: result.success + directPushResult.pushed, 
+    failed: result.failed + directPushResult.failed 
+  };
+}
+
+// Push all unsynced items directly from stores (not just queue)
+export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: number; failed: number }> {
+  const supabase = await getSupabaseClient();
+  const db = await getDB();
+  
+  let pushed = 0;
+  let failed = 0;
+
+  // 1. Push unsynced sales
+  const allSales = await db.getAll("sales");
+  const unsyncedSales = allSales.filter(s => !s.synced);
+  
+  for (const sale of unsyncedSales) {
+    try {
+      const { error } = await supabase
+        .from("sales")
+        .upsert({
+          id: sale.id,
+          type: sale.type,
+          amount: sale.amount,
+          note: sale.note || null,
+          client_id: sale.clientId || null,
+          user_id: userId,
+          created_at: sale.createdAt,
+        }, { onConflict: 'id' });
+
+      if (!error) {
+        await db.put("sales", { ...sale, synced: true });
+        pushed++;
+      } else {
+        console.error("Error syncing sale:", error);
+        failed++;
+      }
+    } catch (err) {
+      console.error("Error syncing sale:", err);
+      failed++;
+    }
+  }
+
+  // 2. Push unsynced clients
+  const allClients = await db.getAll("clients");
+  const unsyncedClients = allClients.filter(c => !c.synced);
+  
+  for (const client of unsyncedClients) {
+    try {
+      const { error } = await supabase
+        .from("clients")
+        .upsert({
+          id: client.id,
+          name: client.name,
+          phone: client.phone,
+          photo: client.photo || null,
+          is_risky: client.is_risky || false,
+          user_id: userId,
+          created_at: client.createdAt,
+          updated_at: client.updatedAt,
+        }, { onConflict: 'id' });
+
+      if (!error) {
+        await db.put("clients", { ...client, synced: true });
+        pushed++;
+      } else {
+        console.error("Error syncing client:", error);
+        failed++;
+      }
+    } catch (err) {
+      console.error("Error syncing client:", err);
+      failed++;
+    }
+  }
+
+  // 3. Push unsynced debts
+  const allDebts = await db.getAll("debts");
+  const unsyncedDebts = allDebts.filter(d => !d.synced);
+  
+  for (const debt of unsyncedDebts) {
+    try {
+      const { error } = await supabase
+        .from("debts")
+        .upsert({
+          id: debt.id,
+          client_id: debt.clientId,
+          amount: debt.amount,
+          paid: debt.paid,
+          user_id: userId,
+          created_at: debt.createdAt,
+          updated_at: debt.updatedAt,
+        }, { onConflict: 'id' });
+
+      if (!error) {
+        await db.put("debts", { ...debt, synced: true });
+        pushed++;
+      } else {
+        console.error("Error syncing debt:", error);
+        failed++;
+      }
+    } catch (err) {
+      console.error("Error syncing debt:", err);
+      failed++;
+    }
+  }
+
+  // 4. Push unsynced payments
+  const allPayments = await db.getAll("payments");
+  const unsyncedPayments = allPayments.filter(p => !p.synced);
+  
+  for (const payment of unsyncedPayments) {
+    try {
+      const { error } = await supabase
+        .from("payments")
+        .upsert({
+          id: payment.id,
+          debt_id: payment.debtId,
+          client_id: payment.clientId,
+          amount: payment.amount,
+          user_id: userId,
+          created_at: payment.createdAt,
+        }, { onConflict: 'id' });
+
+      if (!error) {
+        await db.put("payments", { ...payment, synced: true });
+        pushed++;
+      } else {
+        console.error("Error syncing payment:", error);
+        failed++;
+      }
+    } catch (err) {
+      console.error("Error syncing payment:", err);
+      failed++;
+    }
+  }
+
+  // 5. Push unsynced stock items
+  const allStock = await db.getAll("stock_items");
+  const unsyncedStock = allStock.filter(s => !s.synced);
+  
+  for (const stock of unsyncedStock) {
+    try {
+      const { error } = await supabase
+        .from("stock_items")
+        .upsert({
+          id: stock.id,
+          name: stock.name,
+          quantity: stock.quantity,
+          unit_price: stock.unit_price,
+          model: stock.model || null,
+          source: stock.source || "manual",
+          user_id: userId,
+          created_at: stock.createdAt,
+          updated_at: stock.updatedAt,
+        }, { onConflict: 'id' });
+
+      if (!error) {
+        await db.put("stock_items", { ...stock, synced: true });
+        pushed++;
+      } else {
+        console.error("Error syncing stock:", error);
+        failed++;
+      }
+    } catch (err) {
+      console.error("Error syncing stock:", err);
+      failed++;
+    }
+  }
+
+  console.log(`Pushed ${pushed} items, ${failed} failed`);
+  return { pushed, failed };
 }
