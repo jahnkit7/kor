@@ -235,29 +235,81 @@ export function useStock() {
   );
 
   const addItems = useCallback(
-    async (newItems: NewStockItem[]) => {
-      if (!user || newItems.length === 0) return [];
+    async (newItems: NewStockItem[]): Promise<StockItem[]> => {
+      // CRITICAL: Log BEFORE any checks
+      console.log("========================================");
+      console.log("[useStock] ADD ITEMS CALLED (BATCH)");
+      console.log("[useStock] Items count:", newItems.length);
+      console.log("[useStock] User ID:", user?.id ?? "NO USER");
+      console.log("[useStock] Is Online:", isOnline);
+      console.log("========================================");
+
+      if (!user) {
+        console.error("[useStock] ❌ BATCH ADD BLOCKED: No user authenticated");
+        toast({
+          title: "❌ Non connecté",
+          description: "Reconnectez-vous pour enregistrer les produits",
+          variant: "destructive",
+        });
+        return [];
+      }
+
+      if (newItems.length === 0) {
+        console.warn("[useStock] ⚠️ No items provided to addItems");
+        return [];
+      }
 
       try {
         const insertedItems: StockItem[] = [];
+        let successCount = 0;
+        let failCount = 0;
 
-        for (const item of newItems) {
+        for (let i = 0; i < newItems.length; i++) {
+          const item = newItems[i];
+          console.log(`[useStock] Adding item ${i + 1}/${newItems.length}: ${item.name}`);
+          
           const result = await addItem(item);
-          if (result) insertedItems.push(result);
+          
+          if (result) {
+            insertedItems.push(result);
+            successCount++;
+            console.log(`[useStock] ✅ Item ${i + 1} added successfully`);
+          } else {
+            failCount++;
+            console.error(`[useStock] ❌ Item ${i + 1} failed to add`);
+          }
+        }
+
+        console.log(`[useStock] ===== BATCH COMPLETE =====`);
+        console.log(`[useStock] Success: ${successCount}, Failed: ${failCount}`);
+
+        if (failCount > 0 && successCount > 0) {
+          toast({
+            title: "⚠️ Ajout partiel",
+            description: `${successCount} produit(s) ajouté(s), ${failCount} échec(s)`,
+            variant: "destructive",
+          });
+        } else if (failCount > 0 && successCount === 0) {
+          toast({
+            title: "❌ Échec complet",
+            description: `Aucun produit n'a pu être enregistré. Vérifiez votre connexion.`,
+            variant: "destructive",
+          });
         }
 
         return insertedItems;
       } catch (error) {
-        console.error("Error adding stock items:", error);
+        console.error("[useStock] ❌ BATCH EXCEPTION:", error);
+        const errorMsg = error instanceof Error ? error.message : String(error);
         toast({
-          title: "Erreur",
-          description: "Impossible d'ajouter les produits",
+          title: "❌ Erreur critique",
+          description: `Impossible d'ajouter les produits: ${errorMsg}`,
           variant: "destructive",
         });
         return [];
       }
     },
-    [user, addItem, toast]
+    [user, isOnline, addItem, toast]
   );
 
   const updateItem = useCallback(
