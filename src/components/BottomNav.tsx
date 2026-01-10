@@ -123,7 +123,7 @@ const BottomNav = () => {
         )}
       </AnimatePresence>
       
-      <div className="flex items-center justify-around h-16">
+      <div className="flex items-center justify-around h-14 pb-1">
         {visibleItems.map(({ icon, label, path, badge, isBeta }) => {
           const isActive = location.pathname === path || 
             (path !== "/dashboard" && location.pathname.startsWith(path));
@@ -132,13 +132,17 @@ const BottomNav = () => {
           const showSyncBadge = path === "/settings" && pendingCount > 0;
           
           return (
-            <button
+            <motion.button
               key={path}
               onClick={() => navigate(path)}
+              whileTap={{ scale: 0.9 }}
               className="relative flex flex-col items-center justify-center w-16 h-full transition-all"
             >
               <motion.div 
-                className="relative flex flex-col items-center"
+                className={cn(
+                  "relative flex flex-col items-center px-3 py-1.5 rounded-xl transition-all",
+                  isActive && "bg-gradient-to-br from-[#4f7df3]/15 to-[#3b6ce8]/10"
+                )}
                 animate={{ scale: isActive ? 1.05 : 1 }}
                 transition={{ type: "spring", stiffness: 400, damping: 20 }}
               >
@@ -146,14 +150,14 @@ const BottomNav = () => {
                   icon={icon}
                   className={cn(
                     "w-6 h-6 transition-colors",
-                    isActive ? "text-[#4f7df3]" : "text-[#718096] hover:text-[#2d3748]"
+                    isActive ? "text-[#4f7df3]" : "text-[#718096] hover:text-[#051425]"
                   )}
                   strokeWidth={isActive ? 2 : 1.5}
                 />
                 
                 {/* Badge for unread messages */}
                 {badge > 0 && (
-                  <span className="absolute -top-1 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] flex items-center justify-center font-bold">
+                  <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] flex items-center justify-center font-bold">
                     {badge > 9 ? "9+" : badge}
                   </span>
                 )}
@@ -186,22 +190,14 @@ const BottomNav = () => {
                       initial={{ opacity: 0, y: -2 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -2 }}
-                      className="text-[10px] font-semibold mt-1 text-[#4f7df3]"
+                      className="text-[10px] font-semibold mt-0.5 text-[#4f7df3]"
                     >
                       {label}
                     </motion.span>
                   )}
                 </AnimatePresence>
-
-                {/* Active indicator dot */}
-                {isActive && (
-                  <motion.div 
-                    layoutId="activeIndicator"
-                    className="w-1 h-1 rounded-full bg-[#4f7df3] mt-0.5"
-                  />
-                )}
               </motion.div>
-            </button>
+            </motion.button>
           );
         })}
       </div>

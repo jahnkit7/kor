@@ -30,8 +30,9 @@ const BentoStatsGrid = ({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
+        whileTap={{ scale: 0.96, boxShadow: "inset 0 2px 4px rgba(0,0,0,0.05)" }}
         onClick={() => navigate("/debts")}
-        className="bg-gradient-to-br from-[#fee2e2] to-[#fecaca] rounded-2xl p-4 cursor-pointer hover:shadow-lg transition-all active:scale-[0.98]"
+        className="bg-gradient-to-br from-[#fee2e2] to-[#fecaca] rounded-xl p-4 cursor-pointer hover:shadow-lg shadow-[#ef4444]/10 transition-all"
       >
         <div className="flex items-center justify-between mb-3">
           <div className="w-10 h-10 rounded-xl bg-[#ef4444]/20 flex items-center justify-center">
@@ -53,8 +54,9 @@ const BentoStatsGrid = ({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.25 }}
+        whileTap={{ scale: 0.96, boxShadow: "inset 0 2px 4px rgba(0,0,0,0.05)" }}
         onClick={() => navigate("/stock")}
-        className="bg-gradient-to-br from-[#dbeafe] to-[#bfdbfe] rounded-2xl p-4 cursor-pointer hover:shadow-lg transition-all active:scale-[0.98]"
+        className="bg-gradient-to-br from-[#dbeafe] to-[#bfdbfe] rounded-xl p-4 cursor-pointer hover:shadow-lg shadow-[#3b82f6]/10 transition-all"
       >
         <div className="flex items-center justify-between mb-3">
           <div className="w-10 h-10 rounded-xl bg-[#3b82f6]/20 flex items-center justify-center">

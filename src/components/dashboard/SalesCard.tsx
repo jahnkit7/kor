@@ -29,8 +29,9 @@ const SalesCard = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
+      whileTap={{ scale: 0.98 }}
       className={cn(
-        "bg-white rounded-3xl p-5 shadow-lg border border-[#e2e8f0]",
+        "bg-white rounded-2xl p-5 shadow-lg shadow-[#4f7df3]/10",
         className
       )}
     >
@@ -41,7 +42,7 @@ const SalesCard = ({
             <HugeiconsIcon icon={Store01Icon} className="w-5 h-5 text-white" strokeWidth={1.5} />
           </div>
           <div>
-            <p className="text-sm font-semibold text-[#2d3748]">{shopName}</p>
+            <p className="text-sm font-semibold text-[#051425]">{shopName}</p>
             <p className="text-xs text-[#718096]">Ventes du jour</p>
           </div>
         </div>
@@ -55,7 +56,7 @@ const SalesCard = ({
       {/* Total Amount */}
       <div className="flex items-center justify-between mb-5">
         <div>
-          <p className="text-3xl font-extrabold text-[#2d3748] tracking-tight">
+          <p className="text-3xl font-extrabold text-[#051425] tracking-tight">
             {formatMoney(totalSales)}
             {!hideAmounts && (
               <span className="text-base font-semibold text-[#718096] ml-1">
@@ -64,8 +65,9 @@ const SalesCard = ({
             )}
           </p>
         </div>
-        <button
+        <motion.button
           onClick={onToggleHide}
+          whileTap={{ scale: 0.9 }}
           className="w-10 h-10 rounded-full bg-[#f8f9ff] flex items-center justify-center hover:bg-[#eef1fb] transition-colors"
         >
           <HugeiconsIcon 
@@ -73,7 +75,7 @@ const SalesCard = ({
             className="w-5 h-5 text-[#718096]" 
             strokeWidth={1.5}
           />
-        </button>
+        </motion.button>
       </div>
 
       {/* Cash / Credit Split */}
@@ -83,7 +85,7 @@ const SalesCard = ({
             <div className="w-2 h-2 rounded-full bg-[#4f7df3]" />
             <span className="text-xs font-medium text-[#718096]">Cash</span>
           </div>
-          <p className="text-lg font-bold text-[#2d3748]">
+          <p className="text-lg font-bold text-[#051425]">
             {formatMoney(cashSales)}
           </p>
         </div>

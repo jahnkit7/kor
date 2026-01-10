@@ -32,7 +32,7 @@ const TransactionItem = ({
       bgColor: "bg-[#eef6ff]",
       iconColor: "text-[#4f7df3]",
       label: "Vente cash",
-      amountColor: "text-[#2d3748]",
+      amountColor: "text-[#051425]",
       amountPrefix: "",
     },
     credit: {
@@ -63,7 +63,8 @@ const TransactionItem = ({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05, duration: 0.3 }}
-      className="bg-white rounded-2xl p-4 shadow-sm border border-[#f0f0f5] hover:shadow-md transition-shadow"
+      whileTap={{ scale: 0.98 }}
+      className="bg-white rounded-xl p-4 shadow-lg shadow-[#4f7df3]/5 hover:shadow-md transition-shadow"
     >
       <div className="flex items-center gap-3">
         {/* Icon */}
@@ -78,7 +79,7 @@ const TransactionItem = ({
 
         {/* Info */}
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-[#2d3748] truncate">
+          <p className="text-sm font-semibold text-[#051425] truncate">
             {displayLabel}
           </p>
           <p className="text-xs text-[#718096]">{time}</p>
