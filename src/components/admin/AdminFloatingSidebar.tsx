@@ -14,7 +14,8 @@ import {
   Zap,
   BarChart2,
   TrendingUp,
-  Gift
+  Gift,
+  Bell
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +36,7 @@ const features = [
 ];
 
 const support = [
+  { to: "/admin/notifications", icon: Bell, label: "Notifications" },
   { to: "/admin/support", icon: MessageSquare, label: "Support" },
   { to: "/admin/logs", icon: FileText, label: "Logs" },
 ];

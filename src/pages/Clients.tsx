@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useFeatureTracking } from "@/hooks/use-feature-tracking";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { 
@@ -23,6 +24,12 @@ const Clients = () => {
   const { canDeleteData } = usePermissions();
   const { formatMoney } = useHiddenAmount();
   const { clients, loading, toggleRisky } = useClients();
+  const { trackFeature } = useFeatureTracking();
+
+  // Track page view
+  useEffect(() => {
+    trackFeature("clients", { action: "page_view" });
+  }, [trackFeature]);
 
   const filteredClients = clients.filter(
     (client) =>

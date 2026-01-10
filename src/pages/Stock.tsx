@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useFeatureTracking } from "@/hooks/use-feature-tracking";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +34,12 @@ export default function Stock() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { items, loading, addItem, addItems, updateItem, deleteItem, getTotalValue } = useStock();
+  const { trackFeature } = useFeatureTracking();
+
+  // Track page view
+  useEffect(() => {
+    trackFeature("stock", { action: "page_view" });
+  }, [trackFeature]);
   
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);

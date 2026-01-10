@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useFeatureTracking } from "@/hooks/use-feature-tracking";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -42,6 +44,12 @@ const Settings = () => {
   const { hideAmounts, autoLockMinutes, appPin, updateSettings } = useSecurity();
   const { profile, loading: profileLoading } = useProfile();
   const { signOut } = useAuth();
+  const { trackFeature } = useFeatureTracking();
+
+  // Track page view
+  useEffect(() => {
+    trackFeature("settings", { action: "page_view" });
+  }, [trackFeature]);
 
   const handleLogout = async () => {
     try {
