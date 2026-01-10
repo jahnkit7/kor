@@ -6,9 +6,11 @@ import { BentoCard } from "@/components/admin/BentoCard";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { FeatureDependencyGraph } from "@/components/admin/FeatureDependencyGraph";
 import { 
   ToggleLeft, 
   ShoppingCart, 
@@ -21,7 +23,9 @@ import {
   Brain, 
   UserCog,
   Link,
-  AlertTriangle
+  AlertTriangle,
+  Grid3X3,
+  GitBranch
 } from "lucide-react";
 
 const featureIcons: Record<string, React.ReactNode> = {
@@ -156,95 +160,122 @@ export default function AdminFeatures() {
           </div>
         </div>
 
-        {/* Features Grid */}
-        {isLoading ? (
-          <BentoGrid columns={3}>
-            {[...Array(9)].map((_, i) => (
-              <Skeleton key={i} className="h-40 rounded-2xl" />
-            ))}
-          </BentoGrid>
-        ) : (
-          <BentoGrid columns={3}>
-            {typedFeatures?.map((feature) => {
-              const dependents = getDependentFeatures(feature.feature_key);
-              const isToggling = togglingFeatures.has(feature.id);
-              const dependenciesNames = feature.depends_on?.map(k => getFeatureByKey(k)?.name).filter(Boolean);
-              
-              return (
-                <BentoCard 
-                  key={feature.id}
-                  className={`transition-all duration-300 ${
-                    !feature.is_globally_enabled ? "opacity-50 grayscale" : ""
-                  } ${isToggling ? "animate-pulse" : ""}`}
-                >
-                  <div className="flex flex-col h-full">
-                    {/* Header */}
-                    <div className="flex items-start justify-between mb-3">
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                        feature.is_globally_enabled 
-                          ? "bg-primary/10 text-primary" 
-                          : "bg-muted text-muted-foreground"
-                      }`}>
-                        {featureIcons[feature.feature_key] || <ToggleLeft className="w-5 h-5" />}
+        {/* Tabs for Grid/Graph views */}
+        <Tabs defaultValue="grid" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="grid" className="gap-2">
+              <Grid3X3 className="w-4 h-4" />
+              Grille
+            </TabsTrigger>
+            <TabsTrigger value="graph" className="gap-2">
+              <GitBranch className="w-4 h-4" />
+              Graphe
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="grid">
+            {isLoading ? (
+              <BentoGrid columns={3}>
+                {[...Array(9)].map((_, i) => (
+                  <Skeleton key={i} className="h-40 rounded-2xl" />
+                ))}
+              </BentoGrid>
+            ) : (
+              <BentoGrid columns={3}>
+                {typedFeatures?.map((feature) => {
+                  const dependents = getDependentFeatures(feature.feature_key);
+                  const isToggling = togglingFeatures.has(feature.id);
+                  const dependenciesNames = feature.depends_on?.map(k => getFeatureByKey(k)?.name).filter(Boolean);
+                  
+                  return (
+                    <BentoCard 
+                      key={feature.id}
+                      className={`transition-all duration-300 ${
+                        !feature.is_globally_enabled ? "opacity-50 grayscale" : ""
+                      } ${isToggling ? "animate-pulse" : ""}`}
+                    >
+                      <div className="flex flex-col h-full">
+                        {/* Header */}
+                        <div className="flex items-start justify-between mb-3">
+                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                            feature.is_globally_enabled 
+                              ? "bg-primary/10 text-primary" 
+                              : "bg-muted text-muted-foreground"
+                          }`}>
+                            {featureIcons[feature.feature_key] || <ToggleLeft className="w-5 h-5" />}
+                          </div>
+                          <Switch
+                            checked={feature.is_globally_enabled}
+                            onCheckedChange={() => toggleFeatureWithCascade(feature)}
+                            disabled={isToggling}
+                          />
+                        </div>
+
+                        {/* Title & Description */}
+                        <h3 className="font-semibold text-foreground">{feature.name}</h3>
+                        <p className="text-sm text-muted-foreground mt-1 flex-1">
+                          {feature.description}
+                        </p>
+
+                        {/* Dependencies */}
+                        {dependenciesNames && dependenciesNames.length > 0 && (
+                          <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+                            <Link className="w-3 h-3" />
+                            <span>Dépend de: {dependenciesNames.join(", ")}</span>
+                          </div>
+                        )}
+
+                        {/* Dependents Warning */}
+                        {dependents.length > 0 && feature.is_globally_enabled && (
+                          <div className="mt-2 flex items-center gap-2 text-xs text-amber-600">
+                            <AlertTriangle className="w-3 h-3" />
+                            <span>
+                              {dependents.length} feature{dependents.length > 1 ? "s" : ""} dépendante{dependents.length > 1 ? "s" : ""}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Badges */}
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {feature.min_plan_required && (
+                            <Badge 
+                              variant="outline" 
+                              className={planColors[feature.min_plan_required] || ""}
+                            >
+                              Min: {feature.min_plan_required}
+                            </Badge>
+                          )}
+                          {feature.enabled_for_users && feature.enabled_for_users.length > 0 && (
+                            <Badge variant="secondary" className="text-xs">
+                              +{feature.enabled_for_users.length} users
+                            </Badge>
+                          )}
+                          {feature.disabled_countries && feature.disabled_countries.length > 0 && (
+                            <Badge variant="destructive" className="text-xs">
+                              -{feature.disabled_countries.length} pays
+                            </Badge>
+                          )}
+                        </div>
                       </div>
-                      <Switch
-                        checked={feature.is_globally_enabled}
-                        onCheckedChange={() => toggleFeatureWithCascade(feature)}
-                        disabled={isToggling}
-                      />
-                    </div>
+                    </BentoCard>
+                  );
+                })}
+              </BentoGrid>
+            )}
+          </TabsContent>
 
-                    {/* Title & Description */}
-                    <h3 className="font-semibold text-foreground">{feature.name}</h3>
-                    <p className="text-sm text-muted-foreground mt-1 flex-1">
-                      {feature.description}
-                    </p>
-
-                    {/* Dependencies */}
-                    {dependenciesNames && dependenciesNames.length > 0 && (
-                      <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-                        <Link className="w-3 h-3" />
-                        <span>Dépend de: {dependenciesNames.join(", ")}</span>
-                      </div>
-                    )}
-
-                    {/* Dependents Warning */}
-                    {dependents.length > 0 && feature.is_globally_enabled && (
-                      <div className="mt-2 flex items-center gap-2 text-xs text-amber-600">
-                        <AlertTriangle className="w-3 h-3" />
-                        <span>
-                          {dependents.length} feature{dependents.length > 1 ? "s" : ""} dépendante{dependents.length > 1 ? "s" : ""}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Badges */}
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {feature.min_plan_required && (
-                        <Badge 
-                          variant="outline" 
-                          className={planColors[feature.min_plan_required] || ""}
-                        >
-                          Min: {feature.min_plan_required}
-                        </Badge>
-                      )}
-                      {feature.enabled_for_users && feature.enabled_for_users.length > 0 && (
-                        <Badge variant="secondary" className="text-xs">
-                          +{feature.enabled_for_users.length} users
-                        </Badge>
-                      )}
-                      {feature.disabled_countries && feature.disabled_countries.length > 0 && (
-                        <Badge variant="destructive" className="text-xs">
-                          -{feature.disabled_countries.length} pays
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                </BentoCard>
-              );
-            })}
-          </BentoGrid>
-        )}
+          <TabsContent value="graph">
+            {isLoading ? (
+              <Skeleton className="h-[500px] rounded-2xl" />
+            ) : (
+              <FeatureDependencyGraph 
+                features={typedFeatures || []}
+                onToggle={toggleFeatureWithCascade}
+                togglingFeatures={togglingFeatures}
+              />
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </AdminLayout>
   );
