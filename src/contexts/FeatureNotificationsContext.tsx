@@ -23,20 +23,36 @@ export function FeatureNotificationsProvider({ children }: FeatureNotificationsP
     if (eventType === "UPDATE") {
       const wasEnabled = oldRecord?.is_globally_enabled;
       const isNowEnabled = newRecord?.is_globally_enabled;
+      const wasInBeta = oldRecord?.is_beta;
+      const isNowInBeta = newRecord?.is_beta;
       const featureName = newRecord?.name || newRecord?.feature_key;
 
+      // Notification pour activation/désactivation globale
       if (wasEnabled && !isNowEnabled) {
-        // Feature was disabled
         toast.warning(`Fonctionnalité désactivée`, {
           description: `"${featureName}" a été temporairement désactivée.`,
           icon: <AlertTriangle className="w-5 h-5" />,
           duration: 5000,
         });
       } else if (!wasEnabled && isNowEnabled) {
-        // Feature was enabled
         toast.success(`Fonctionnalité activée`, {
           description: `"${featureName}" est maintenant disponible !`,
           icon: <CheckCircle2 className="w-5 h-5" />,
+          duration: 4000,
+        });
+      }
+
+      // Notification pour transition Bêta → Stable
+      if (wasInBeta && !isNowInBeta) {
+        toast.success(`Fonctionnalité stable !`, {
+          description: `"${featureName}" n'est plus en Bêta et est maintenant stable.`,
+          icon: <CheckCircle2 className="w-5 h-5" />,
+          duration: 5000,
+        });
+      } else if (!wasInBeta && isNowInBeta) {
+        // Notification pour transition Stable → Bêta
+        toast.info(`Nouvelle fonctionnalité Bêta`, {
+          description: `"${featureName}" est maintenant en phase de test Bêta.`,
           duration: 4000,
         });
       }

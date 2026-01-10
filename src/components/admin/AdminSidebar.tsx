@@ -17,7 +17,8 @@ import {
   RefreshCw,
   UserPlus,
   BarChart3,
-  Bell
+  Bell,
+  FlaskConical
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +33,7 @@ const navItems = [
   { to: "/admin/geography", icon: Globe, label: "Géographie" },
   { to: "/admin/features", icon: ToggleLeft, label: "Fonctionnalités" },
   { to: "/admin/feature-analytics", icon: BarChart3, label: "Analytics Features" },
+  { to: "/admin/beta-analytics", icon: FlaskConical, label: "Analytics Bêta" },
   { to: "/admin/roadmap", icon: Map, label: "Roadmap" },
   { to: "/admin/commissions", icon: Gift, label: "Commissions Plateforme" },
   { to: "/admin/notifications", icon: Bell, label: "Notifications" },

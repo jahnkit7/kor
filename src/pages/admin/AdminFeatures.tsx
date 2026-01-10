@@ -151,6 +151,7 @@ export default function AdminFeatures() {
 
   const toggleBeta = async (feature: FeatureFlag) => {
     const newStatus = !feature.is_beta;
+    const wasInBeta = feature.is_beta;
     setBetaTogglingFeatures(prev => new Set([...prev, feature.id]));
 
     try {
@@ -161,14 +162,58 @@ export default function AdminFeatures() {
 
       if (error) throw error;
       
+      // Si la feature passe de Bêta à Stable, envoyer des notifications aux utilisateurs
+      if (wasInBeta && !newStatus) {
+        await sendBetaToStableNotifications(feature);
+      }
+      
       queryClient.invalidateQueries({ queryKey: ["admin-feature-flags"] });
       queryClient.invalidateQueries({ queryKey: ["feature-flags"] });
       
-      toast.success(newStatus ? "Feature marquée comme Bêta" : "Mode Bêta retiré");
+      if (wasInBeta && !newStatus) {
+        toast.success(`"${feature.name}" est maintenant stable ! Notifications envoyées.`);
+      } else {
+        toast.success(newStatus ? "Feature marquée comme Bêta" : "Mode Bêta retiré");
+      }
     } catch (error) {
       toast.error("Erreur lors de la mise à jour");
     } finally {
       setBetaTogglingFeatures(new Set());
+    }
+  };
+
+  const sendBetaToStableNotifications = async (feature: FeatureFlag) => {
+    try {
+      // Récupérer tous les utilisateurs qui ont utilisé cette feature
+      const { data: usageData } = await supabase
+        .from("feature_usage")
+        .select("user_id")
+        .eq("feature_key", feature.feature_key);
+
+      if (!usageData || usageData.length === 0) return;
+
+      // Extraire les user_ids uniques
+      const uniqueUserIds = [...new Set(usageData.map(u => u.user_id))];
+
+      // Envoyer une notification à chaque utilisateur
+      const notifications = uniqueUserIds.map(userId => ({
+        user_id: userId,
+        title: "🎉 Fonctionnalité stable !",
+        message: `"${feature.name}" n'est plus en Bêta et est maintenant stable.`,
+        type: "feature_update",
+        action_url: null,
+      }));
+
+      // Insérer toutes les notifications
+      const { error } = await supabase
+        .from("notifications")
+        .insert(notifications);
+
+      if (error) {
+        console.error("Erreur envoi notifications:", error);
+      }
+    } catch (error) {
+      console.error("Erreur envoi notifications Bêta → Stable:", error);
     }
   };
 
