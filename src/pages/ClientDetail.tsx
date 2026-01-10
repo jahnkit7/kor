@@ -191,16 +191,16 @@ const ClientDetail = () => {
   return (
     <AppLayout>
       {/* Header */}
-      <div className="bg-card px-4 pt-4 pb-6 border-b border-border">
+      <div className="bg-gradient-to-b from-[#f8f9ff] to-white px-4 pt-4 pb-6 border-b border-border">
         <div className="flex items-center gap-4 mb-4">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate("/clients")}
           >
-            <ArrowLeft className="w-6 h-6" />
+            <ArrowLeft className="w-6 h-6 text-[#2d3748]" />
           </Button>
-          <h1 className="text-xl font-bold">Détail client</h1>
+          <h1 className="text-xl font-bold text-[#2d3748]">Détail client</h1>
         </div>
 
         {/* Client Info */}
