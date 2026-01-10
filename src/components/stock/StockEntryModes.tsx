@@ -1,4 +1,5 @@
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Keyboard, Zap, Mic, Lock } from "lucide-react";
 import { useFeatureAccess } from "@/hooks/use-feature-access";
 
@@ -15,6 +16,7 @@ export function StockEntryModes({ onSelectMode }: StockEntryModesProps) {
     isNotInPlan: voiceNotInPlan,
     requiredPlan: voiceRequiredPlan,
     loading: voiceLoading,
+    isBeta: voiceBeta,
   } = useFeatureAccess("voice_input");
 
   // Base modes that are always shown
@@ -28,6 +30,7 @@ export function StockEntryModes({ onSelectMode }: StockEntryModesProps) {
       disabled: false,
       hidden: false,
       requiredPlan: null as string | null,
+      isBeta: false,
     },
     {
       id: "approximate" as const,
@@ -38,6 +41,7 @@ export function StockEntryModes({ onSelectMode }: StockEntryModesProps) {
       disabled: false,
       hidden: false,
       requiredPlan: null as string | null,
+      isBeta: false,
     },
   ];
 
@@ -54,6 +58,7 @@ export function StockEntryModes({ onSelectMode }: StockEntryModesProps) {
       disabled: voiceNotInPlan,
       hidden: false,
       requiredPlan: voiceRequiredPlan,
+      isBeta: voiceBeta,
     }] : []),
   ];
 
@@ -88,6 +93,11 @@ export function StockEntryModes({ onSelectMode }: StockEntryModesProps) {
                       <span className="text-xs px-2 py-0.5 rounded-full bg-accent/10 text-accent font-medium">
                         {mode.badge}
                       </span>
+                    )}
+                    {mode.isBeta && !mode.disabled && (
+                      <Badge variant="beta" className="text-[10px] px-1.5 py-0 h-4">
+                        Bêta
+                      </Badge>
                     )}
                   </div>
                   <p className="text-sm text-muted-foreground">{mode.description}</p>

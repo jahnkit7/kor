@@ -71,6 +71,36 @@ export type Database = {
         }
         Relationships: []
       }
+      beta_feedback: {
+        Row: {
+          comment: string | null
+          created_at: string | null
+          device_info: Json | null
+          feature_key: string
+          id: string
+          rating: number
+          user_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string | null
+          device_info?: Json | null
+          feature_key: string
+          id?: string
+          rating: number
+          user_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string | null
+          device_info?: Json | null
+          feature_key?: string
+          id?: string
+          rating?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           created_at: string

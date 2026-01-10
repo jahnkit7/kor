@@ -1,8 +1,10 @@
+import { useEffect } from "react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { BentoGrid } from "@/components/admin/BentoGrid";
 import { BentoCard } from "@/components/admin/BentoCard";
 import { useFeatureAnalytics } from "@/hooks/use-feature-analytics";
 import { useAdminFeatureFlags } from "@/hooks/use-admin-stats";
+import { useAdminBetaFeedback } from "@/hooks/use-beta-feedback";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -16,7 +18,9 @@ import {
   UserCheck,
   BarChart3,
   Sparkles,
-  AlertTriangle
+  AlertTriangle,
+  Star,
+  MessageSquare
 } from "lucide-react";
 import { format, parseISO, formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -44,6 +48,11 @@ const chartColors = [
 export default function AdminBetaAnalytics() {
   const { data: analytics, isLoading } = useFeatureAnalytics();
   const { data: features } = useAdminFeatureFlags();
+  const { data: feedbackData, isLoading: feedbackLoading, refetch: refetchFeedback } = useAdminBetaFeedback();
+
+  useEffect(() => {
+    refetchFeedback();
+  }, []);
 
   const betaFeatures = features?.filter(f => f.is_beta) || [];
 
@@ -349,6 +358,101 @@ export default function AdminBetaAnalytics() {
             </div>
           </div>
         )}
+
+        {/* User Feedback Section */}
+        <div className="space-y-4">
+          <h3 className="font-semibold flex items-center gap-2">
+            <MessageSquare className="w-5 h-5 text-emerald-500" />
+            Feedbacks utilisateurs
+          </h3>
+
+          {feedbackLoading ? (
+            <Skeleton className="h-32 rounded-2xl" />
+          ) : feedbackData && feedbackData.feedback.length > 0 ? (
+            <div className="space-y-4">
+              {/* Feedback Stats per Feature */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {Object.entries(feedbackData.stats).map(([featureKey, stat]) => {
+                  const featureName = features?.find(f => f.feature_key === featureKey)?.name || featureKey;
+                  return (
+                    <Card key={featureKey}>
+                      <CardContent className="pt-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                          <span className="font-bold text-lg">{stat.avgRating.toFixed(1)}</span>
+                        </div>
+                        <p className="text-sm font-medium truncate">{featureName}</p>
+                        <p className="text-xs text-muted-foreground">{stat.count} avis</p>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+
+              {/* Recent Feedback */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Derniers feedbacks</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {feedbackData.feedback.slice(0, 10).map((feedback) => {
+                    const featureName = features?.find(f => f.feature_key === feedback.feature_key)?.name || feedback.feature_key;
+                    return (
+                      <div 
+                        key={feedback.id} 
+                        className="flex items-start gap-3 p-3 rounded-lg bg-secondary/50"
+                      >
+                        <div className="flex items-center gap-1 shrink-0">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={star}
+                              className={`w-3 h-3 ${
+                                star <= feedback.rating
+                                  ? "text-amber-500 fill-amber-500"
+                                  : "text-muted-foreground/30"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant="secondary" className="text-xs">
+                              {featureName}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {feedback.shop_name || "Anonyme"}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              • {formatDistanceToNow(parseISO(feedback.created_at), { 
+                                addSuffix: true, 
+                                locale: fr 
+                              })}
+                            </span>
+                          </div>
+                          {feedback.comment && (
+                            <p className="text-sm text-foreground mt-1">
+                              "{feedback.comment}"
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <BentoCard className="text-center py-12">
+              <MessageSquare className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
+              <p className="text-muted-foreground">
+                Aucun feedback utilisateur reçu
+              </p>
+              <p className="text-sm text-muted-foreground/70 mt-2">
+                Les feedbacks apparaîtront quand les utilisateurs noteront les features Bêta
+              </p>
+            </BentoCard>
+          )}
+        </div>
       </div>
     </AdminLayout>
   );

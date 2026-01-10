@@ -14,10 +14,10 @@ const BottomNav = () => {
   const { conversations } = useMerchantMessages();
   const { isOnline, pendingCount, isSyncing } = useOffline();
   
-  // Check if features are globally disabled
-  const { isGloballyDisabled: networkDisabled, loading: networkLoading } = useFeatureAccess("network");
-  const { isGloballyDisabled: debtsDisabled, loading: debtsLoading } = useFeatureAccess("debts");
-  const { isGloballyDisabled: clientsDisabled, loading: clientsLoading } = useFeatureAccess("clients");
+  // Check if features are globally disabled and beta status
+  const { isGloballyDisabled: networkDisabled, loading: networkLoading, isBeta: networkBeta } = useFeatureAccess("network");
+  const { isGloballyDisabled: debtsDisabled, loading: debtsLoading, isBeta: debtsBeta } = useFeatureAccess("debts");
+  const { isGloballyDisabled: clientsDisabled, loading: clientsLoading, isBeta: clientsBeta } = useFeatureAccess("clients");
 
   // Count unread messages for network badge
   const unreadCount = useMemo(() => {
@@ -25,14 +25,14 @@ const BottomNav = () => {
   }, [conversations]);
 
   const navItems = [
-    { icon: Home, label: "Accueil", path: "/dashboard", show: true, badge: 0 },
+    { icon: Home, label: "Accueil", path: "/dashboard", show: true, badge: 0, isBeta: false },
     // Hide "Dettes" if debts feature is globally disabled
-    { icon: CreditCard, label: "Dettes", path: "/debts", show: !debtsDisabled && !debtsLoading, badge: 0 },
+    { icon: CreditCard, label: "Dettes", path: "/debts", show: !debtsDisabled && !debtsLoading, badge: 0, isBeta: debtsBeta },
     // Hide "Réseau" if network feature is globally disabled
-    { icon: Radio, label: "Réseau", path: "/network", show: !networkDisabled && !networkLoading, badge: unreadCount },
+    { icon: Radio, label: "Réseau", path: "/network", show: !networkDisabled && !networkLoading, badge: unreadCount, isBeta: networkBeta },
     // Hide "Clients" if clients feature is globally disabled
-    { icon: Users, label: "Clients", path: "/clients", show: !clientsDisabled && !clientsLoading, badge: 0 },
-    { icon: Settings, label: "Réglages", path: "/settings", show: true, badge: 0 },
+    { icon: Users, label: "Clients", path: "/clients", show: !clientsDisabled && !clientsLoading, badge: 0, isBeta: clientsBeta },
+    { icon: Settings, label: "Réglages", path: "/settings", show: true, badge: 0, isBeta: false },
   ];
 
   const visibleItems = navItems.filter(item => item.show);
@@ -74,7 +74,7 @@ const BottomNav = () => {
       )}
       
       <div className="flex items-center justify-around h-16">
-        {visibleItems.map(({ icon: Icon, label, path, badge }) => {
+        {visibleItems.map(({ icon: Icon, label, path, badge, isBeta }) => {
           const isActive = location.pathname === path || 
             (path !== "/dashboard" && location.pathname.startsWith(path));
           
@@ -97,6 +97,10 @@ const BottomNav = () => {
                   <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] flex items-center justify-center font-bold">
                     {badge > 9 ? "9+" : badge}
                   </span>
+                )}
+                {/* Beta indicator dot */}
+                {isBeta && badge === 0 && !showSyncBadge && (
+                  <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 border-2 border-card" />
                 )}
                 {/* Sync pending indicator - colored badge with count */}
                 {showSyncBadge && (

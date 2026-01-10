@@ -20,6 +20,8 @@ import { useProfile } from "@/hooks/use-profile";
 import { useSales } from "@/hooks/use-sales";
 import { useDebts } from "@/hooks/use-debts";
 import { useStock } from "@/hooks/use-stock";
+import { useFeatureAccess } from "@/hooks/use-feature-access";
+import { BetaBadge } from "@/components/BetaBadge";
 import { cn } from "@/lib/utils";
 
 interface ModernDashboardProps {
@@ -118,9 +120,10 @@ const ModernDashboard = ({
 
           {/* Debts Card - Colored */}
           <div 
-            className="bg-gradient-to-br from-[hsl(0_75%_55%)] to-[hsl(15_85%_50%)] rounded-2xl p-4 text-white cursor-pointer hover:opacity-95 transition-opacity"
+            className="relative bg-gradient-to-br from-[hsl(0_75%_55%)] to-[hsl(15_85%_50%)] rounded-2xl p-4 text-white cursor-pointer hover:opacity-95 transition-opacity"
             onClick={() => navigate("/debts")}
           >
+            <BetaBadge featureKey="debts" position="top-right" size="sm" className="border border-white/30" />
             <div className="flex items-center justify-between mb-3">
               <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
                 <TrendingUp className="w-5 h-5" />
@@ -134,9 +137,10 @@ const ModernDashboard = ({
 
           {/* Stock Card - Soft Blue */}
           <div 
-            className="bg-gradient-to-br from-[hsl(230_60%_65%)] to-[hsl(250_60%_55%)] rounded-2xl p-4 text-white cursor-pointer hover:opacity-95 transition-opacity"
+            className="relative bg-gradient-to-br from-[hsl(230_60%_65%)] to-[hsl(250_60%_55%)] rounded-2xl p-4 text-white cursor-pointer hover:opacity-95 transition-opacity"
             onClick={() => navigate("/stock")}
           >
+            <BetaBadge featureKey="stock" position="top-right" size="sm" className="border border-white/30" />
             <div className="flex items-center justify-between mb-3">
               <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
                 <Package className="w-5 h-5" />
@@ -170,9 +174,10 @@ const ModernDashboard = ({
         {/* Network & Clients Quick Access */}
         <div className="grid grid-cols-2 gap-3 mt-4">
           <div 
-            className="bg-gradient-to-br from-[hsl(280_60%_55%)] to-[hsl(300_60%_45%)] rounded-2xl p-4 text-white cursor-pointer hover:opacity-95 transition-opacity"
+            className="relative bg-gradient-to-br from-[hsl(280_60%_55%)] to-[hsl(300_60%_45%)] rounded-2xl p-4 text-white cursor-pointer hover:opacity-95 transition-opacity"
             onClick={() => navigate("/network")}
           >
+            <BetaBadge featureKey="network" position="top-right" size="sm" className="border border-white/30" />
             <div className="flex items-center justify-between mb-2">
               <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
                 <Radio className="w-5 h-5" />
@@ -184,9 +189,10 @@ const ModernDashboard = ({
           </div>
 
           <div 
-            className="bg-secondary rounded-2xl p-4 cursor-pointer hover:bg-secondary/80 transition-colors"
+            className="relative bg-secondary rounded-2xl p-4 cursor-pointer hover:bg-secondary/80 transition-colors"
             onClick={() => navigate("/clients")}
           >
+            <BetaBadge featureKey="clients" position="top-right" size="sm" />
             <div className="flex items-center justify-between mb-2">
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
                 <Users className="w-5 h-5 text-primary" />
