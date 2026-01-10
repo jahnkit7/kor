@@ -135,13 +135,15 @@ const BottomNav = () => {
             <motion.button
               key={path}
               onClick={() => navigate(path)}
-              whileTap={{ scale: 0.9 }}
-              className="relative flex flex-col items-center justify-center w-16 h-full transition-all"
+              whileTap={{ scale: 0.92 }}
+              className="group relative flex flex-col items-center justify-center w-16 h-full outline-none"
             >
               <motion.div 
                 className={cn(
-                  "relative flex flex-col items-center gap-0.5 px-4 py-2 rounded-2xl transition-all",
-                  isActive && "bg-[#e8f0fe]"
+                  "relative flex flex-col items-center gap-0.5 px-4 py-2 rounded-2xl transition-colors duration-150",
+                  isActive 
+                    ? "bg-[#e8f0fe]" 
+                    : "bg-transparent active:bg-[#e8f0fe]/60"
                 )}
                 animate={{ scale: isActive ? 1.02 : 1 }}
                 transition={{ type: "spring", stiffness: 400, damping: 20 }}
@@ -149,8 +151,10 @@ const BottomNav = () => {
                 <HugeiconsIcon 
                   icon={icon}
                   className={cn(
-                    "w-6 h-6 transition-colors",
-                    isActive ? "text-[#4f7df3]" : "text-[#6F7A95]"
+                    "w-6 h-6 transition-colors duration-150",
+                    isActive 
+                      ? "text-[#4f7df3]" 
+                      : "text-[#6F7A95] group-active:text-[#4f7df3]"
                   )}
                   strokeWidth={isActive ? 2 : 1.5}
                 />
