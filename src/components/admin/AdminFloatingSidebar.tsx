@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { 
   LayoutDashboard, 
   Users, 
@@ -17,9 +17,14 @@ import {
   Gift,
   Bell,
   Map,
-  Database
+  Database,
+  User,
+  LogOut
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useProfile } from "@/hooks/use-profile";
 
 const modules = [
   { to: "/admin", icon: LayoutDashboard, label: "Dashboard", exact: true },
@@ -81,17 +86,44 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 }
 
 export function AdminFloatingSidebar() {
+  const navigate = useNavigate();
+  const { profile } = useProfile();
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast.success("Déconnexion réussie");
+      navigate("/auth");
+    } catch (error) {
+      console.error("Logout error:", error);
+      toast.error("Erreur lors de la déconnexion");
+    }
+  };
+
   return (
     <aside className="hidden lg:flex lg:flex-col lg:w-72 lg:fixed lg:top-4 lg:left-4 lg:bottom-4 bg-card/80 backdrop-blur-xl border border-border/50 rounded-3xl shadow-2xl shadow-primary/5 overflow-hidden">
-      {/* Header - Branding */}
+      {/* Header - Branding + Admin Info */}
       <div className="p-6 border-b border-border/50">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/30">
             <Sparkles className="w-5 h-5 text-primary-foreground" />
           </div>
           <div>
             <h1 className="font-bold text-lg text-foreground tracking-tight">DÉKON</h1>
             <p className="text-[11px] text-muted-foreground font-medium">Control Center</p>
+          </div>
+        </div>
+        
+        {/* Admin Info */}
+        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-secondary/50">
+          <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
+            <User className="w-4 h-4 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-foreground truncate">
+              {profile?.owner_name || "Administrateur"}
+            </p>
+            <p className="text-[10px] text-muted-foreground">Admin</p>
           </div>
         </div>
       </div>
@@ -145,13 +177,23 @@ export function AdminFloatingSidebar() {
           </button>
         </div>
         
-        <NavLink
-          to="/dashboard"
-          className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Retour à l'app</span>
-        </NavLink>
+        <div className="space-y-1">
+          <NavLink
+            to="/dashboard"
+            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Retour à l'app</span>
+          </NavLink>
+          
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm text-destructive hover:text-destructive/80 hover:bg-destructive/10 transition-all w-full"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Déconnexion</span>
+          </button>
+        </div>
       </div>
     </aside>
   );
