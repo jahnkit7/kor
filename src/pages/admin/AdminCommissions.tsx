@@ -19,6 +19,7 @@ import {
 import { useAdminCountries, useAdminUsers } from "@/hooks/use-admin-stats";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import { UserSyncStatus, SyncWarningBanner } from "@/components/admin/UserSyncStatus";
 import { 
   Percent, 
   Plus, 
@@ -34,7 +35,8 @@ import {
   Clock,
   User,
   RefreshCw,
-  AlertTriangle
+  AlertTriangle,
+  Cloud
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -69,6 +71,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -705,6 +708,20 @@ export default function AdminCommissions() {
                 <CardTitle className="flex items-center gap-2">
                   <Wallet className="w-5 h-5" />
                   Soldes de commissions
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center gap-1 ml-2">
+                          <Cloud className="w-4 h-4 text-primary" />
+                          <span className="text-xs text-muted-foreground font-normal">Cloud</span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Ces données proviennent du cloud (Supabase)</p>
+                        <p className="text-xs text-muted-foreground">Les ventes locales non synchronisées ne sont pas incluses</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -727,13 +744,21 @@ export default function AdminCommissions() {
                           </div>
                           <div>
                             <p className="font-medium">{getUserName(balance.user_id)}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <UserSyncStatus 
+                                cloudSales={0} 
+                                cloudAmount={balance.total_earned || 0}
+                                hasPendingSync={false}
+                                pendingCount={0}
+                              />
+                            </div>
                             <p className="text-xs text-muted-foreground">
-                              Total gagné: {formatCFA(balance.total_earned)} • Payé: {formatCFA(balance.total_paid)}
+                              Commissions gagnées: {formatCFA(balance.total_earned || 0)} • Payé: {formatCFA(balance.total_paid || 0)}
                             </p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="font-bold text-primary">{formatCFA(balance.balance)}</p>
+                          <p className="font-bold text-primary">{formatCFA(balance.balance || 0)}</p>
                           <p className="text-xs text-muted-foreground">à collecter</p>
                         </div>
                       </div>
