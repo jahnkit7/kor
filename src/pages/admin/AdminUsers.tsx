@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { useAdminUsers } from "@/hooks/use-admin-stats";
+import { useSubscriptionPlans } from "@/hooks/use-subscription-plans";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -13,7 +15,22 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, User, Phone, MapPin, Calendar, MoreVertical } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Search, User, Phone, MapPin, Calendar, MoreVertical, Loader2, CreditCard } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -29,11 +46,20 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export default function AdminUsers() {
-  const { data: users, isLoading } = useAdminUsers();
+  const { data: users, isLoading, refetch } = useAdminUsers();
+  const { plans, loading: plansLoading } = useSubscriptionPlans();
   const [search, setSearch] = useState("");
   const [selectedUser, setSelectedUser] = useState<any>(null);
+  
+  // Activation dialog state
+  const [activatingUser, setActivatingUser] = useState<any>(null);
+  const [selectedPlanId, setSelectedPlanId] = useState<string>("");
+  const [customDays, setCustomDays] = useState<string>("");
+  const [isActivating, setIsActivating] = useState(false);
 
   const filteredUsers = users?.filter(
     (user) =>
@@ -41,6 +67,72 @@ export default function AdminUsers() {
       user.phone?.includes(search) ||
       user.owner_name?.toLowerCase().includes(search.toLowerCase())
   );
+
+  const handleOpenActivationDialog = (user: any, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setActivatingUser(user);
+    setSelectedPlanId("");
+    setCustomDays("");
+  };
+
+  const handleActivateSubscription = async () => {
+    if (!activatingUser || !selectedPlanId) {
+      toast.error("Veuillez sélectionner un plan");
+      return;
+    }
+
+    setIsActivating(true);
+
+    try {
+      const plan = plans.find((p) => p.id === selectedPlanId);
+      if (!plan) {
+        toast.error("Plan non trouvé");
+        return;
+      }
+
+      // Use custom days if provided, otherwise use plan duration
+      const daysToAdd = customDays ? parseInt(customDays) : plan.duration_days;
+      
+      if (isNaN(daysToAdd) || daysToAdd <= 0) {
+        toast.error("Durée invalide");
+        return;
+      }
+
+      const startDate = new Date().toISOString();
+      const endDate = new Date();
+      endDate.setDate(endDate.getDate() + daysToAdd);
+
+      const { error } = await supabase
+        .from("subscriptions")
+        .upsert({
+          user_id: activatingUser.user_id,
+          plan: plan.name.toLowerCase(),
+          is_active: true,
+          trial_started_at: startDate,
+          trial_ends_at: endDate.toISOString(),
+        }, {
+          onConflict: "user_id",
+        });
+
+      if (error) throw error;
+
+      toast.success(`Abonnement ${plan.name} activé pour ${daysToAdd} jours !`);
+      setActivatingUser(null);
+      setSelectedUser(null);
+      refetch();
+    } catch (error) {
+      console.error("Error activating subscription:", error);
+      toast.error("Erreur lors de l'activation");
+    } finally {
+      setIsActivating(false);
+    }
+  };
+
+  const getSelectedPlanDuration = () => {
+    if (!selectedPlanId) return null;
+    const plan = plans.find((p) => p.id === selectedPlanId);
+    return plan?.duration_days;
+  };
 
   return (
     <AdminLayout>
@@ -139,7 +231,7 @@ export default function AdminUsers() {
                               Expiré
                             </Badge>
                           ) : (
-                            <Badge variant="secondary">Trial</Badge>
+                            <Badge variant="secondary">Aucun</Badge>
                           )}
                         </TableCell>
                         <TableCell>
@@ -150,11 +242,15 @@ export default function AdminUsers() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => setSelectedUser(user)}>
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedUser(user);
+                              }}>
                                 Voir détails
                               </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                Activer manuellement
+                              <DropdownMenuItem onClick={(e) => handleOpenActivationDialog(user, e)}>
+                                <CreditCard className="w-4 h-4 mr-2" />
+                                Activer abonnement
                               </DropdownMenuItem>
                               <DropdownMenuItem className="text-destructive">
                                 Suspendre
@@ -226,7 +322,7 @@ export default function AdminUsers() {
                       <div className="space-y-2">
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Plan</span>
-                          <span className="font-medium">
+                          <span className="font-medium capitalize">
                             {selectedUser.subscriptions[0].plan || "Essai gratuit"}
                           </span>
                         </div>
@@ -238,6 +334,14 @@ export default function AdminUsers() {
                           }>
                             {selectedUser.subscriptions[0].is_active ? "Actif" : "Expiré"}
                           </Badge>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Début</span>
+                          <span>
+                            {selectedUser.subscriptions[0].trial_started_at
+                              ? new Date(selectedUser.subscriptions[0].trial_started_at).toLocaleDateString("fr-FR")
+                              : "-"}
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Fin période</span>
@@ -255,7 +359,13 @@ export default function AdminUsers() {
 
                   {/* Actions */}
                   <div className="space-y-2">
-                    <Button className="w-full">Activer abonnement manuellement</Button>
+                    <Button 
+                      className="w-full"
+                      onClick={() => handleOpenActivationDialog(selectedUser)}
+                    >
+                      <CreditCard className="w-4 h-4 mr-2" />
+                      Activer/Renouveler abonnement
+                    </Button>
                     <Button variant="outline" className="w-full">
                       Reset PIN
                     </Button>
@@ -268,6 +378,82 @@ export default function AdminUsers() {
             )}
           </SheetContent>
         </Sheet>
+
+        {/* Activation Dialog */}
+        <Dialog open={!!activatingUser} onOpenChange={() => setActivatingUser(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Activer un abonnement</DialogTitle>
+              <DialogDescription>
+                Activer manuellement un abonnement pour{" "}
+                <span className="font-semibold">
+                  {activatingUser?.shop_name || activatingUser?.owner_name || "cet utilisateur"}
+                </span>
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              {/* Plan Selection */}
+              <div className="space-y-2">
+                <Label>Plan d'abonnement</Label>
+                <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner un plan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {plans.map((plan) => (
+                      <SelectItem key={plan.id} value={plan.id}>
+                        {plan.name} - {plan.duration_days} jours
+                        {plan.price > 0 && ` (${plan.price.toLocaleString()} CFA)`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Custom Duration Override */}
+              <div className="space-y-2">
+                <Label>
+                  Durée personnalisée (optionnel)
+                  {getSelectedPlanDuration() && (
+                    <span className="text-muted-foreground font-normal ml-2">
+                      Par défaut: {getSelectedPlanDuration()} jours
+                    </span>
+                  )}
+                </Label>
+                <Input
+                  type="number"
+                  placeholder="Nombre de jours"
+                  value={customDays}
+                  onChange={(e) => setCustomDays(e.target.value)}
+                  min={1}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Laisser vide pour utiliser la durée du plan sélectionné
+                </p>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setActivatingUser(null)}>
+                Annuler
+              </Button>
+              <Button 
+                onClick={handleActivateSubscription} 
+                disabled={isActivating || !selectedPlanId || plansLoading}
+              >
+                {isActivating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Activation...
+                  </>
+                ) : (
+                  "Activer l'abonnement"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminLayout>
   );

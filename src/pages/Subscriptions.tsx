@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -10,76 +10,110 @@ import {
   Star,
   Loader2,
   ArrowRight,
-  Sparkles
+  Sparkles,
+  CalendarCheck
 } from "lucide-react";
 import { useUserSubscription } from "@/hooks/use-feature-access";
+import { useSubscriptionPlans } from "@/hooks/use-subscription-plans";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { PaymentMethodDialog } from "@/components/payment/PaymentMethodDialog";
 
-// Plans statiques avec détails
-const staticPlans = [
-  {
-    id: "gratuit",
-    name: "Gratuit",
-    price: 0,
-    duration_days: 365,
+// Configuration des icônes et couleurs par plan
+const planConfig: Record<string, { icon: any; color: string; popular: boolean }> = {
+  gratuit: { icon: Zap, color: "secondary", popular: false },
+  starter: { icon: Star, color: "primary", popular: false },
+  premium: { icon: Crown, color: "accent", popular: true },
+  "annuel premium": { icon: CalendarCheck, color: "accent", popular: false },
+};
+
+// Descriptions et features pour affichage
+const planDisplayInfo: Record<string, { description: string; displayFeatures: string[] }> = {
+  gratuit: {
     description: "Pour démarrer",
-    icon: Zap,
-    features: [
+    displayFeatures: [
       "Gestion des ventes",
       "Suivi du stock",
       "Gestion des clients",
       "Suivi des dettes",
     ],
-    color: "secondary",
-    popular: false,
   },
-  {
-    id: "starter",
-    name: "Starter",
-    price: 5000,
-    duration_days: 30,
+  starter: {
     description: "Pour les petites boutiques",
-    icon: Star,
-    features: [
+    displayFeatures: [
       "Tout du plan Gratuit",
       "Rapports détaillés",
-      "Gestion des employés",
       "Entrée vocale",
     ],
-    color: "primary",
-    popular: false,
   },
-  {
-    id: "premium",
-    name: "Premium",
-    price: 10000,
-    duration_days: 30,
+  premium: {
     description: "Fonctionnalités avancées",
-    icon: Crown,
-    features: [
+    displayFeatures: [
       "Tout du plan Starter",
       "Réseau de marchands",
-      "Analytics avancés",
+      "Analyse IA",
+      "Gestion employés",
+    ],
+  },
+  "annuel premium": {
+    description: "Premium avec 2 mois offerts",
+    displayFeatures: [
+      "Toutes les fonctionnalités Premium",
+      "1 an d'accès",
+      "Économisez 10 000 CFA",
       "Support prioritaire",
     ],
-    color: "accent",
-    popular: true,
   },
-];
+};
+
+interface PlanUI {
+  id: string;
+  name: string;
+  price: number;
+  duration_days: number;
+  description: string;
+  icon: any;
+  features: string[];
+  color: string;
+  popular: boolean;
+}
 
 export default function Subscriptions() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { data: currentSubscription, isLoading: subLoading, refetch } = useUserSubscription();
+  const { plans: dbPlans, loading: plansLoading } = useSubscriptionPlans();
   const [subscribing, setSubscribing] = useState<string | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<typeof staticPlans[0] | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<PlanUI | null>(null);
   const [justActivated, setJustActivated] = useState(false);
 
-  const handleSelectPlan = (plan: typeof staticPlans[0]) => {
+  // Mapper les plans de la base de données avec la configuration UI
+  const plans: PlanUI[] = useMemo(() => {
+    return dbPlans.map((dbPlan) => {
+      const planKey = dbPlan.name.toLowerCase();
+      const config = planConfig[planKey] || { icon: Zap, color: "secondary", popular: false };
+      const displayInfo = planDisplayInfo[planKey] || { 
+        description: dbPlan.description || "Plan d'abonnement", 
+        displayFeatures: dbPlan.features || [] 
+      };
+
+      return {
+        id: dbPlan.id,
+        name: dbPlan.name,
+        price: dbPlan.price,
+        duration_days: dbPlan.duration_days,
+        description: displayInfo.description,
+        icon: config.icon,
+        features: displayInfo.displayFeatures,
+        color: config.color,
+        popular: config.popular,
+      };
+    });
+  }, [dbPlans]);
+
+  const handleSelectPlan = (plan: PlanUI) => {
     if (!user) {
       navigate("/auth");
       return;
@@ -95,7 +129,7 @@ export default function Subscriptions() {
     }
   };
 
-  const handleFreeSubscribe = async (plan: typeof staticPlans[0]) => {
+  const handleFreeSubscribe = async (plan: PlanUI) => {
     if (!user) return;
     setSubscribing(plan.name);
 
@@ -108,7 +142,7 @@ export default function Subscriptions() {
         .from("subscriptions")
         .upsert({
           user_id: user.id,
-          plan: plan.id,
+          plan: plan.name.toLowerCase(),
           is_active: true,
           trial_started_at: startDate,
           trial_ends_at: endDate.toISOString(),
@@ -118,10 +152,12 @@ export default function Subscriptions() {
 
       if (error) throw error;
 
-      toast.success(`Plan ${plan.name} activé ! Bienvenue sur DÉKON 🎉`);
+      toast.success(`Plan ${plan.name} activé pour ${plan.duration_days} jours ! 🎉`);
+      setJustActivated(true);
       await refetch();
       navigate("/dashboard", { replace: true });
     } catch (error) {
+      console.error("Error subscribing:", error);
       toast.error("Erreur lors de l'abonnement");
     } finally {
       setSubscribing(null);
@@ -140,7 +176,7 @@ export default function Subscriptions() {
         .from("subscriptions")
         .upsert({
           user_id: user.id,
-          plan: selectedPlan.id,
+          plan: selectedPlan.name.toLowerCase(),
           is_active: true,
           trial_started_at: startDate,
           trial_ends_at: endDate.toISOString(),
@@ -150,17 +186,20 @@ export default function Subscriptions() {
 
       if (error) throw error;
 
-      toast.success(`Plan ${selectedPlan.name} activé !`);
+      toast.success(`Plan ${selectedPlan.name} activé pour ${selectedPlan.duration_days} jours !`);
       setPaymentOpen(false);
+      setJustActivated(true);
+      await refetch();
       setTimeout(() => navigate("/dashboard"), 500);
     } catch (error) {
+      console.error("Error activating subscription:", error);
       toast.error("Erreur lors de l'activation");
     } finally {
       setSubscribing(null);
     }
   };
 
-  if (subLoading) {
+  if (subLoading || plansLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -185,9 +224,9 @@ export default function Subscriptions() {
 
       {/* Plans */}
       <div className="px-4 -mt-8 pb-8 space-y-4">
-        {staticPlans.map((plan) => {
+        {plans.map((plan) => {
           const Icon = plan.icon;
-          const isCurrentPlan = currentPlan === plan.id;
+          const isCurrentPlan = currentPlan === plan.name.toLowerCase();
           const isPopular = plan.popular;
 
           return (
@@ -223,14 +262,19 @@ export default function Subscriptions() {
                         <Badge variant="secondary" className="text-xs">Actuel</Badge>
                       )}
                     </CardTitle>
-                    <CardDescription>{plan.description}</CardDescription>
+                    <CardDescription>
+                      {plan.description} • {plan.duration_days} jours
+                    </CardDescription>
                   </div>
                   <div className="text-right">
                     <p className="text-2xl font-bold">
                       {plan.price === 0 ? "Gratuit" : `${plan.price.toLocaleString()} CFA`}
                     </p>
-                    {plan.price > 0 && (
+                    {plan.price > 0 && plan.duration_days <= 31 && (
                       <p className="text-xs text-muted-foreground">/mois</p>
+                    )}
+                    {plan.price > 0 && plan.duration_days > 31 && (
+                      <p className="text-xs text-muted-foreground">/an</p>
                     )}
                   </div>
                 </div>
