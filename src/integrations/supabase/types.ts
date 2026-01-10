@@ -981,6 +981,7 @@ export type Database = {
           app_pin: string | null
           auto_deduct_stock: boolean | null
           auto_lock_minutes: number | null
+          city: string | null
           created_at: string
           currency: string
           hide_amounts: boolean | null
@@ -995,6 +996,7 @@ export type Database = {
           referral_code: string | null
           referred_by: string | null
           shop_name: string
+          specialty: string | null
           updated_at: string
           user_id: string
         }
@@ -1002,6 +1004,7 @@ export type Database = {
           app_pin?: string | null
           auto_deduct_stock?: boolean | null
           auto_lock_minutes?: number | null
+          city?: string | null
           created_at?: string
           currency?: string
           hide_amounts?: boolean | null
@@ -1016,6 +1019,7 @@ export type Database = {
           referral_code?: string | null
           referred_by?: string | null
           shop_name?: string
+          specialty?: string | null
           updated_at?: string
           user_id: string
         }
@@ -1023,6 +1027,7 @@ export type Database = {
           app_pin?: string | null
           auto_deduct_stock?: boolean | null
           auto_lock_minutes?: number | null
+          city?: string | null
           created_at?: string
           currency?: string
           hide_amounts?: boolean | null
@@ -1037,6 +1042,7 @@ export type Database = {
           referral_code?: string | null
           referred_by?: string | null
           shop_name?: string
+          specialty?: string | null
           updated_at?: string
           user_id?: string
         }

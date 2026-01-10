@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Phone, Lock, ChevronDown, Check } from "lucide-react";
@@ -64,12 +64,23 @@ const Auth = () => {
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [lockoutUntil, setLockoutUntil] = useState<number | null>(null);
   
+  // Ref to track if country detection has already run
+  const countryDetectedRef = useRef(false);
+  
   // Hook for validating referral codes
   const validateReferralCode = useValidateReferralCode();
 
-  // Détection automatique du pays via géolocalisation IP
+  // Détection automatique du pays via géolocalisation IP - runs only once
   useEffect(() => {
+    // Skip if already detected
+    if (countryDetectedRef.current) {
+      setCountryDetecting(false);
+      return;
+    }
+    
     const detectCountry = async () => {
+      countryDetectedRef.current = true;
+      
       try {
         // Utiliser ipapi.co pour la géolocalisation gratuite
         const response = await fetch("https://ipapi.co/json/", { 
