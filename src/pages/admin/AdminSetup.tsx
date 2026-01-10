@@ -27,22 +27,31 @@ const SEED_COUNTRIES = [
 ];
 
 const SEED_PLANS = [
-  { name: 'Gratuit', price: 0, duration_days: 7, currency: 'XOF', features: ['basic_sales', 'basic_stock', 'basic_clients', 'basic_debts'], is_active: true, sort_order: 0, description: 'Essai gratuit de 7 jours' },
-  { name: 'Starter', price: 1500, duration_days: 30, currency: 'XOF', features: ['basic_sales', 'basic_stock', 'basic_clients', 'basic_debts', 'reports', 'voice_input'], is_active: true, sort_order: 1, description: 'Pour les petites boutiques' },
-  { name: 'Premium', price: 5000, duration_days: 30, currency: 'XOF', features: ['basic_sales', 'basic_stock', 'basic_clients', 'basic_debts', 'reports', 'voice_input', 'network', 'ai_analysis', 'employees'], is_active: true, sort_order: 2, description: 'Fonctionnalités avancées' },
-  { name: 'Annuel Premium', price: 50000, duration_days: 365, currency: 'XOF', features: ['basic_sales', 'basic_stock', 'basic_clients', 'basic_debts', 'reports', 'voice_input', 'network', 'ai_analysis', 'employees', 'priority_support'], is_active: true, sort_order: 3, description: 'Premium avec 2 mois offerts' },
+  { name: 'Gratuit', price: 0, duration_days: 7, currency: 'XOF', features: ['sales', 'stock', 'clients', 'debts', 'offline_mode', 'referrals', 'commission_payment'], is_active: true, sort_order: 0, description: 'Essai gratuit de 7 jours' },
+  { name: 'Starter', price: 1500, duration_days: 30, currency: 'XOF', features: ['sales', 'stock', 'clients', 'debts', 'offline_mode', 'referrals', 'commission_payment', 'reports', 'voice_input', 'alerts'], is_active: true, sort_order: 1, description: 'Pour les petites boutiques' },
+  { name: 'Premium', price: 5000, duration_days: 30, currency: 'XOF', features: ['sales', 'stock', 'clients', 'debts', 'offline_mode', 'referrals', 'commission_payment', 'reports', 'voice_input', 'alerts', 'ai_analysis', 'network', 'employees', 'invoices', 'multi_currency'], is_active: true, sort_order: 2, description: 'Fonctionnalités avancées' },
+  { name: 'Annuel Premium', price: 50000, duration_days: 365, currency: 'XOF', features: ['sales', 'stock', 'clients', 'debts', 'offline_mode', 'referrals', 'commission_payment', 'reports', 'voice_input', 'alerts', 'ai_analysis', 'network', 'employees', 'invoices', 'multi_currency'], is_active: true, sort_order: 3, description: 'Premium avec 2 mois offerts' },
 ];
 
 const SEED_FEATURES = [
+  // Basiques (Gratuit)
   { feature_key: 'sales', name: 'Ventes', description: 'Enregistrement et suivi des ventes', is_globally_enabled: true, min_plan_required: null, depends_on: [] },
   { feature_key: 'stock', name: 'Stock', description: 'Gestion du stock et inventaire', is_globally_enabled: true, min_plan_required: null, depends_on: [] },
   { feature_key: 'clients', name: 'Clients', description: 'Gestion de la base clients', is_globally_enabled: true, min_plan_required: null, depends_on: [] },
   { feature_key: 'debts', name: 'Créances', description: 'Suivi des dettes clients', is_globally_enabled: true, min_plan_required: null, depends_on: ['clients'] },
+  { feature_key: 'offline_mode', name: 'Mode Hors Ligne', description: 'Synchronisation des données en mode offline', is_globally_enabled: true, min_plan_required: null, depends_on: [] },
+  { feature_key: 'referrals', name: 'Parrainage', description: 'Système de parrainage et commissions affiliés', is_globally_enabled: true, min_plan_required: null, depends_on: [] },
+  { feature_key: 'commission_payment', name: 'Paiement Commissions', description: 'Gestion des paiements de commissions', is_globally_enabled: true, min_plan_required: null, depends_on: ['referrals'] },
+  // Starter
   { feature_key: 'reports', name: 'Rapports', description: 'Rapports et statistiques avancés', is_globally_enabled: true, min_plan_required: 'starter', depends_on: ['sales'] },
   { feature_key: 'voice_input', name: 'Entrée vocale', description: 'Saisie vocale des ventes et stock', is_globally_enabled: true, min_plan_required: 'starter', depends_on: [] },
+  { feature_key: 'alerts', name: 'Alertes', description: 'Rappels automatiques pour dettes et expiration', is_globally_enabled: true, min_plan_required: 'starter', depends_on: [] },
+  // Premium
   { feature_key: 'ai_analysis', name: 'Analyse IA', description: 'Analyse intelligente des données', is_globally_enabled: true, min_plan_required: 'premium', depends_on: ['voice_input'] },
   { feature_key: 'network', name: 'Réseau Marchands', description: 'Réseau B2B entre marchands', is_globally_enabled: true, min_plan_required: 'premium', depends_on: ['clients'] },
   { feature_key: 'employees', name: 'Gestion Employés', description: 'Gestion des employés et permissions', is_globally_enabled: true, min_plan_required: 'premium', depends_on: [] },
+  { feature_key: 'invoices', name: 'Factures', description: 'Génération de factures PDF professionnelles', is_globally_enabled: true, min_plan_required: 'premium', depends_on: ['sales'] },
+  { feature_key: 'multi_currency', name: 'Multi-devises', description: 'Support de plusieurs devises et taux de change', is_globally_enabled: true, min_plan_required: 'premium', depends_on: [] },
 ];
 
 const SEED_ROADMAP = [
@@ -197,9 +206,9 @@ export default function AdminSetup() {
       key: "features",
       icon: ToggleLeft,
       title: "Feature Flags",
-      description: "9 fonctionnalités avec dépendances",
+      description: "15 fonctionnalités avec dépendances",
       count: status?.features || 0,
-      expected: 9,
+      expected: 15,
       onSeed: seedFeatures,
     },
     {
