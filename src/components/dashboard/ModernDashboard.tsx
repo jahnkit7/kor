@@ -4,7 +4,6 @@ import {
   Wallet,
   CreditCard,
   TrendingUp,
-  Plus,
   Package,
   BarChart3,
   Users,
@@ -12,6 +11,7 @@ import {
   Radio,
 } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import QuickActionFAB from "@/components/dashboard/QuickActionFAB";
 import AppLayout from "@/components/layout/AppLayout";
 import { RoleBadge } from "@/components/RoleBadge";
 import { HideAmountsToggle, useHiddenAmount } from "@/components/HideAmountsToggle";
@@ -180,22 +180,23 @@ const ModernDashboard = ({
           </div>
         </div>
 
-        {/* Quick Actions - Modern Pill Buttons */}
-        <div className="grid grid-cols-2 gap-3 mt-6">
+        {/* Quick Actions - Cash / Crédit / + on ONE line */}
+        <div className="flex items-center gap-3 mt-6">
           <Button
             onClick={() => navigate("/sale/cash")}
-            className="h-14 rounded-2xl bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/90 text-primary-foreground shadow-none text-sm font-semibold"
+            className="flex-1 min-w-0 h-14 rounded-full bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/90 text-primary-foreground shadow-lg shadow-primary/25 text-base font-semibold"
           >
             <Wallet className="w-5 h-5 mr-2 flex-shrink-0" />
             <span className="truncate">Vente Cash</span>
           </Button>
           <Button
             onClick={() => navigate("/sale/credit")}
-            className="h-14 rounded-2xl bg-accent hover:bg-accent/90 text-accent-foreground shadow-none text-sm font-semibold"
+            className="flex-1 min-w-0 h-14 rounded-full bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg shadow-accent/25 text-base font-semibold"
           >
             <CreditCard className="w-5 h-5 mr-2 flex-shrink-0" />
             <span className="truncate">Vente Crédit</span>
           </Button>
+          <QuickActionFAB inline className="shrink-0" />
         </div>
 
         {/* Network & Clients Quick Access */}
