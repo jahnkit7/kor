@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useNetworkStatus } from "@/hooks/use-network-status";
+import { useFeatureTracking } from "@/hooks/use-feature-tracking";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -99,6 +100,12 @@ const isSpeechRecognitionSupported = () => {
 export function VoiceSaleInput({ clients, onComplete, onCancel, onCreateClient, onFinish }: VoiceSaleInputProps) {
   const { toast } = useToast();
   const { isOnline } = useNetworkStatus();
+  const { trackFeature } = useFeatureTracking();
+
+  // Track voice input usage
+  useEffect(() => {
+    trackFeature("sales", { action: "voice_input" });
+  }, [trackFeature]);
 
   const [step, setStep] = useState<"record" | "analyzing" | "validate" | "saving">("record");
   const [isRecording, setIsRecording] = useState(false);

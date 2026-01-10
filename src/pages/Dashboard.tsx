@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useFeatureTracking } from "@/hooks/use-feature-tracking";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -37,6 +38,12 @@ const Dashboard = () => {
   const { totalDebts, clientsWithDebts, loading: debtsLoading } = useDebts();
   const { items: stockItems, loading: stockLoading, getTotalValue } = useStock();
   const { isModern } = useThemeStyle();
+  const { trackFeature } = useFeatureTracking();
+
+  // Track dashboard view
+  useEffect(() => {
+    trackFeature("dashboard", { action: "page_view" });
+  }, [trackFeature]);
 
   // Note: RequireProfile guard handles incomplete profile redirect globally
 

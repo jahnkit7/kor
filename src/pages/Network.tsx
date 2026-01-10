@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useFeatureTracking } from "@/hooks/use-feature-tracking";
 import { 
   Sheet,
   SheetContent,
@@ -43,6 +44,12 @@ type TabType = "requests" | "offers" | "merchants" | "activity";
 
 const Network = () => {
   const navigate = useNavigate();
+  const { trackFeature } = useFeatureTracking();
+
+  // Track page view
+  useEffect(() => {
+    trackFeature("network", { action: "page_view" });
+  }, [trackFeature]);
   const [activeTab, setActiveTab] = useState<TabType>("requests");
   const [showProfileSheet, setShowProfileSheet] = useState(false);
   const [showNewRequest, setShowNewRequest] = useState(false);

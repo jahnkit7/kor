@@ -42,6 +42,7 @@ import AdminCommissions from "./pages/admin/AdminCommissions";
 import AdminFeatureAnalytics from "./pages/admin/AdminFeatureAnalytics";
 import AdminPromoCodes from "./pages/admin/AdminPromoCodes";
 import AdminFinancials from "./pages/admin/AdminFinancials";
+import AdminNotifications from "./pages/admin/AdminNotifications";
 
 const queryClient = new QueryClient();
 
@@ -206,6 +207,7 @@ const App = () => (
             <Route path="/admin/commissions" element={<AdminCommissions />} />
             <Route path="/admin/feature-analytics" element={<AdminFeatureAnalytics />} />
             <Route path="/admin/promo-codes" element={<AdminPromoCodes />} />
+            <Route path="/admin/notifications" element={<AdminNotifications />} />
             <Route path="/admin/support" element={<AdminSupport />} />
             <Route path="/admin/logs" element={<AdminLogs />} />
 

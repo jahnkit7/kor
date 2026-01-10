@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useFeatureTracking } from "@/hooks/use-feature-tracking";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { 
@@ -25,6 +26,12 @@ const Debts = () => {
   const { formatMoney } = useHiddenAmount();
   const { debts, totalDebts, loading } = useDebts();
   const { clients } = useClients();
+  const { trackFeature } = useFeatureTracking();
+
+  // Track page view
+  useEffect(() => {
+    trackFeature("debts", { action: "page_view" });
+  }, [trackFeature]);
 
   // Group debts by client with unpaid balance
   const clientDebts = debts.reduce((acc, debt) => {

@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useFeatureTracking } from "@/hooks/use-feature-tracking";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
@@ -29,6 +30,14 @@ const Reports = () => {
   const { profile } = useProfile();
   const { getPeriodStats, loading: salesLoading } = useSales();
   const { totalDebts, loading: debtsLoading } = useDebts();
+  const { trackFeature } = useFeatureTracking();
+
+  // Track page view
+  useEffect(() => {
+    if (canViewReports) {
+      trackFeature("reports", { action: "page_view" });
+    }
+  }, [trackFeature, canViewReports]);
   
   const shopName = profile?.shop_name || "Ma Boutique";
   const currentData = getPeriodStats(period);

@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useFeatureTracking } from "@/hooks/use-feature-tracking";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +26,12 @@ const SalesHistory = () => {
   const { formatMoney, hideAmounts } = useHiddenAmount();
   const { sales, loading, getPeriodStats } = useSales();
   const [period, setPeriod] = useState<Period>("day");
+  const { trackFeature } = useFeatureTracking();
+
+  // Track page view
+  useEffect(() => {
+    trackFeature("sales_history", { action: "page_view" });
+  }, [trackFeature]);
 
   // Filter sales by period
   const filteredSales = useMemo(() => {

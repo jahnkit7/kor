@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useNetworkStatus } from "@/hooks/use-network-status";
+import { useFeatureTracking } from "@/hooks/use-feature-tracking";
 import { supabase } from "@/integrations/supabase/client";
 import { parseTranscriptLocally, canParseLocally, type ParsedStockItem } from "@/lib/local-stock-parser";
 import type { NewStockItem } from "@/hooks/use-stock";
@@ -65,6 +66,12 @@ const isSpeechRecognitionSupported = () => {
 export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) {
   const { toast } = useToast();
   const { isOnline } = useNetworkStatus();
+  const { trackFeature } = useFeatureTracking();
+
+  // Track voice input usage
+  useEffect(() => {
+    trackFeature("stock", { action: "voice_input" });
+  }, [trackFeature]);
 
   const [step, setStep] = useState<"record" | "analyzing" | "saving" | "validate" | "manual" | "transcript-view">("record");
   const [isRecording, setIsRecording] = useState(false);

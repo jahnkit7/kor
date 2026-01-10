@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useFeatureTracking } from "@/hooks/use-feature-tracking";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,9 +15,15 @@ const Sale = () => {
   const navigate = useNavigate();
   const { type } = useParams<{ type: "cash" | "credit" }>();
   const isCash = type === "cash";
+  const { trackFeature } = useFeatureTracking();
 
   const { clients, loading: clientsLoading, quickCreateClient } = useClients();
   const { addSale, sales, loading: salesLoading } = useSales();
+
+  // Track page view
+  useEffect(() => {
+    trackFeature("sales", { action: "page_view", metadata: { type } });
+  }, [trackFeature, type]);
   
   const [showRecentSales, setShowRecentSales] = useState(false);
   const [showAllSales, setShowAllSales] = useState(false);
