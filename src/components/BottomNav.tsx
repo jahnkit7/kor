@@ -3,12 +3,16 @@ import { Home, CreditCard, Users, Radio, Settings } from "lucide-react";
 import { usePermissions } from "@/hooks/use-role";
 import { useMerchantMessages } from "@/hooks/use-merchant-messages";
 import { useMemo } from "react";
+import { useFeatureAccess } from "@/hooks/use-feature-access";
 
 const BottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { canViewReports } = usePermissions();
   const { conversations } = useMerchantMessages();
+  
+  // Check if network feature is globally disabled
+  const { isGloballyDisabled: networkDisabled, loading: networkLoading } = useFeatureAccess("network");
 
   // Count unread messages for network badge
   const unreadCount = useMemo(() => {
@@ -18,7 +22,8 @@ const BottomNav = () => {
   const navItems = [
     { icon: Home, label: "Accueil", path: "/dashboard", show: true, badge: 0 },
     { icon: CreditCard, label: "Dettes", path: "/debts", show: true, badge: 0 },
-    { icon: Radio, label: "Réseau", path: "/network", show: true, badge: unreadCount },
+    // Hide "Réseau" if network feature is globally disabled
+    { icon: Radio, label: "Réseau", path: "/network", show: !networkDisabled && !networkLoading, badge: unreadCount },
     { icon: Users, label: "Clients", path: "/clients", show: true, badge: 0 },
     { icon: Settings, label: "Réglages", path: "/settings", show: true, badge: 0 },
   ];

@@ -1,21 +1,34 @@
 import { useMemo, useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useFeatureTracking } from "@/hooks/use-feature-tracking";
+import { useFeatureAccess } from "@/hooks/use-feature-access";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowLeft, Check, User, MessageSquare, Mic, ChevronDown, ChevronUp, Wallet, CreditCard, Clock } from "lucide-react";
+import { ArrowLeft, Check, User, MessageSquare, Mic, ChevronDown, ChevronUp, Wallet, CreditCard, Clock, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { useClients } from "@/hooks/use-clients";
 import { useSales } from "@/hooks/use-sales";
 import { VoiceSaleInput } from "@/components/sale/VoiceSaleInput";
 import { cn } from "@/lib/utils";
+
 const Sale = () => {
   const navigate = useNavigate();
   const { type } = useParams<{ type: "cash" | "credit" }>();
   const isCash = type === "cash";
   const { trackFeature } = useFeatureTracking();
+  
+  // Check voice_input feature status
+  const { 
+    isGloballyDisabled: voiceDisabled, 
+    isNotInPlan: voiceNotInPlan,
+    requiredPlan: voiceRequiredPlan,
+  } = useFeatureAccess("voice_input");
+  
+  // Determine if voice button should be shown and its state
+  const showVoiceButton = !voiceDisabled;
+  const voiceButtonDisabled = voiceNotInPlan;
 
   const { clients, loading: clientsLoading, quickCreateClient } = useClients();
   const { addSale, sales, loading: salesLoading } = useSales();
@@ -185,15 +198,34 @@ const Sale = () => {
             </h1>
           </div>
           
-          {/* Voice button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-primary-foreground hover:bg-primary-foreground/10"
-            onClick={() => setShowVoiceInput(true)}
-          >
-            <Mic className="w-6 h-6" />
-          </Button>
+          {/* Voice button - hidden if globally disabled, shows lock if not in plan */}
+          {showVoiceButton && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "text-primary-foreground",
+                voiceButtonDisabled 
+                  ? "opacity-60 cursor-not-allowed" 
+                  : "hover:bg-primary-foreground/10"
+              )}
+              onClick={() => {
+                if (voiceButtonDisabled) {
+                  toast.info(`Disponible pour ${voiceRequiredPlan}`, {
+                    description: "Passez à un plan supérieur pour accéder à la saisie vocale.",
+                  });
+                } else {
+                  setShowVoiceInput(true);
+                }
+              }}
+            >
+              {voiceButtonDisabled ? (
+                <Lock className="w-5 h-5" />
+              ) : (
+                <Mic className="w-6 h-6" />
+              )}
+            </Button>
+          )}
         </div>
 
         {/* Amount Display */}

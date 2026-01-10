@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import { useFeatureAccess } from "@/hooks/use-feature-access";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Lock, Zap, AlertTriangle } from "lucide-react";
+import { Lock, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface FeatureGateProps {
@@ -11,6 +11,11 @@ interface FeatureGateProps {
   fallback?: ReactNode;
   showUpgradePrompt?: boolean;
   silentFail?: boolean;
+  /**
+   * If true, completely hides content when globally disabled (default: true)
+   * If false, shows "temporarily unavailable" message
+   */
+  hideWhenDisabled?: boolean;
 }
 
 export function FeatureGate({ 
@@ -19,8 +24,9 @@ export function FeatureGate({
   fallback,
   showUpgradePrompt = true,
   silentFail = false,
+  hideWhenDisabled = true,
 }: FeatureGateProps) {
-  const { hasAccess, loading, reason, requiredPlan } = useFeatureAccess(featureKey);
+  const { hasAccess, loading, reason, requiredPlan, isGloballyDisabled, isNotInPlan } = useFeatureAccess(featureKey);
   const navigate = useNavigate();
 
   // While loading, show nothing or a skeleton
@@ -29,6 +35,16 @@ export function FeatureGate({
     return (
       <div className="animate-pulse bg-muted/50 rounded-xl h-32" />
     );
+  }
+
+  // GLOBALLY DISABLED: Hide completely (default behavior)
+  if (isGloballyDisabled) {
+    if (hideWhenDisabled || silentFail) {
+      return null;
+    }
+    // If hideWhenDisabled is false, could show a maintenance message
+    // But for now, we hide by default
+    return null;
   }
 
   // User has access - render children
@@ -46,71 +62,63 @@ export function FeatureGate({
     return <>{fallback}</>;
   }
 
-  // Show upgrade prompt if enabled
+  // NOT IN PLAN: Show upgrade prompt with overlay style
+  if (isNotInPlan && showUpgradePrompt) {
+    return (
+      <Card className="border-dashed border-2 bg-muted/20">
+        <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+          <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+            <Lock className="w-6 h-6 text-primary" />
+          </div>
+          <h3 className="font-semibold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-2">
+            Disponible pour {requiredPlan}
+          </h3>
+          <p className="text-sm text-muted-foreground mb-4 max-w-xs">
+            Cette fonctionnalité nécessite un abonnement{" "}
+            <span className="font-medium text-foreground capitalize">
+              {requiredPlan}
+            </span>{" "}
+            ou supérieur.
+          </p>
+          <Button 
+            onClick={() => navigate("/settings")}
+            className="gap-2"
+          >
+            <Zap className="w-4 h-4" />
+            Passer au plan {requiredPlan}
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Other reasons (no subscription, dependency, etc.)
   if (showUpgradePrompt) {
     return (
       <Card className="border-dashed border-2 bg-muted/20">
         <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-          {reason === "plan_required" ? (
-            <>
-              <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                <Lock className="w-6 h-6 text-primary" />
-              </div>
-              <h3 className="font-semibold text-foreground mb-2">
-                Fonctionnalité Premium
-              </h3>
-              <p className="text-sm text-muted-foreground mb-4 max-w-xs">
-                Cette fonctionnalité nécessite un abonnement{" "}
-                <span className="font-medium text-foreground capitalize">
-                  {requiredPlan}
-                </span>{" "}
-                ou supérieur.
-              </p>
-              <Button 
-                onClick={() => navigate("/settings")}
-                className="gap-2"
-              >
-                <Zap className="w-4 h-4" />
-                Passer au plan {requiredPlan}
-              </Button>
-            </>
-          ) : reason === "globally_disabled" ? (
-            <>
-              <div className="w-14 h-14 rounded-full bg-amber-500/10 flex items-center justify-center mb-4">
-                <AlertTriangle className="w-6 h-6 text-amber-500" />
-              </div>
-              <h3 className="font-semibold text-foreground mb-2">
-                Fonctionnalité temporairement indisponible
-              </h3>
-              <p className="text-sm text-muted-foreground max-w-xs">
-                Cette fonctionnalité est actuellement en maintenance. 
-                Elle sera bientôt disponible.
-              </p>
-            </>
-          ) : reason === "dependency_disabled" ? (
-            <>
-              <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mb-4">
-                <Lock className="w-6 h-6 text-muted-foreground" />
-              </div>
-              <h3 className="font-semibold text-foreground mb-2">
-                Fonctionnalité non disponible
-              </h3>
-              <p className="text-sm text-muted-foreground max-w-xs">
-                Une dépendance requise pour cette fonctionnalité n'est pas activée.
-              </p>
-            </>
-          ) : (
-            <>
-              <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mb-4">
-                <Lock className="w-6 h-6 text-muted-foreground" />
-              </div>
-              <h3 className="font-semibold text-foreground mb-2">
-                Accès restreint
-              </h3>
-              <p className="text-sm text-muted-foreground max-w-xs">
-                Vous n'avez pas accès à cette fonctionnalité.
-              </p>
-            </>
+          <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mb-4">
+            <Lock className="w-6 h-6 text-muted-foreground" />
+          </div>
+          <h3 className="font-semibold text-foreground mb-2">
+            Accès restreint
+          </h3>
+          <p className="text-sm text-muted-foreground max-w-xs">
+            {reason === "no_subscription" 
+              ? "Un abonnement actif est requis pour cette fonctionnalité."
+              : reason === "dependency_disabled"
+              ? "Une dépendance requise pour cette fonctionnalité n'est pas activée."
+              : "Vous n'avez pas accès à cette fonctionnalité."
+            }
+          </p>
+          {reason === "no_subscription" && (
+            <Button 
+              onClick={() => navigate("/subscriptions")}
+              className="gap-2 mt-4"
+            >
+              <Zap className="w-4 h-4" />
+              Voir les abonnements
+            </Button>
           )}
         </CardContent>
       </Card>
