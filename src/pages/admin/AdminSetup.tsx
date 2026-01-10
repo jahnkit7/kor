@@ -55,12 +55,13 @@ const SEED_FEATURES = [
 ];
 
 const SEED_ROADMAP = [
-  { title: 'Mode hors-ligne complet', description: 'Fonctionnement complet de l\'application sans connexion internet', category: 'feature', status: 'completed', priority: 'high', estimated_effort: 'large' },
-  { title: 'Entrée vocale ventes', description: 'Enregistrement des ventes par commande vocale', category: 'feature', status: 'completed', priority: 'high', estimated_effort: 'medium' },
-  { title: 'Réseau marchands B2B', description: 'Place de marché pour les échanges entre commerçants', category: 'feature', status: 'in_progress', priority: 'high', estimated_effort: 'large' },
-  { title: 'Synchronisation multi-appareils', description: 'Accès aux données depuis plusieurs appareils', category: 'feature', status: 'backlog', priority: 'medium', estimated_effort: 'large' },
-  { title: 'Export PDF des rapports', description: 'Génération de rapports en format PDF', category: 'improvement', status: 'backlog', priority: 'medium', estimated_effort: 'small' },
-  { title: 'Notifications push', description: 'Alertes push pour les événements importants', category: 'feature', status: 'backlog', priority: 'medium', estimated_effort: 'medium' },
+  { title: 'Generateur de facture', description: 'N\'est pas encore implémenté', category: 'feature', status: 'in_progress', priority: 'high' },
+  { title: 'Amelioration, UI settings user', description: 'Ranger mieux, garder abonnement visible en haut, les trucs comme parrainage peut etre a la suite de abonnement. Et les choses like supprime ton compte tout en bas', category: 'improvement', status: 'backlog', priority: 'high' },
+  { title: 'Modifier legerement Style classic user', description: 'faire avec les meme finition soft comme dashboard admin', category: 'improvement', status: 'backlog', priority: 'high' },
+  { title: 'Revoir Onboading user', description: 'Les infos que l\'utilisateur inscrit ne sont pas afficher sur sa page cote admin. Et ensuite je ne me rappele plus le reste de ce que fesait onboarding.', category: 'bug', status: 'in_progress', priority: 'urgent' },
+  { title: 'Mode hors ligne', description: 'Actuellement, lorsqu\'on fait une operation, ca refuse. Alors que normalement, ca devrait etre storer localement, et quand il y a du reseau, pousser les donner dans la bdd. Donc il ne faut pas oublier de faire des sync. Pour l\'instant se focaliser sur les ventes et les dettes.', category: 'improvement', status: 'testing', priority: 'urgent' },
+  { title: 'Gestion stock', description: 'Qu\'est-ce qui se passe, lorsqu\'un utilisateur ne veut pas la gestion de stock ? Le menu lui est visible, mais que doit-on afficher ? Lorsque cette feature lui ait desactive alors qu\'il a des donnes dans la table, le desactiver lui efface aussi les donnes ?', category: 'improvement', status: 'testing', priority: 'high' },
+  { title: 'Transcription offline', description: 'Comment ca fonctionne la transcription ? Lorsque l\'appli est offline, on ne peut pas appeler l\'edge function. Faut-il prevoir une alternative ? Genre l\'API du browser de transcription ? Je crois que c\'est gratuit ca..', category: 'performance', status: 'in_progress', priority: 'urgent' },
 ];
 
 export default function AdminSetup() {
@@ -215,9 +216,9 @@ export default function AdminSetup() {
       key: "roadmap",
       icon: Map,
       title: "Roadmap",
-      description: "6 items de démonstration",
+      description: "7 items réels du projet",
       count: status?.roadmap || 0,
-      expected: 6,
+      expected: 7,
       onSeed: seedRoadmap,
     },
   ];
