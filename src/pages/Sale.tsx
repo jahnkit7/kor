@@ -42,7 +42,7 @@ const Sale = () => {
 
   const { clients, loading: clientsLoading, quickCreateClient } = useClients();
   const { addSale, sales, loading: salesLoading } = useSales();
-  const { items: stockItems, loading: stockLoading, refetch: refetchStock } = useStock();
+  const { items: stockItems, loading: stockLoading, refetch: refetchStock, addItem } = useStock();
 
   // Track page view
   useEffect(() => {
@@ -330,6 +330,20 @@ const Sale = () => {
                 stockItems={stockItems}
                 selectedProducts={selectedProducts}
                 onProductsChange={setSelectedProducts}
+                onCreateStockItem={async (item) => {
+                  console.log("[Sale] Creating stock item from ProductSelector:", item);
+                  const result = await addItem({
+                    name: item.name,
+                    quantity: item.quantity,
+                    unit_price: item.unit_price,
+                    source: "manual",
+                  });
+                  if (result) {
+                    console.log("[Sale] Stock item created successfully:", result.id);
+                    return { id: result.id };
+                  }
+                  return null;
+                }}
               />
             </Card>
           </CollapsibleContent>

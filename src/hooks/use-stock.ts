@@ -108,8 +108,13 @@ export function useStock() {
 
   const addItem = useCallback(
     async (item: NewStockItem) => {
+      console.log("[useStock] ===== ADD STOCK ITEM START =====");
+      console.log("[useStock] Input:", JSON.stringify(item));
+      console.log("[useStock] User:", user?.id);
+      console.log("[useStock] Online:", isOnline);
+
       if (!user) {
-        console.error("[useStock] addItem: No user authenticated");
+        console.error("[useStock] ✗ No user authenticated - ABORTING");
         toast({
           title: "Erreur",
           description: "Vous devez être connecté pour ajouter un produit",
@@ -118,10 +123,9 @@ export function useStock() {
         return null;
       }
 
-      console.log("[useStock] addItem:", item.name, "qty:", item.quantity, "price:", item.unit_price);
-
       try {
         // 1. Save locally first
+        console.log("[useStock] Step 1: Saving locally...");
         const localItem = await localDB.addStockItem({
           name: item.name,
           quantity: item.quantity,
@@ -130,9 +134,10 @@ export function useStock() {
           source: item.source || "manual",
           user_id: user.id,
         });
-        console.log("[useStock] Saved locally with ID:", localItem.id);
+        console.log("[useStock] ✓ Saved locally with ID:", localItem.id);
 
         // 2. Update UI immediately
+        console.log("[useStock] Step 2: Updating UI...");
         const newItem: StockItem = {
           id: localItem.id,
           user_id: user.id,
@@ -146,49 +151,69 @@ export function useStock() {
           synced: false,
         };
         setItems(prev => [newItem, ...prev]);
+        console.log("[useStock] ✓ UI updated");
 
         // 3. If online, sync to Supabase immediately
         if (isOnline) {
-          console.log("[useStock] Syncing to Supabase...");
+          console.log("[useStock] Step 3: Syncing to Supabase...");
+          
+          const supabasePayload = {
+            id: localItem.id,
+            user_id: user.id,
+            name: item.name,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            model: item.model || null,
+            source: item.source || "manual",
+          };
+          console.log("[useStock] Supabase payload:", JSON.stringify(supabasePayload));
+
           const { data, error } = await supabase
             .from("stock_items")
-            .insert({
-              id: localItem.id,
-              user_id: user.id,
-              name: item.name,
-              quantity: item.quantity,
-              unit_price: item.unit_price,
-              model: item.model || null,
-              source: item.source || "manual",
-            })
+            .insert(supabasePayload)
             .select()
             .single();
 
           if (error) {
-            console.error("[useStock] Supabase INSERT error:", error.message, error.details, error.hint);
+            console.error("[useStock] ✗ SUPABASE ERROR:");
+            console.error("[useStock]   Code:", error.code);
+            console.error("[useStock]   Message:", error.message);
+            console.error("[useStock]   Details:", error.details);
+            console.error("[useStock]   Hint:", error.hint);
+            
             toast({
               title: "Erreur de synchronisation",
-              description: `${item.name}: ${error.message}`,
+              description: `${item.name}: ${error.message} (${error.code})`,
               variant: "destructive",
             });
-            // Item stays local, will be synced later
+            // Item stays local, will be synced later via background sync
           } else {
-            console.log("[useStock] Synced to Supabase:", data?.id);
+            console.log("[useStock] ✓ Synced to Supabase:", data?.id);
             await localDB.markAsSynced("stock_items", localItem.id);
             setItems(prev => prev.map(i => 
               i.id === localItem.id ? { ...i, synced: true } : i
             ));
+            
+            toast({
+              title: "Produit ajouté",
+              description: `${item.name} créé avec succès`,
+            });
           }
         } else {
-          console.log("[useStock] Offline - item queued for sync");
+          console.log("[useStock] Offline - item queued for background sync");
+          toast({
+            title: "Produit enregistré localement",
+            description: `${item.name} sera synchronisé une fois en ligne`,
+          });
         }
 
+        console.log("[useStock] ===== ADD STOCK ITEM END =====");
         return newItem;
       } catch (error) {
-        console.error("[useStock] Exception adding stock item:", error);
+        console.error("[useStock] ✗ EXCEPTION:", error);
         toast({
           title: "Erreur",
-          description: "Impossible d'ajouter le produit",
+          description: `Impossible d'ajouter ${item.name}: ${error instanceof Error ? error.message : String(error)}`,
           variant: "destructive",
         });
         return null;
