@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,6 @@ import {
   Trash2, 
   Palette, 
   Image as ImageIcon,
-  Check,
   Loader2 
 } from "lucide-react";
 import { useInvoiceSettings } from "@/hooks/use-invoice-settings";
@@ -22,6 +21,20 @@ export function InvoiceCustomization() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputKey = useRef(0);
+  
+  // Local state for footer text with debounce
+  const [localFooterText, setLocalFooterText] = useState("");
+  const footerDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitialMount = useRef(true);
+
+  // Sync local footer text with settings on initial load
+  useEffect(() => {
+    if (!loading && isInitialMount.current) {
+      setLocalFooterText(settings.footer_text || "");
+      isInitialMount.current = false;
+    }
+  }, [loading, settings.footer_text]);
 
   const handleColorChange = async (key: "primary_color" | "secondary_color", value: string) => {
     setSaving(true);
@@ -43,14 +56,32 @@ export function InvoiceCustomization() {
     }
   };
 
-  const handleFooterChange = async (text: string) => {
-    setSaving(true);
-    const success = await updateSettings({ footer_text: text || null });
-    setSaving(false);
-    if (success) {
-      toast.success("Texte de pied de page mis à jour");
+  // Debounced footer text handler - no toast spam
+  const handleFooterChange = (text: string) => {
+    setLocalFooterText(text);
+    
+    // Clear previous timeout
+    if (footerDebounceRef.current) {
+      clearTimeout(footerDebounceRef.current);
     }
+    
+    // Set new timeout for debounced save
+    footerDebounceRef.current = setTimeout(async () => {
+      const success = await updateSettings({ footer_text: text || null });
+      if (success) {
+        toast.success("Pied de page mis à jour");
+      }
+    }, 800);
   };
+
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    return () => {
+      if (footerDebounceRef.current) {
+        clearTimeout(footerDebounceRef.current);
+      }
+    };
+  }, []);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -71,6 +102,9 @@ export function InvoiceCustomization() {
     setUploading(true);
     const url = await uploadLogo(file);
     setUploading(false);
+
+    // Reset file input to allow re-uploading same file
+    fileInputKey.current += 1;
 
     if (url) {
       toast.success("Logo téléchargé avec succès");
@@ -166,6 +200,7 @@ export function InvoiceCustomization() {
                 </div>
               )}
               <input
+                key={fileInputKey.current}
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
@@ -243,13 +278,13 @@ export function InvoiceCustomization() {
           </div>
         </div>
 
-        {/* Footer Text */}
+        {/* Footer Text - Now with local state and debounce */}
         <div className="space-y-2">
           <Label htmlFor="footer-text">Texte de pied de page personnalisé</Label>
           <Textarea
             id="footer-text"
             placeholder="Ex: Merci pour votre confiance ! Adresse: ..."
-            value={settings.footer_text || ""}
+            value={localFooterText}
             onChange={(e) => handleFooterChange(e.target.value)}
             className="resize-none"
             rows={2}
