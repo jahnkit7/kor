@@ -4,6 +4,7 @@ import { BentoGrid } from "@/components/admin/BentoGrid";
 import { useAdminStats } from "@/hooks/use-admin-stats";
 import { useActivityLogs } from "@/hooks/use-activity-logs";
 import { useCommissionStats } from "@/hooks/use-admin-commissions";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { 
   Users, 
   TrendingUp, 
@@ -94,9 +95,12 @@ export default function AdminDashboard() {
             <h1 className="text-3xl font-bold text-foreground tracking-tight">Dashboard</h1>
             <p className="text-muted-foreground">Vue d'ensemble de DÉKON</p>
           </div>
-          <div className="hidden lg:flex items-center gap-2 px-4 py-2 rounded-full bg-success/10 text-success text-sm font-medium">
-            <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
-            Système opérationnel
+          <div className="flex items-center gap-4">
+            <NotificationBell />
+            <div className="hidden lg:flex items-center gap-2 px-4 py-2 rounded-full bg-success/10 text-success text-sm font-medium">
+              <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
+              Système opérationnel
+            </div>
           </div>
         </div>
 

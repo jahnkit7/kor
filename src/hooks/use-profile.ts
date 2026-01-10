@@ -2,6 +2,13 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "./use-auth";
 import { isSupabaseConfigured, getSupabaseClient } from "@/lib/supabase";
 
+export interface NotificationSettings {
+  debt_threshold: number;
+  low_stock_threshold: number;
+  notify_high_debt: boolean;
+  notify_low_stock: boolean;
+}
+
 export interface Profile {
   id: string;
   user_id: string;
@@ -14,6 +21,7 @@ export interface Profile {
   auto_lock_minutes: number;
   hide_amounts: boolean;
   onboarding_completed: boolean;
+  notification_settings: NotificationSettings | null;
 }
 
 interface ProfileState {
@@ -50,7 +58,22 @@ export function useProfile(): ProfileState {
         console.error("Error fetching profile:", error);
         setProfile(null);
       } else {
-        setProfile(data);
+        // Transform the data to match our Profile interface
+        const profileData: Profile = {
+          id: data.id,
+          user_id: data.user_id,
+          shop_name: data.shop_name,
+          owner_name: data.owner_name,
+          phone: data.phone,
+          currency: data.currency,
+          language: data.language,
+          app_pin: data.app_pin,
+          auto_lock_minutes: data.auto_lock_minutes,
+          hide_amounts: data.hide_amounts,
+          onboarding_completed: data.onboarding_completed,
+          notification_settings: data.notification_settings as unknown as NotificationSettings | null,
+        };
+        setProfile(profileData);
       }
     } catch (error) {
       console.error("Error fetching profile:", error);
@@ -69,9 +92,11 @@ export function useProfile(): ProfileState {
 
     try {
       const supabase = await getSupabaseClient();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const dbUpdates: Record<string, any> = { ...updates };
       const { error } = await supabase
         .from("profiles")
-        .update(updates)
+        .update(dbUpdates)
         .eq("user_id", user.id);
 
       if (error) {

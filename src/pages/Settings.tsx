@@ -32,6 +32,7 @@ import { SubscriptionManagement } from "@/components/settings/SubscriptionManage
 import { ReferralSection } from "@/components/settings/ReferralSection";
 import { DeleteAccountDialog } from "@/components/settings/DeleteAccountDialog";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { NotificationSettings } from "@/components/settings/NotificationSettings";
 import { toast } from "sonner";
 
 const Settings = () => {
@@ -243,6 +244,15 @@ const Settings = () => {
               ))}
             </CardContent>
           </Card>
+        </div>
+
+        {/* Notifications */}
+        <div>
+          <p className="text-sm font-semibold text-muted-foreground mb-3 px-1">
+            <Bell className="inline w-4 h-4 mr-1" />
+            Notifications
+          </p>
+          <NotificationSettings />
         </div>
 
         {/* Theme / Appearance */}
