@@ -19,6 +19,7 @@ export default {
     extend: {
       fontFamily: {
         sans: ['Manrope', 'system-ui', 'sans-serif'],
+        poppins: ['Poppins', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",
