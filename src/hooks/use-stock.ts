@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "./use-auth";
+import { useNetworkStatus } from "./use-network-status";
 import { supabase } from "@/integrations/supabase/client";
+import * as localDB from "@/lib/db";
 import { useToast } from "./use-toast";
 
 export interface StockItem {
@@ -13,6 +15,7 @@ export interface StockItem {
   source: "manual" | "approximate" | "voice";
   created_at: string;
   updated_at: string;
+  synced?: boolean;
 }
 
 export interface NewStockItem {
@@ -25,37 +28,79 @@ export interface NewStockItem {
 
 export function useStock() {
   const { user } = useAuth();
+  const { isOnline } = useNetworkStatus();
   const { toast } = useToast();
   const [items, setItems] = useState<StockItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchItems = useCallback(async () => {
-    if (!user) {
-      setItems([]);
-      setLoading(false);
-      return;
-    }
-
     try {
-      const { data, error } = await supabase
-        .from("stock_items")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+      // 1. Load local data first
+      const localItems = await localDB.getStockItems();
+      const mappedLocalItems: StockItem[] = localItems.map(item => ({
+        id: item.id,
+        user_id: item.user_id || user?.id || "",
+        name: item.name,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        model: item.model || null,
+        source: item.source || "manual",
+        created_at: item.createdAt,
+        updated_at: item.updatedAt,
+        synced: item.synced,
+      }));
+      setItems(mappedLocalItems);
+      setLoading(false);
 
-      if (error) throw error;
-      setItems((data as StockItem[]) || []);
+      // 2. If online and authenticated, sync with cloud
+      if (isOnline && user) {
+        try {
+          const { data, error } = await supabase
+            .from("stock_items")
+            .select("*")
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false });
+
+          if (!error && data) {
+            const cloudItems: StockItem[] = (data as StockItem[]).map(item => ({
+              ...item,
+              synced: true,
+            }));
+
+            // Merge
+            const unsyncedLocalItems = mappedLocalItems.filter(i => !i.synced);
+            const cloudItemIds = new Set(cloudItems.map(i => i.id));
+            const finalItems = [
+              ...unsyncedLocalItems.filter(i => !cloudItemIds.has(i.id)),
+              ...cloudItems,
+            ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+            setItems(finalItems);
+
+            // Update local DB
+            for (const item of data) {
+              await localDB.upsertFromCloud("stock_items", [{
+                id: item.id,
+                name: item.name,
+                quantity: item.quantity,
+                unit_price: item.unit_price,
+                model: item.model,
+                source: item.source,
+                user_id: item.user_id,
+                createdAt: item.created_at,
+                updatedAt: item.updated_at,
+              }]);
+            }
+          }
+        } catch (error) {
+          console.warn("Could not sync stock with cloud:", error);
+        }
+      }
     } catch (error) {
       console.error("Error fetching stock items:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger le stock",
-        variant: "destructive",
-      });
-    } finally {
       setLoading(false);
     }
-  }, [user, toast]);
+  }, [user, isOnline]);
 
   useEffect(() => {
     fetchItems();
@@ -66,23 +111,58 @@ export function useStock() {
       if (!user) return null;
 
       try {
-        const { data, error } = await supabase
-          .from("stock_items")
-          .insert({
-            user_id: user.id,
-            name: item.name,
-            quantity: item.quantity,
-            unit_price: item.unit_price,
-            model: item.model || null,
-            source: item.source || "manual",
-          })
-          .select()
-          .single();
+        // 1. Save locally first
+        const localItem = await localDB.addStockItem({
+          name: item.name,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          model: item.model || null,
+          source: item.source || "manual",
+          user_id: user.id,
+        });
 
-        if (error) throw error;
-        
-        setItems((prev) => [data as StockItem, ...prev]);
-        return data as StockItem;
+        // 2. Update UI
+        const newItem: StockItem = {
+          id: localItem.id,
+          user_id: user.id,
+          name: localItem.name,
+          quantity: localItem.quantity,
+          unit_price: localItem.unit_price,
+          model: localItem.model || null,
+          source: localItem.source || "manual",
+          created_at: localItem.createdAt,
+          updated_at: localItem.updatedAt,
+          synced: false,
+        };
+        setItems(prev => [newItem, ...prev]);
+
+        // 3. If online, sync
+        if (isOnline) {
+          try {
+            const { error } = await supabase
+              .from("stock_items")
+              .insert({
+                id: localItem.id,
+                user_id: user.id,
+                name: item.name,
+                quantity: item.quantity,
+                unit_price: item.unit_price,
+                model: item.model || null,
+                source: item.source || "manual",
+              });
+
+            if (!error) {
+              await localDB.markAsSynced("stock_items", localItem.id);
+              setItems(prev => prev.map(i => 
+                i.id === localItem.id ? { ...i, synced: true } : i
+              ));
+            }
+          } catch (error) {
+            console.log("Stock item queued for sync:", error);
+          }
+        }
+
+        return newItem;
       } catch (error) {
         console.error("Error adding stock item:", error);
         toast({
@@ -93,7 +173,7 @@ export function useStock() {
         return null;
       }
     },
-    [user, toast]
+    [user, isOnline, toast]
   );
 
   const addItems = useCallback(
@@ -101,24 +181,13 @@ export function useStock() {
       if (!user || newItems.length === 0) return [];
 
       try {
-        const itemsToInsert = newItems.map((item) => ({
-          user_id: user.id,
-          name: item.name,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          model: item.model || null,
-          source: item.source || "manual",
-        }));
+        const insertedItems: StockItem[] = [];
 
-        const { data, error } = await supabase
-          .from("stock_items")
-          .insert(itemsToInsert)
-          .select();
+        for (const item of newItems) {
+          const result = await addItem(item);
+          if (result) insertedItems.push(result);
+        }
 
-        if (error) throw error;
-
-        const insertedItems = (data as StockItem[]) || [];
-        setItems((prev) => [...insertedItems, ...prev]);
         return insertedItems;
       } catch (error) {
         console.error("Error adding stock items:", error);
@@ -130,7 +199,7 @@ export function useStock() {
         return [];
       }
     },
-    [user, toast]
+    [user, addItem, toast]
   );
 
   const updateItem = useCallback(
@@ -138,17 +207,40 @@ export function useStock() {
       if (!user) return false;
 
       try {
-        const { error } = await supabase
-          .from("stock_items")
-          .update(updates)
-          .eq("id", id)
-          .eq("user_id", user.id);
+        // 1. Update locally first
+        await localDB.updateStockItem(id, {
+          name: updates.name,
+          quantity: updates.quantity,
+          unit_price: updates.unit_price,
+          model: updates.model,
+          source: updates.source,
+        });
 
-        if (error) throw error;
-
-        setItems((prev) =>
-          prev.map((item) => (item.id === id ? { ...item, ...updates } : item))
+        // 2. Update UI
+        setItems(prev =>
+          prev.map(item => (item.id === id ? { ...item, ...updates, synced: false } : item))
         );
+
+        // 3. If online, sync
+        if (isOnline) {
+          try {
+            const { error } = await supabase
+              .from("stock_items")
+              .update(updates)
+              .eq("id", id)
+              .eq("user_id", user.id);
+
+            if (!error) {
+              await localDB.markAsSynced("stock_items", id);
+              setItems(prev => prev.map(i => 
+                i.id === id ? { ...i, synced: true } : i
+              ));
+            }
+          } catch (error) {
+            console.warn("Update queued for sync:", error);
+          }
+        }
+
         return true;
       } catch (error) {
         console.error("Error updating stock item:", error);
@@ -160,7 +252,7 @@ export function useStock() {
         return false;
       }
     },
-    [user, toast]
+    [user, isOnline, toast]
   );
 
   const deleteItem = useCallback(
@@ -168,15 +260,25 @@ export function useStock() {
       if (!user) return false;
 
       try {
-        const { error } = await supabase
-          .from("stock_items")
-          .delete()
-          .eq("id", id)
-          .eq("user_id", user.id);
+        // 1. Delete locally
+        await localDB.deleteStockItem(id);
 
-        if (error) throw error;
+        // 2. Update UI
+        setItems(prev => prev.filter(item => item.id !== id));
 
-        setItems((prev) => prev.filter((item) => item.id !== id));
+        // 3. If online, delete from cloud
+        if (isOnline) {
+          try {
+            await supabase
+              .from("stock_items")
+              .delete()
+              .eq("id", id)
+              .eq("user_id", user.id);
+          } catch (error) {
+            console.warn("Delete queued for sync:", error);
+          }
+        }
+
         return true;
       } catch (error) {
         console.error("Error deleting stock item:", error);
@@ -188,7 +290,7 @@ export function useStock() {
         return false;
       }
     },
-    [user, toast]
+    [user, isOnline, toast]
   );
 
   const getTotalValue = useCallback(() => {

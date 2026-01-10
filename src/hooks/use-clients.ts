@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "./use-auth";
+import { useNetworkStatus } from "./use-network-status";
 import { isSupabaseConfigured, getSupabaseClient } from "@/lib/supabase";
+import * as localDB from "@/lib/db";
 import { toast } from "sonner";
 
 export interface Client {
@@ -14,6 +16,8 @@ export interface Client {
   updated_at: string;
   // Computed from debts
   total_debt?: number;
+  // Sync status
+  synced?: boolean;
 }
 
 interface ClientsState {
@@ -29,177 +33,224 @@ interface ClientsState {
 
 export function useClients(): ClientsState {
   const { user } = useAuth();
+  const { isOnline } = useNetworkStatus();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchClients = useCallback(async () => {
-    if (!user || !isSupabaseConfigured()) {
-      setLoading(false);
-      return;
-    }
-
     try {
-      const supabase = await getSupabaseClient();
-      
-      // Fetch clients with their debts
-      const { data: clientsData, error: clientsError } = await supabase
-        .from("clients")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-
-      if (clientsError) {
-        console.error("Error fetching clients:", clientsError);
-        return;
-      }
-
-      // Fetch debts to calculate totals
-      const { data: debtsData, error: debtsError } = await supabase
-        .from("debts")
-        .select("client_id, amount, paid")
-        .eq("user_id", user.id);
-
-      if (debtsError) {
-        console.error("Error fetching debts:", debtsError);
-      }
-
-      // Calculate total debt per client
-      const debtsByClient: Record<string, number> = {};
-      debtsData?.forEach(debt => {
-        const remaining = debt.amount - debt.paid;
-        if (remaining > 0) {
-          debtsByClient[debt.client_id] = (debtsByClient[debt.client_id] || 0) + remaining;
-        }
-      });
-
-      const clientsWithDebts = clientsData.map(client => ({
-        ...client,
-        total_debt: debtsByClient[client.id] || 0,
+      // 1. Load local data first
+      const localClients = await localDB.getClients();
+      const mappedLocalClients: Client[] = localClients.map(c => ({
+        id: c.id,
+        name: c.name,
+        phone: c.phone,
+        photo: c.photo || null,
+        is_risky: c.is_risky || false,
+        user_id: c.user_id || user?.id || "",
+        created_at: c.createdAt,
+        updated_at: c.updatedAt,
+        total_debt: 0,
+        synced: c.synced,
       }));
+      setClients(mappedLocalClients);
+      setLoading(false);
 
-      setClients(clientsWithDebts);
+      // 2. If online and authenticated, sync with cloud
+      if (isOnline && user && isSupabaseConfigured()) {
+        try {
+          const supabase = await getSupabaseClient();
+          
+          const { data: clientsData, error: clientsError } = await supabase
+            .from("clients")
+            .select("*")
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false });
+
+          if (clientsError) throw clientsError;
+
+          // Fetch debts to calculate totals
+          const { data: debtsData } = await supabase
+            .from("debts")
+            .select("client_id, amount, paid")
+            .eq("user_id", user.id);
+
+          const debtsByClient: Record<string, number> = {};
+          debtsData?.forEach(debt => {
+            const remaining = debt.amount - debt.paid;
+            if (remaining > 0) {
+              debtsByClient[debt.client_id] = (debtsByClient[debt.client_id] || 0) + remaining;
+            }
+          });
+
+          const cloudClients = clientsData.map(client => ({
+            ...client,
+            total_debt: debtsByClient[client.id] || 0,
+            synced: true,
+          }));
+
+          // Merge: keep local unsynced clients, update with cloud data
+          const unsyncedLocalClients = mappedLocalClients.filter(c => !c.synced);
+          const cloudClientIds = new Set(cloudClients.map(c => c.id));
+          const finalClients = [
+            ...unsyncedLocalClients.filter(c => !cloudClientIds.has(c.id)),
+            ...cloudClients,
+          ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+          setClients(finalClients);
+
+          // Update local DB with cloud data
+          for (const client of clientsData) {
+            await localDB.upsertFromCloud("clients", [{
+              id: client.id,
+              name: client.name,
+              phone: client.phone,
+              photo: client.photo,
+              is_risky: client.is_risky,
+              user_id: client.user_id,
+              createdAt: client.created_at,
+              updatedAt: client.updated_at,
+            }]);
+          }
+        } catch (error) {
+          console.warn("Could not sync clients with cloud:", error);
+        }
+      }
     } catch (error) {
       console.error("Error fetching clients:", error);
-    } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, isOnline]);
 
   useEffect(() => {
     fetchClients();
   }, [fetchClients]);
 
   const addClient = useCallback(async (clientData: { name: string; phone: string }): Promise<Client | null> => {
-    if (!user || !isSupabaseConfigured()) return null;
+    if (!user) return null;
 
     try {
-      const supabase = await getSupabaseClient();
-      const { data, error } = await supabase
-        .from("clients")
-        .insert({
-          name: clientData.name,
-          phone: clientData.phone,
-          user_id: user.id,
-        })
-        .select()
-        .single();
+      // 1. Save locally first
+      const localClient = await localDB.addClient({
+        name: clientData.name,
+        phone: clientData.phone,
+        user_id: user.id,
+      });
 
-      if (error) {
-        console.error("Error adding client:", error);
-        toast.error("Erreur lors de l'ajout du client");
-        return null;
+      // 2. Update UI immediately
+      const newClient: Client = {
+        id: localClient.id,
+        name: localClient.name,
+        phone: localClient.phone,
+        photo: null,
+        is_risky: false,
+        user_id: user.id,
+        created_at: localClient.createdAt,
+        updated_at: localClient.updatedAt,
+        total_debt: 0,
+        synced: false,
+      };
+      setClients(prev => [newClient, ...prev]);
+      toast.success("Client ajouté");
+
+      // 3. If online, sync immediately
+      if (isOnline && isSupabaseConfigured()) {
+        try {
+          const supabase = await getSupabaseClient();
+          await supabase
+            .from("clients")
+            .insert({
+              id: localClient.id,
+              name: clientData.name,
+              phone: clientData.phone,
+              user_id: user.id,
+            });
+
+          await localDB.markAsSynced("clients", localClient.id);
+          setClients(prev => prev.map(c => 
+            c.id === localClient.id ? { ...c, synced: true } : c
+          ));
+        } catch (error) {
+          console.log("Client queued for sync:", error);
+        }
       }
 
-      setClients(prev => [{ ...data, total_debt: 0 }, ...prev]);
-      toast.success("Client ajouté");
-      return data;
+      return newClient;
     } catch (error) {
       console.error("Error adding client:", error);
       toast.error("Erreur lors de l'ajout du client");
-    return null;
-  }
-}, [user]);
-
-const quickCreateClient = useCallback(async (name: string): Promise<Client | null> => {
-  if (!user || !isSupabaseConfigured()) return null;
-
-  try {
-    const supabase = await getSupabaseClient();
-    const { data, error } = await supabase
-      .from("clients")
-      .insert({
-        name: name.trim(),
-        phone: "", // Empty phone for quick create
-        user_id: user.id,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Error quick creating client:", error);
-      toast.error("Erreur lors de la création du client");
       return null;
     }
+  }, [user, isOnline]);
 
-    const newClient = { ...data, total_debt: 0 };
-    setClients(prev => [newClient, ...prev]);
-    toast.success(`Client "${name}" créé`);
-    return newClient;
-  } catch (error) {
-    console.error("Error quick creating client:", error);
-    toast.error("Erreur lors de la création du client");
-    return null;
-  }
-}, [user]);
+  const quickCreateClient = useCallback(async (name: string): Promise<Client | null> => {
+    return addClient({ name: name.trim(), phone: "" });
+  }, [addClient]);
 
   const updateClient = useCallback(async (id: string, updates: Partial<Client>) => {
-    if (!user || !isSupabaseConfigured()) return;
+    if (!user) return;
 
     try {
-      const supabase = await getSupabaseClient();
-      const { error } = await supabase
-        .from("clients")
-        .update(updates)
-        .eq("id", id)
-        .eq("user_id", user.id);
+      // Update locally first
+      await localDB.updateClient(id, {
+        name: updates.name,
+        phone: updates.phone,
+        photo: updates.photo || undefined,
+        is_risky: updates.is_risky,
+      });
 
-      if (error) {
-        console.error("Error updating client:", error);
-        toast.error("Erreur lors de la mise à jour");
-        return;
+      // Update UI
+      setClients(prev => prev.map(c => c.id === id ? { ...c, ...updates, synced: false } : c));
+
+      // If online, sync
+      if (isOnline && isSupabaseConfigured()) {
+        try {
+          const supabase = await getSupabaseClient();
+          await supabase
+            .from("clients")
+            .update(updates)
+            .eq("id", id)
+            .eq("user_id", user.id);
+
+          await localDB.markAsSynced("clients", id);
+          setClients(prev => prev.map(c => c.id === id ? { ...c, synced: true } : c));
+        } catch (error) {
+          console.warn("Could not sync update:", error);
+        }
       }
-
-      setClients(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
     } catch (error) {
       console.error("Error updating client:", error);
       toast.error("Erreur lors de la mise à jour");
     }
-  }, [user]);
+  }, [user, isOnline]);
 
   const deleteClient = useCallback(async (id: string) => {
-    if (!user || !isSupabaseConfigured()) return;
+    if (!user) return;
 
     try {
-      const supabase = await getSupabaseClient();
-      const { error } = await supabase
-        .from("clients")
-        .delete()
-        .eq("id", id)
-        .eq("user_id", user.id);
+      // Remove from UI immediately
+      setClients(prev => prev.filter(c => c.id !== id));
 
-      if (error) {
-        console.error("Error deleting client:", error);
-        toast.error("Erreur lors de la suppression");
-        return;
+      // Try to delete from cloud if online
+      if (isOnline && isSupabaseConfigured()) {
+        try {
+          const supabase = await getSupabaseClient();
+          await supabase
+            .from("clients")
+            .delete()
+            .eq("id", id)
+            .eq("user_id", user.id);
+        } catch (error) {
+          console.warn("Could not delete from cloud:", error);
+        }
       }
 
-      setClients(prev => prev.filter(c => c.id !== id));
       toast.success("Client supprimé");
     } catch (error) {
       console.error("Error deleting client:", error);
       toast.error("Erreur lors de la suppression");
     }
-  }, [user]);
+  }, [user, isOnline]);
 
   const toggleRisky = useCallback(async (id: string) => {
     const client = clients.find(c => c.id === id);

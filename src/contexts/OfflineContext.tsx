@@ -42,18 +42,37 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   };
 
   const performSync = async () => {
-    // Sync will be handled when user is authenticated
-    // For now, just update pending count
-    await updatePendingCount();
+    if (isSyncing) return;
+    setIsSyncing(true);
+    
+    try {
+      // Trigger refetch on all hooks by dispatching custom event
+      window.dispatchEvent(new CustomEvent("app:sync-needed"));
+      await updatePendingCount();
+    } catch (error) {
+      console.error("Sync failed:", error);
+    } finally {
+      setIsSyncing(false);
+    }
   };
+
+  // Auto-sync when connection is restored
+  useEffect(() => {
+    if (isOnline && wasOffline && isReady) {
+      performSync();
+    }
+  }, [isOnline, wasOffline, isReady]);
 
   // Show toast on status change
   useEffect(() => {
     if (prevOnline !== isOnline) {
       if (isOnline) {
         toast.success("Connexion rétablie", {
-          description: pendingCount > 0 ? "Synchronisation disponible" : undefined,
+          description: pendingCount > 0 ? "Synchronisation en cours..." : undefined,
         });
+        if (pendingCount > 0) {
+          performSync();
+        }
       } else {
         toast.warning("Mode hors-ligne", {
           description: "Vos données seront synchronisées dès que la connexion sera rétablie.",

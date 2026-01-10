@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "./use-auth";
+import { useNetworkStatus } from "./use-network-status";
 import { isSupabaseConfigured, getSupabaseClient } from "@/lib/supabase";
+import * as localDB from "@/lib/db";
 import { toast } from "sonner";
 
 export interface Debt {
@@ -17,6 +19,8 @@ export interface Debt {
   client_name?: string;
   client_phone?: string;
   client_is_risky?: boolean;
+  // Sync status
+  synced?: boolean;
 }
 
 export interface Payment {
@@ -42,171 +46,262 @@ interface DebtsState {
 
 export function useDebts(): DebtsState {
   const { user } = useAuth();
+  const { isOnline } = useNetworkStatus();
   const [debts, setDebts] = useState<Debt[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchDebts = useCallback(async () => {
-    if (!user || !isSupabaseConfigured()) {
-      setLoading(false);
-      return;
-    }
-
     try {
-      const supabase = await getSupabaseClient();
-      const { data, error } = await supabase
-        .from("debts")
-        .select(`
-          *,
-          clients:client_id (name, phone, is_risky)
-        `)
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+      // 1. Load local data first
+      const localDebts = await localDB.getDebts();
+      const localClients = await localDB.getClients();
+      const clientMap = new Map(localClients.map(c => [c.id, c]));
 
-      if (error) {
-        console.error("Error fetching debts:", error);
-        return;
+      const mappedLocalDebts: Debt[] = localDebts.map(d => {
+        const client = clientMap.get(d.clientId);
+        return {
+          id: d.id,
+          client_id: d.clientId,
+          amount: d.amount,
+          paid: d.paid,
+          user_id: d.user_id || user?.id || "",
+          created_at: d.createdAt,
+          updated_at: d.updatedAt,
+          remaining: d.amount - d.paid,
+          client_name: d.client_name || client?.name || "Client inconnu",
+          client_phone: client?.phone || "",
+          client_is_risky: client?.is_risky || false,
+          synced: d.synced,
+        };
+      });
+      setDebts(mappedLocalDebts);
+      setLoading(false);
+
+      // 2. If online and authenticated, sync with cloud
+      if (isOnline && user && isSupabaseConfigured()) {
+        try {
+          const supabase = await getSupabaseClient();
+          const { data, error } = await supabase
+            .from("debts")
+            .select(`
+              *,
+              clients:client_id (name, phone, is_risky)
+            `)
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false });
+
+          if (!error && data) {
+            const cloudDebts: Debt[] = data.map(debt => ({
+              ...debt,
+              remaining: debt.amount - debt.paid,
+              client_name: debt.clients?.name || "Client inconnu",
+              client_phone: debt.clients?.phone || "",
+              client_is_risky: debt.clients?.is_risky || false,
+              synced: true,
+            }));
+
+            // Merge
+            const unsyncedLocalDebts = mappedLocalDebts.filter(d => !d.synced);
+            const cloudDebtIds = new Set(cloudDebts.map(d => d.id));
+            const finalDebts = [
+              ...unsyncedLocalDebts.filter(d => !cloudDebtIds.has(d.id)),
+              ...cloudDebts,
+            ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+            setDebts(finalDebts);
+
+            // Update local DB
+            for (const debt of data) {
+              await localDB.upsertFromCloud("debts", [{
+                id: debt.id,
+                clientId: debt.client_id,
+                client_name: debt.clients?.name,
+                amount: debt.amount,
+                paid: debt.paid,
+                user_id: debt.user_id,
+                createdAt: debt.created_at,
+                updatedAt: debt.updated_at,
+              }]);
+            }
+          }
+        } catch (error) {
+          console.warn("Could not sync debts with cloud:", error);
+        }
       }
-
-      const debtsWithInfo = data.map(debt => ({
-        ...debt,
-        remaining: debt.amount - debt.paid,
-        client_name: debt.clients?.name || "Client inconnu",
-        client_phone: debt.clients?.phone || "",
-        client_is_risky: debt.clients?.is_risky || false,
-      }));
-
-      setDebts(debtsWithInfo);
     } catch (error) {
       console.error("Error fetching debts:", error);
-    } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, isOnline]);
 
   useEffect(() => {
     fetchDebts();
   }, [fetchDebts]);
 
   const addDebt = useCallback(async (debtData: { client_id: string; amount: number }): Promise<Debt | null> => {
-    if (!user || !isSupabaseConfigured()) return null;
+    if (!user) return null;
 
     try {
-      const supabase = await getSupabaseClient();
-      const { data, error } = await supabase
-        .from("debts")
-        .insert({
-          client_id: debtData.client_id,
-          amount: debtData.amount,
-          paid: 0,
-          user_id: user.id,
-        })
-        .select(`
-          *,
-          clients:client_id (name, phone, is_risky)
-        `)
-        .single();
+      // 1. Save locally first
+      const localDebt = await localDB.addOrUpdateDebt(debtData.client_id, debtData.amount);
+      
+      // Get client info
+      const clients = await localDB.getClients();
+      const client = clients.find(c => c.id === debtData.client_id);
 
-      if (error) {
-        console.error("Error adding debt:", error);
-        toast.error("Erreur lors de l'ajout de la dette");
-        return null;
-      }
-
-      const debtWithInfo = {
-        ...data,
-        remaining: data.amount - data.paid,
-        client_name: data.clients?.name || "Client inconnu",
-        client_phone: data.clients?.phone || "",
-        client_is_risky: data.clients?.is_risky || false,
+      // 2. Update UI
+      const newDebt: Debt = {
+        id: localDebt.id,
+        client_id: debtData.client_id,
+        amount: localDebt.amount,
+        paid: localDebt.paid,
+        user_id: user.id,
+        created_at: localDebt.createdAt,
+        updated_at: localDebt.updatedAt,
+        remaining: localDebt.amount - localDebt.paid,
+        client_name: client?.name || "Client inconnu",
+        client_phone: client?.phone || "",
+        client_is_risky: client?.is_risky || false,
+        synced: false,
       };
 
-      setDebts(prev => [debtWithInfo, ...prev]);
+      setDebts(prev => {
+        const existing = prev.find(d => d.id === localDebt.id);
+        if (existing) {
+          return prev.map(d => d.id === localDebt.id ? newDebt : d);
+        }
+        return [newDebt, ...prev];
+      });
       toast.success("Dette ajoutée");
-      return debtWithInfo;
+
+      // 3. If online, sync
+      if (isOnline && isSupabaseConfigured()) {
+        try {
+          const supabase = await getSupabaseClient();
+          await supabase
+            .from("debts")
+            .upsert({
+              id: localDebt.id,
+              client_id: debtData.client_id,
+              amount: localDebt.amount,
+              paid: localDebt.paid,
+              user_id: user.id,
+            });
+
+          await localDB.markAsSynced("debts", localDebt.id);
+          setDebts(prev => prev.map(d => 
+            d.id === localDebt.id ? { ...d, synced: true } : d
+          ));
+        } catch (error) {
+          console.log("Debt queued for sync:", error);
+        }
+      }
+
+      return newDebt;
     } catch (error) {
       console.error("Error adding debt:", error);
       toast.error("Erreur lors de l'ajout de la dette");
       return null;
     }
-  }, [user]);
+  }, [user, isOnline]);
 
   const addPayment = useCallback(async (debtId: string, amount: number) => {
-    if (!user || !isSupabaseConfigured()) return;
+    if (!user) return;
 
     const debt = debts.find(d => d.id === debtId);
     if (!debt) return;
 
     try {
-      const supabase = await getSupabaseClient();
-      
-      // Add payment record
-      const { error: paymentError } = await supabase
-        .from("payments")
-        .insert({
-          debt_id: debtId,
-          client_id: debt.client_id,
-          amount,
-          user_id: user.id,
-        });
+      // 1. Save payment locally
+      const localPayment = await localDB.addPayment({
+        debtId,
+        clientId: debt.client_id,
+        amount,
+        user_id: user.id,
+      });
 
-      if (paymentError) {
-        console.error("Error adding payment:", paymentError);
-        toast.error("Erreur lors de l'ajout du paiement");
-        return;
-      }
-
-      // Update debt paid amount
+      // 2. Update UI
       const newPaid = debt.paid + amount;
-      const { error: updateError } = await supabase
-        .from("debts")
-        .update({ paid: newPaid })
-        .eq("id", debtId);
-
-      if (updateError) {
-        console.error("Error updating debt:", updateError);
-        toast.error("Erreur lors de la mise à jour de la dette");
-        return;
-      }
-
       setDebts(prev => prev.map(d => 
         d.id === debtId 
-          ? { ...d, paid: newPaid, remaining: d.amount - newPaid }
+          ? { ...d, paid: newPaid, remaining: d.amount - newPaid, synced: false }
           : d
       ));
-
       toast.success("Paiement enregistré");
+
+      // 3. If online, sync
+      if (isOnline && isSupabaseConfigured()) {
+        try {
+          const supabase = await getSupabaseClient();
+          
+          // Add payment record
+          await supabase
+            .from("payments")
+            .insert({
+              id: localPayment.id,
+              debt_id: debtId,
+              client_id: debt.client_id,
+              amount,
+              user_id: user.id,
+            });
+
+          // Update debt paid amount
+          await supabase
+            .from("debts")
+            .update({ paid: newPaid })
+            .eq("id", debtId);
+
+          await localDB.markAsSynced("payments", localPayment.id);
+          await localDB.markAsSynced("debts", debtId);
+          setDebts(prev => prev.map(d => 
+            d.id === debtId ? { ...d, synced: true } : d
+          ));
+        } catch (error) {
+          console.warn("Payment queued for sync:", error);
+        }
+      }
     } catch (error) {
       console.error("Error adding payment:", error);
       toast.error("Erreur lors de l'ajout du paiement");
     }
-  }, [user, debts]);
+  }, [user, debts, isOnline]);
 
   const getDebtsByClient = useCallback((clientId: string) => {
     return debts.filter(d => d.client_id === clientId && d.remaining > 0);
   }, [debts]);
 
   const getPaymentsByDebt = useCallback(async (debtId: string): Promise<Payment[]> => {
-    if (!user || !isSupabaseConfigured()) return [];
+    // Try cloud first if online
+    if (isOnline && user && isSupabaseConfigured()) {
+      try {
+        const supabase = await getSupabaseClient();
+        const { data, error } = await supabase
+          .from("payments")
+          .select("*")
+          .eq("debt_id", debtId)
+          .order("created_at", { ascending: false });
 
-    try {
-      const supabase = await getSupabaseClient();
-      const { data, error } = await supabase
-        .from("payments")
-        .select("*")
-        .eq("debt_id", debtId)
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        console.error("Error fetching payments:", error);
-        return [];
+        if (!error && data) {
+          return data;
+        }
+      } catch (error) {
+        console.warn("Could not fetch payments from cloud:", error);
       }
-
-      return data;
-    } catch (error) {
-      console.error("Error fetching payments:", error);
-      return [];
     }
-  }, [user]);
+
+    // Fallback to local
+    const localPayments = await localDB.getPayments();
+    return localPayments
+      .filter(p => p.debtId === debtId)
+      .map(p => ({
+        id: p.id,
+        debt_id: p.debtId,
+        client_id: p.clientId,
+        amount: p.amount,
+        user_id: p.user_id || user?.id || "",
+        created_at: p.createdAt,
+      }));
+  }, [user, isOnline]);
 
   const totalDebts = debts.reduce((sum, d) => sum + d.remaining, 0);
   const clientsWithDebts = new Set(debts.filter(d => d.remaining > 0).map(d => d.client_id)).size;
