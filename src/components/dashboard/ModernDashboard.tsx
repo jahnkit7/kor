@@ -180,23 +180,25 @@ const ModernDashboard = ({
           </div>
         </div>
 
-        {/* Quick Actions - Cash / Crédit / + on ONE line */}
-        <div className="flex items-center gap-3 mt-6">
+        {/* Quick Actions - Grid 45% / 45% / 10% pour garantir le bouton + visible */}
+        <div className="grid grid-cols-[45fr_45fr_10fr] gap-2 mt-6 items-center">
           <Button
             onClick={() => navigate("/sale/cash")}
-            className="flex-1 min-w-0 h-14 rounded-full bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/90 text-primary-foreground shadow-lg shadow-primary/25 text-base font-semibold"
+            className="w-full min-w-0 h-[clamp(3rem,12vw,3.5rem)] rounded-full bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/90 text-primary-foreground shadow-lg shadow-primary/25 text-[clamp(0.75rem,3vw,1rem)] font-semibold px-3"
           >
-            <Wallet className="w-5 h-5 mr-2 flex-shrink-0" />
-            <span className="truncate">Vente Cash</span>
+            <Wallet className="w-[clamp(1rem,4vw,1.25rem)] h-[clamp(1rem,4vw,1.25rem)] mr-1.5 flex-shrink-0" />
+            <span className="truncate">Cash</span>
           </Button>
           <Button
             onClick={() => navigate("/sale/credit")}
-            className="flex-1 min-w-0 h-14 rounded-full bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg shadow-accent/25 text-base font-semibold"
+            className="w-full min-w-0 h-[clamp(3rem,12vw,3.5rem)] rounded-full bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg shadow-accent/25 text-[clamp(0.75rem,3vw,1rem)] font-semibold px-3"
           >
-            <CreditCard className="w-5 h-5 mr-2 flex-shrink-0" />
-            <span className="truncate">Vente Crédit</span>
+            <CreditCard className="w-[clamp(1rem,4vw,1.25rem)] h-[clamp(1rem,4vw,1.25rem)] mr-1.5 flex-shrink-0" />
+            <span className="truncate">Crédit</span>
           </Button>
-          <QuickActionFAB inline className="shrink-0" />
+          <div className="flex justify-center min-w-[clamp(2.75rem,10vw,3.25rem)]">
+            <QuickActionFAB inline />
+          </div>
         </div>
 
         {/* Network & Clients Quick Access */}
