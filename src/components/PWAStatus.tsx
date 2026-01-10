@@ -3,10 +3,13 @@ import { Wifi, WifiOff, Cloud, RefreshCw, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNetworkStatus } from "@/hooks/use-network-status";
 import { useSync } from "@/hooks/use-sync";
+import { useOffline } from "@/contexts/OfflineContext";
+import { Button } from "@/components/ui/button";
 
 export function PWAStatus() {
   const { isOnline } = useNetworkStatus();
-  const { isSyncing, pendingCount, pendingDetails, performSync } = useSync();
+  const { pendingCount, pendingDetails } = useSync();
+  const { isSyncing, performSync } = useOffline();
   const [showSuccess, setShowSuccess] = useState(false);
   const [wasSyncing, setWasSyncing] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
@@ -51,7 +54,7 @@ export function PWAStatus() {
   if (showSuccess) {
     return (
       <StatusPill variant="success">
-        <Check className="w-3 h-3" />
+        <Check className="w-3.5 h-3.5" />
         <span>Synchronisé</span>
       </StatusPill>
     );
@@ -61,7 +64,7 @@ export function PWAStatus() {
   if (isSyncing) {
     return (
       <StatusPill variant="syncing">
-        <RefreshCw className="w-3 h-3 animate-spin" />
+        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
         <span>Synchronisation...</span>
         {pendingCount > 0 && (
           <span className="bg-white/20 px-1.5 py-0.5 rounded text-[10px] font-semibold">
@@ -76,7 +79,7 @@ export function PWAStatus() {
   if (!isOnline) {
     return (
       <StatusPill variant="offline" pulse={pendingCount > 0}>
-        <WifiOff className="w-3 h-3" />
+        <WifiOff className="w-3.5 h-3.5" />
         <span>Hors ligne</span>
         {pendingCount > 0 && (
           <span className="bg-white/20 px-1.5 py-0.5 rounded text-[10px] font-semibold" title={getPendingDetailsText()}>
@@ -87,13 +90,25 @@ export function PWAStatus() {
     );
   }
 
-  // Online with pending sync
+  // Online with pending sync - show prominent sync button
   if (pendingCount > 0) {
     return (
-      <StatusPill variant="pending" onClick={performSync}>
-        <Cloud className="w-3 h-3" />
+      <StatusPill variant="pending">
+        <Cloud className="w-3.5 h-3.5" />
         <span>{pendingCount} en attente</span>
-        <RefreshCw className="w-3 h-3 opacity-60" />
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-6 px-2 py-0 text-xs bg-white/20 hover:bg-white/30 ml-1"
+          onClick={(e) => {
+            e.stopPropagation();
+            performSync();
+          }}
+          disabled={isSyncing}
+        >
+          <RefreshCw className={cn("w-3 h-3 mr-1", isSyncing && "animate-spin")} />
+          Sync
+        </Button>
       </StatusPill>
     );
   }
@@ -101,7 +116,7 @@ export function PWAStatus() {
   // Online state (briefly shown)
   return (
     <StatusPill variant="online">
-      <Wifi className="w-3 h-3" />
+      <Wifi className="w-3.5 h-3.5" />
       <span>En ligne</span>
     </StatusPill>
   );
@@ -119,20 +134,24 @@ function StatusPill({ variant, children, onClick, pulse }: StatusPillProps) {
     online: "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30",
     offline: "bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30",
     syncing: "bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500/30",
-    pending: "bg-violet-500/20 text-violet-600 dark:text-violet-400 border-violet-500/30 cursor-pointer hover:bg-violet-500/30 active:scale-95",
+    pending: "bg-violet-500/20 text-violet-600 dark:text-violet-400 border-violet-500/30",
     success: "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30",
   };
 
   return (
     <div
       className={cn(
-        "fixed top-3 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-1.5 px-3 py-1.5",
+        "fixed left-1/2 -translate-x-1/2 z-[60] flex items-center gap-1.5 px-3 py-1.5",
         "text-xs font-medium rounded-full border backdrop-blur-sm shadow-lg",
         "animate-in fade-in slide-in-from-top-2 duration-300",
-        "safe-area-inset-top transition-all",
+        "transition-all",
         variants[variant],
         pulse && "animate-pulse"
       )}
+      style={{
+        // Position below iPhone notch/safe area
+        top: 'max(0.75rem, calc(env(safe-area-inset-top) + 0.5rem))'
+      }}
       onClick={onClick}
       role={onClick ? "button" : undefined}
     >

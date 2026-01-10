@@ -748,7 +748,7 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
     return (
       <FullscreenModal 
         title="Mode texte"
-        onBack={switchToVoice}
+        onBack={isSupported ? switchToVoice : undefined}
         footer={
           <>
             <Button 
@@ -760,7 +760,7 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
               {isOnline ? <Sparkles className="h-4 w-4" /> : <Zap className="h-4 w-4" />}
               {isOnline ? "Analyser (IA)" : "Analyser (local)"}
             </Button>
-            {isSupported && (
+            {isSupported && isOnline && (
               <Button variant="outline" onClick={switchToVoice} className="w-full gap-2">
                 <Mic className="h-4 w-4" />
                 Mode vocal
@@ -770,6 +770,18 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
         }
       >
         <div className="space-y-4">
+          {/* Offline notice */}
+          {!isOnline && (
+            <Card className="p-3 bg-amber-500/10 border-amber-500/20">
+              <div className="flex items-center gap-2">
+                <WifiOff className="h-4 w-4 text-amber-600" />
+                <p className="text-sm text-amber-700 dark:text-amber-400">
+                  Mode hors-ligne - L'analyse se fera localement
+                </p>
+              </div>
+            </Card>
+          )}
+
           <p className="text-sm text-muted-foreground text-center">
             Décrivez votre stock par écrit
           </p>
@@ -783,12 +795,20 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
           <Textarea
             value={manualText}
             onChange={(e) => setManualText(e.target.value)}
-            placeholder="Exemple: J'ai 50 savons Lux à 500 francs, 10 paquets de riz à 15000..."
-            className="min-h-[150px] text-base"
+            placeholder="Exemples: 
+• 50 savons Lux à 500 francs
+• 10 sacs de riz 25kg à 15000 CFA
+• 100 sachets de lait 25g à 100
+• Ciment 20 sacs 5000 francs l'unité"
+            className="min-h-[180px] text-base"
           />
-          <p className="text-xs text-muted-foreground">
-            💡 Mentionnez le nom, la quantité et le prix de chaque produit
-          </p>
+          
+          <Card className="p-3 bg-primary/5 border-primary/20">
+            <p className="text-xs text-muted-foreground">
+              💡 <strong>Conseils :</strong> Mentionnez le nom, la quantité et le prix. 
+              Exemples: "50 savons à 500", "riz 10 sacs 15000 CFA", "huile 20 bidons à 1500 le bidon"
+            </p>
+          </Card>
         </div>
       </FullscreenModal>
     );
@@ -854,13 +874,32 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
           </div>
 
           {/* Online/Offline status */}
-          <div className={cn(
-            "flex items-center gap-2 px-3 py-2 rounded-lg text-sm",
-            isOnline ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-          )}>
-            {isOnline ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
-            <span>{isOnline ? "En ligne - Analyse IA disponible" : "Hors-ligne - Analyse locale"}</span>
-          </div>
+          {!isOnline ? (
+            <Card className="p-4 bg-amber-500/10 border-amber-500/30">
+              <div className="flex items-start gap-3">
+                <WifiOff className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                <div className="space-y-2">
+                  <p className="font-medium text-amber-700 dark:text-amber-400">Mode hors-ligne</p>
+                  <p className="text-sm text-muted-foreground">
+                    La reconnaissance vocale nécessite internet. Utilisez le mode texte pour saisir votre stock manuellement.
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    onClick={switchToManual} 
+                    className="w-full gap-2 mt-2 border-amber-500/30 hover:bg-amber-500/10"
+                  >
+                    <Keyboard className="h-4 w-4" />
+                    Utiliser le mode texte
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          ) : (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-primary/10 text-primary">
+              <Wifi className="h-4 w-4" />
+              <span>En ligne - Analyse IA disponible</span>
+            </div>
+          )}
 
           {/* Browser not supported warning */}
           {!isSupported && (
