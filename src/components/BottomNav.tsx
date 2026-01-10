@@ -1,11 +1,21 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, CreditCard, Users, Radio, Settings, CloudOff, RefreshCw } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { 
+  Home01Icon, 
+  Wallet02Icon,
+  UserIcon,
+  WifiConnected01Icon,
+  Settings01Icon,
+  CloudIcon,
+  ArrowReloadHorizontalIcon,
+} from "@hugeicons/core-free-icons";
 import { usePermissions } from "@/hooks/use-role";
 import { useMerchantMessages } from "@/hooks/use-merchant-messages";
 import { useMemo } from "react";
 import { useFeatureAccess } from "@/hooks/use-feature-access";
 import { useOffline } from "@/contexts/OfflineContext";
 import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
 
 const BottomNav = () => {
   const navigate = useNavigate();
@@ -25,56 +35,96 @@ const BottomNav = () => {
   }, [conversations]);
 
   const navItems = [
-    { icon: Home, label: "Accueil", path: "/dashboard", show: true, badge: 0, isBeta: false },
-    // Hide "Dettes" if debts feature is globally disabled
-    { icon: CreditCard, label: "Dettes", path: "/debts", show: !debtsDisabled && !debtsLoading, badge: 0, isBeta: debtsBeta },
-    // Hide "Réseau" if network feature is globally disabled
-    { icon: Radio, label: "Réseau", path: "/network", show: !networkDisabled && !networkLoading, badge: unreadCount, isBeta: networkBeta },
-    // Hide "Clients" if clients feature is globally disabled
-    { icon: Users, label: "Clients", path: "/clients", show: !clientsDisabled && !clientsLoading, badge: 0, isBeta: clientsBeta },
-    { icon: Settings, label: "Réglages", path: "/settings", show: true, badge: 0, isBeta: false },
+    { 
+      icon: Home01Icon, 
+      label: "Accueil", 
+      path: "/dashboard", 
+      show: true, 
+      badge: 0, 
+      isBeta: false 
+    },
+    { 
+      icon: Wallet02Icon, 
+      label: "Dettes", 
+      path: "/debts", 
+      show: !debtsDisabled && !debtsLoading, 
+      badge: 0, 
+      isBeta: debtsBeta 
+    },
+    { 
+      icon: WifiConnected01Icon, 
+      label: "Réseau", 
+      path: "/network", 
+      show: !networkDisabled && !networkLoading, 
+      badge: unreadCount, 
+      isBeta: networkBeta 
+    },
+    { 
+      icon: UserIcon, 
+      label: "Clients", 
+      path: "/clients", 
+      show: !clientsDisabled && !clientsLoading, 
+      badge: 0, 
+      isBeta: clientsBeta 
+    },
+    { 
+      icon: Settings01Icon, 
+      label: "Réglages", 
+      path: "/settings", 
+      show: true, 
+      badge: 0, 
+      isBeta: false 
+    },
   ];
 
   const visibleItems = navItems.filter(item => item.show);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#e2e8f0]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+    <nav 
+      className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-[#f8f9ff] via-[#f8f9ff]/95 to-transparent backdrop-blur-sm" 
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
       {/* Sync status bar - shown when pending items exist */}
-      {pendingCount > 0 && (
-        <div 
-          className={cn(
-            "absolute -top-8 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-1.5 rounded-t-xl shadow-lg transition-all duration-300",
-            !isOnline 
-              ? "bg-amber-500 text-white" 
-              : isSyncing 
-                ? "bg-primary text-primary-foreground" 
-                : "bg-blue-500 text-white"
-          )}
-        >
-          {isSyncing ? (
-            <>
-              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-              <span className="text-xs font-medium">Synchronisation...</span>
-            </>
-          ) : !isOnline ? (
-            <>
-              <CloudOff className="w-3.5 h-3.5" />
-              <span className="text-xs font-medium">Hors-ligne</span>
-              <span className="bg-white/20 px-2 py-0.5 rounded-full text-[11px] font-bold">
-                {pendingCount} en attente
-              </span>
-            </>
-          ) : (
-            <>
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span className="text-xs font-medium">{pendingCount} à synchroniser</span>
-            </>
-          )}
-        </div>
-      )}
+      <AnimatePresence>
+        {pendingCount > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className={cn(
+              "absolute -top-8 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-1.5 rounded-t-xl shadow-lg transition-all duration-300",
+              !isOnline 
+                ? "bg-amber-500 text-white" 
+                : isSyncing 
+                  ? "bg-primary text-primary-foreground" 
+                  : "bg-blue-500 text-white"
+            )}
+          >
+            {isSyncing ? (
+              <>
+                <HugeiconsIcon icon={ArrowReloadHorizontalIcon} className="w-3.5 h-3.5 animate-spin" />
+                <span className="text-xs font-medium">Synchronisation...</span>
+              </>
+            ) : !isOnline ? (
+              <>
+                <HugeiconsIcon icon={CloudIcon} className="w-3.5 h-3.5" />
+                <span className="text-xs font-medium">Hors-ligne</span>
+                <span className="bg-white/20 px-2 py-0.5 rounded-full text-[11px] font-bold">
+                  {pendingCount} en attente
+                </span>
+              </>
+            ) : (
+              <>
+                <HugeiconsIcon icon={ArrowReloadHorizontalIcon} className="w-3.5 h-3.5" />
+                <span className="text-xs font-medium">{pendingCount} à synchroniser</span>
+              </>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
       
       <div className="flex items-center justify-around h-16">
-        {visibleItems.map(({ icon: Icon, label, path, badge, isBeta }) => {
+        {visibleItems.map(({ icon, label, path, badge, isBeta }) => {
           const isActive = location.pathname === path || 
             (path !== "/dashboard" && location.pathname.startsWith(path));
           
@@ -85,24 +135,35 @@ const BottomNav = () => {
             <button
               key={path}
               onClick={() => navigate(path)}
-              className={`relative flex flex-col items-center justify-center w-16 h-full transition-colors ${
-                isActive 
-                  ? "text-[#4f7df3]" 
-                  : "text-[#718096] hover:text-[#2d3748]"
-              }`}
+              className="relative flex flex-col items-center justify-center w-16 h-full transition-all"
             >
-              <div className="relative">
-                <Icon className={`w-6 h-6 ${isActive ? "scale-110" : ""} transition-transform`} />
+              <motion.div 
+                className="relative flex flex-col items-center"
+                animate={{ scale: isActive ? 1.05 : 1 }}
+                transition={{ type: "spring", stiffness: 400, damping: 20 }}
+              >
+                <HugeiconsIcon 
+                  icon={icon}
+                  className={cn(
+                    "w-6 h-6 transition-colors",
+                    isActive ? "text-[#4f7df3]" : "text-[#718096] hover:text-[#2d3748]"
+                  )}
+                  strokeWidth={isActive ? 2 : 1.5}
+                />
+                
+                {/* Badge for unread messages */}
                 {badge > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] flex items-center justify-center font-bold">
+                  <span className="absolute -top-1 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] flex items-center justify-center font-bold">
                     {badge > 9 ? "9+" : badge}
                   </span>
                 )}
+                
                 {/* Beta indicator dot */}
                 {isBeta && badge === 0 && !showSyncBadge && (
-                  <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 border-2 border-card" />
+                  <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 border-2 border-[#f8f9ff]" />
                 )}
-                {/* Sync pending indicator - colored badge with count */}
+                
+                {/* Sync pending indicator */}
                 {showSyncBadge && (
                   <span 
                     className={cn(
@@ -117,8 +178,29 @@ const BottomNav = () => {
                     {pendingCount > 99 ? "99+" : pendingCount}
                   </span>
                 )}
-              </div>
-              <span className="text-[10px] font-semibold mt-1">{label}</span>
+
+                {/* Label - only shown for active item */}
+                <AnimatePresence>
+                  {isActive && (
+                    <motion.span 
+                      initial={{ opacity: 0, y: -2 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -2 }}
+                      className="text-[10px] font-semibold mt-1 text-[#4f7df3]"
+                    >
+                      {label}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+
+                {/* Active indicator dot */}
+                {isActive && (
+                  <motion.div 
+                    layoutId="activeIndicator"
+                    className="w-1 h-1 rounded-full bg-[#4f7df3] mt-0.5"
+                  />
+                )}
+              </motion.div>
             </button>
           );
         })}

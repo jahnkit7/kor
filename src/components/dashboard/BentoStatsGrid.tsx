@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { TrendingUp, Package, ChevronRight } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ChartIncreaseIcon, Package01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 
 interface BentoStatsGridProps {
@@ -34,9 +35,9 @@ const BentoStatsGrid = ({
       >
         <div className="flex items-center justify-between mb-3">
           <div className="w-10 h-10 rounded-xl bg-[#ef4444]/20 flex items-center justify-center">
-            <TrendingUp className="w-5 h-5 text-[#ef4444]" />
+            <HugeiconsIcon icon={ChartIncreaseIcon} className="w-5 h-5 text-[#ef4444]" strokeWidth={1.5} />
           </div>
-          <ChevronRight className="w-5 h-5 text-[#ef4444]/60" />
+          <HugeiconsIcon icon={ArrowRight01Icon} className="w-5 h-5 text-[#ef4444]/60" strokeWidth={1.5} />
         </div>
         <p className="text-xs font-medium text-[#991b1b] mb-1">
           Dettes à récupérer
@@ -57,9 +58,9 @@ const BentoStatsGrid = ({
       >
         <div className="flex items-center justify-between mb-3">
           <div className="w-10 h-10 rounded-xl bg-[#3b82f6]/20 flex items-center justify-center">
-            <Package className="w-5 h-5 text-[#3b82f6]" />
+            <HugeiconsIcon icon={Package01Icon} className="w-5 h-5 text-[#3b82f6]" strokeWidth={1.5} />
           </div>
-          <ChevronRight className="w-5 h-5 text-[#3b82f6]/60" />
+          <HugeiconsIcon icon={ArrowRight01Icon} className="w-5 h-5 text-[#3b82f6]/60" strokeWidth={1.5} />
         </div>
         <p className="text-xs font-medium text-[#1e40af] mb-1">Valeur du stock</p>
         <p className="text-xl font-bold text-[#2563eb]">{formatMoney(stockValue)}</p>
