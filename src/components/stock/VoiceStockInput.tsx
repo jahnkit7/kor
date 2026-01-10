@@ -474,12 +474,27 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
         if (autoSaveMode) {
           setStep("saving");
           setIsSubmitting(true);
+          
+          console.log("[VoiceStock] ===== AUTO SAVE MODE =====");
+          console.log("[VoiceStock] Items to save:", voiceItems.length);
+          
           try {
             const stockItems: NewStockItem[] = voiceItems.map(({ tempId, isEditing, confidence, ...it }) => it);
+            console.log("[VoiceStock] Calling onComplete with:", stockItems);
+            
             await onComplete(stockItems);
+            
+            console.log("[VoiceStock] ✅ onComplete finished successfully");
             toast({
-              title: "Stock ajouté",
+              title: "✅ Stock ajouté",
               description: `${stockItems.length} produit(s) enregistré(s).`,
+            });
+          } catch (saveError) {
+            console.error("[VoiceStock] ❌ onComplete FAILED:", saveError);
+            toast({
+              title: "❌ Erreur d'enregistrement",
+              description: saveError instanceof Error ? saveError.message : "Erreur inconnue",
+              variant: "destructive",
             });
           } finally {
             setIsSubmitting(false);

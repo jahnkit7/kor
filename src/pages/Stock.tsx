@@ -96,14 +96,36 @@ export default function Stock() {
   };
 
   const handleAddItems = async (newItems: NewStockItem[]) => {
+    console.log("[Stock] handleAddItems called with", newItems.length, "items");
+    
+    if (newItems.length === 0) {
+      console.warn("[Stock] No items provided to handleAddItems");
+      toast({
+        title: "⚠️ Aucun produit",
+        description: "Aucun produit à ajouter",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     const results = await addItems(newItems);
+    
+    console.log("[Stock] addItems returned", results.length, "items");
+    
     if (results.length > 0) {
       toast({
-        title: "Stock généré",
+        title: "✅ Stock généré",
         description: `${results.length} produit${results.length > 1 ? "s" : ""} ajouté${results.length > 1 ? "s" : ""}`,
       });
       setIsAddSheetOpen(false);
       setEntryMode(null);
+    } else {
+      console.error("[Stock] ❌ addItems returned empty - all items failed");
+      toast({
+        title: "❌ Échec de l'enregistrement",
+        description: "Les produits n'ont pas pu être enregistrés. Vérifiez votre connexion.",
+        variant: "destructive",
+      });
     }
   };
 
