@@ -52,7 +52,17 @@ import AdminRoadmap from "./pages/admin/AdminRoadmap";
 import AdminSetup from "./pages/admin/AdminSetup";
 import AdminSyncDiagnostic from "./pages/admin/AdminSyncDiagnostic";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes - données considérées fraîches
+      gcTime: 30 * 60 * 1000,   // 30 minutes - garder en cache
+      refetchOnWindowFocus: false, // Ne pas re-fetch au focus
+      refetchOnMount: false,       // Ne pas re-fetch au montage si données fraîches
+      retry: 1,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
