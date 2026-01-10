@@ -130,9 +130,13 @@ export default function AdminUsers() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          {(user.subscriptions as any)?.[0]?.status === "active" ? (
+                          {(user.subscriptions as any)?.[0]?.is_active ? (
                             <Badge className="bg-success/10 text-success hover:bg-success/20">
                               Actif
+                            </Badge>
+                          ) : (user.subscriptions as any)?.[0] ? (
+                            <Badge variant="outline" className="text-warning border-warning">
+                              Expiré
                             </Badge>
                           ) : (
                             <Badge variant="secondary">Trial</Badge>
@@ -221,17 +225,26 @@ export default function AdminUsers() {
                     {selectedUser.subscriptions?.[0] ? (
                       <div className="space-y-2">
                         <div className="flex justify-between">
+                          <span className="text-muted-foreground">Plan</span>
+                          <span className="font-medium">
+                            {selectedUser.subscriptions[0].plan || "Essai gratuit"}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
                           <span className="text-muted-foreground">Statut</span>
-                          <Badge className="bg-success/10 text-success">
-                            {selectedUser.subscriptions[0].status}
+                          <Badge className={selectedUser.subscriptions[0].is_active 
+                            ? "bg-success/10 text-success" 
+                            : "bg-warning/10 text-warning"
+                          }>
+                            {selectedUser.subscriptions[0].is_active ? "Actif" : "Expiré"}
                           </Badge>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Expire</span>
+                          <span className="text-muted-foreground">Fin période</span>
                           <span>
-                            {selectedUser.subscriptions[0].expires_at
-                              ? new Date(selectedUser.subscriptions[0].expires_at).toLocaleDateString("fr-FR")
-                              : "Jamais"}
+                            {selectedUser.subscriptions[0].trial_ends_at
+                              ? new Date(selectedUser.subscriptions[0].trial_ends_at).toLocaleDateString("fr-FR")
+                              : "-"}
                           </span>
                         </div>
                       </div>

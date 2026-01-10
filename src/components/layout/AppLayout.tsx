@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import BottomNav from "@/components/BottomNav";
+import { SubscriptionReminderPopup } from "@/components/SubscriptionReminderPopup";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -12,6 +13,7 @@ interface AppLayoutProps {
  * - Safe area insets for iOS (notch, home indicator)
  * - Bottom navigation positioning
  * - Proper scrolling behavior
+ * - Subscription reminder popup for expired subscriptions
  */
 const AppLayout = ({ children, showBottomNav = true, className = "" }: AppLayoutProps) => {
   return (
@@ -24,6 +26,7 @@ const AppLayout = ({ children, showBottomNav = true, className = "" }: AppLayout
     >
       {children}
       {showBottomNav && <BottomNav />}
+      <SubscriptionReminderPopup />
     </div>
   );
 };
