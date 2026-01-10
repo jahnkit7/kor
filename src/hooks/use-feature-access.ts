@@ -99,30 +99,63 @@ export function useUserSubscription() {
   };
 }
 
-export function useFeatureAccess(featureKey: string) {
+export interface FeatureAccessResult {
+  hasAccess: boolean;
+  loading: boolean;
+  reason: string | null;
+  isGloballyDisabled: boolean;
+  isNotInPlan: boolean;
+  requiredPlan: string | null;
+  currentPlan?: string;
+  missingDependency?: string;
+}
+
+export function useFeatureAccess(featureKey: string): FeatureAccessResult {
   const { user } = useAuth();
   const { data: features, isLoading: featuresLoading } = useFeatureFlags();
   const { data: subscription, isLoading: subLoading } = useUserSubscription();
 
   const loading = featuresLoading || subLoading;
 
+  // Default result while loading
   if (loading || !features) {
-    return { hasAccess: false, loading: true, reason: null };
+    return { 
+      hasAccess: false, 
+      loading: true, 
+      reason: null,
+      isGloballyDisabled: false,
+      isNotInPlan: false,
+      requiredPlan: null,
+    };
   }
 
   const feature = features.find(f => f.feature_key === featureKey);
 
   if (!feature) {
-    return { hasAccess: false, loading: false, reason: "feature_not_found" };
+    return { 
+      hasAccess: false, 
+      loading: false, 
+      reason: "feature_not_found",
+      isGloballyDisabled: false,
+      isNotInPlan: false,
+      requiredPlan: null,
+    };
   }
 
   // 1. Check if globally disabled
   if (!feature.is_globally_enabled) {
-    // 2. But check if user is in enabled_for_users override
+    // Check if user is in enabled_for_users override
     if (user?.id && feature.enabled_for_users?.includes(user.id)) {
-      // User is specifically enabled
+      // User is specifically enabled - continue checks
     } else {
-      return { hasAccess: false, loading: false, reason: "globally_disabled" };
+      return { 
+        hasAccess: false, 
+        loading: false, 
+        reason: "globally_disabled",
+        isGloballyDisabled: true,
+        isNotInPlan: false,
+        requiredPlan: null,
+      };
     }
   }
 
@@ -132,6 +165,9 @@ export function useFeatureAccess(featureKey: string) {
       hasAccess: false, 
       loading: false, 
       reason: "no_subscription",
+      isGloballyDisabled: false,
+      isNotInPlan: false,
+      requiredPlan: null,
     };
   }
 
@@ -139,11 +175,23 @@ export function useFeatureAccess(featureKey: string) {
   const userPlan = subscription.plan?.toLowerCase() || "gratuit";
   const planFeatures = getPlanFeatures(userPlan);
   
+  // Determine minimum required plan for this feature
+  const getRequiredPlanForFeature = (fKey: string): string => {
+    if (planFeaturesMap.gratuit?.includes(fKey)) return "Gratuit";
+    if (planFeaturesMap.starter?.includes(fKey)) return "Starter";
+    if (planFeaturesMap.premium?.includes(fKey)) return "Premium";
+    return feature.min_plan_required || "Premium";
+  };
+
   if (!planFeatures.includes(featureKey)) {
+    const requiredPlan = getRequiredPlanForFeature(featureKey);
     return { 
       hasAccess: false, 
       loading: false, 
       reason: "not_in_plan",
+      isGloballyDisabled: false,
+      isNotInPlan: true,
+      requiredPlan,
       currentPlan: subscription.plan,
     };
   }
@@ -158,6 +206,8 @@ export function useFeatureAccess(featureKey: string) {
         hasAccess: false, 
         loading: false, 
         reason: "plan_required",
+        isGloballyDisabled: false,
+        isNotInPlan: true,
         requiredPlan: feature.min_plan_required,
       };
     }
@@ -172,6 +222,9 @@ export function useFeatureAccess(featureKey: string) {
           hasAccess: false, 
           loading: false, 
           reason: "dependency_disabled",
+          isGloballyDisabled: false,
+          isNotInPlan: false,
+          requiredPlan: null,
           missingDependency: depKey,
         };
       }
@@ -179,7 +232,14 @@ export function useFeatureAccess(featureKey: string) {
   }
 
   // All checks passed
-  return { hasAccess: true, loading: false, reason: null };
+  return { 
+    hasAccess: true, 
+    loading: false, 
+    reason: null,
+    isGloballyDisabled: false,
+    isNotInPlan: false,
+    requiredPlan: null,
+  };
 }
 
 export function useAllFeatureAccess() {
