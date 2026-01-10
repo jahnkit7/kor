@@ -12,12 +12,15 @@ import {
   Sparkles,
   ArrowLeft,
   Zap,
-  BarChart2
+  BarChart2,
+  TrendingUp,
+  Gift
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const modules = [
   { to: "/admin", icon: LayoutDashboard, label: "Dashboard", exact: true },
+  { to: "/admin/financials", icon: TrendingUp, label: "Finances" },
   { to: "/admin/users", icon: Users, label: "Utilisateurs" },
   { to: "/admin/subscriptions", icon: CreditCard, label: "Abonnements" },
   { to: "/admin/codes", icon: QrCode, label: "Codes Prépayés" },
@@ -27,8 +30,8 @@ const modules = [
 const features = [
   { to: "/admin/features", icon: ToggleLeft, label: "Features" },
   { to: "/admin/feature-analytics", icon: BarChart2, label: "Analytics" },
-  { to: "/admin/commissions", icon: Percent, label: "Commissions" },
-  { to: "/admin/promo-codes", icon: QrCode, label: "Codes Promo" },
+  { to: "/admin/commissions", icon: Gift, label: "Commissions" },
+  { to: "/admin/promo-codes", icon: Percent, label: "Codes Promo" },
 ];
 
 const support = [

@@ -17,7 +17,8 @@ import {
   Clock,
   UserCheck,
   Users,
-  Palette
+  Palette,
+  Gift
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { OwnerBadge, RoleBadge } from "@/components/RoleBadge";
@@ -28,6 +29,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { ThemeSelector } from "@/components/ThemeSelector";
 import { ActivateCodeDialog } from "@/components/settings/ActivateCodeDialog";
 import { SubscriptionManagement } from "@/components/settings/SubscriptionManagement";
+import { ReferralSection } from "@/components/settings/ReferralSection";
 import { toast } from "sonner";
 
 const Settings = () => {
@@ -122,6 +124,15 @@ const Settings = () => {
               </CardContent>
             </Card>
           </div>
+        </div>
+
+        {/* Referral Section */}
+        <div>
+          <p className="text-sm font-semibold text-muted-foreground mb-3 px-1">
+            <Gift className="inline w-4 h-4 mr-1" />
+            Parrainage
+          </p>
+          <ReferralSection />
         </div>
 
         {/* Role Display */}
