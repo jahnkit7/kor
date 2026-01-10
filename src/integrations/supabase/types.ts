@@ -671,6 +671,8 @@ export type Database = {
           onboarding_completed: boolean | null
           owner_name: string | null
           phone: string | null
+          referral_code: string | null
+          referred_by: string | null
           shop_name: string
           updated_at: string
           user_id: string
@@ -687,6 +689,8 @@ export type Database = {
           onboarding_completed?: boolean | null
           owner_name?: string | null
           phone?: string | null
+          referral_code?: string | null
+          referred_by?: string | null
           shop_name?: string
           updated_at?: string
           user_id: string
@@ -703,6 +707,8 @@ export type Database = {
           onboarding_completed?: boolean | null
           owner_name?: string | null
           phone?: string | null
+          referral_code?: string | null
+          referred_by?: string | null
           shop_name?: string
           updated_at?: string
           user_id?: string
@@ -811,6 +817,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      referrals: {
+        Row: {
+          converted_at: string | null
+          created_at: string
+          id: string
+          referral_code: string
+          referred_id: string | null
+          referrer_id: string
+          reward_applied: boolean | null
+          reward_type: string | null
+          reward_value: number | null
+          status: string
+        }
+        Insert: {
+          converted_at?: string | null
+          created_at?: string
+          id?: string
+          referral_code: string
+          referred_id?: string | null
+          referrer_id: string
+          reward_applied?: boolean | null
+          reward_type?: string | null
+          reward_value?: number | null
+          status?: string
+        }
+        Update: {
+          converted_at?: string | null
+          created_at?: string
+          id?: string
+          referral_code?: string
+          referred_id?: string | null
+          referrer_id?: string
+          reward_applied?: boolean | null
+          reward_type?: string | null
+          reward_value?: number | null
+          status?: string
+        }
+        Relationships: []
       }
       regions: {
         Row: {
@@ -1114,6 +1159,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_referral_code: { Args: never; Returns: string }
       get_trust_score_data: { Args: { target_user_id: string }; Returns: Json }
       has_role: {
         Args: {
