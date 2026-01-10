@@ -14,7 +14,8 @@ import {
   Gift,
   Map,
   Database,
-  RefreshCw
+  RefreshCw,
+  UserPlus
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -25,10 +26,11 @@ const navItems = [
   { to: "/admin/subscriptions", icon: CreditCard, label: "Abonnements" },
   { to: "/admin/codes", icon: QrCode, label: "Codes Prépayés" },
   { to: "/admin/promo-codes", icon: Percent, label: "Codes Promo" },
+  { to: "/admin/referrals", icon: UserPlus, label: "Parrainages" },
   { to: "/admin/geography", icon: Globe, label: "Géographie" },
   { to: "/admin/features", icon: ToggleLeft, label: "Fonctionnalités" },
   { to: "/admin/roadmap", icon: Map, label: "Roadmap" },
-  { to: "/admin/commissions", icon: Gift, label: "Commissions" },
+  { to: "/admin/commissions", icon: Gift, label: "Commissions Plateforme" },
   { to: "/admin/sync-diagnostic", icon: RefreshCw, label: "Diagnostic Sync" },
   { to: "/admin/support", icon: MessageSquare, label: "Support" },
   { to: "/admin/logs", icon: FileText, label: "Logs" },

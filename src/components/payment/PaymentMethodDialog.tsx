@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Check, Smartphone, Wallet, CreditCard, Tag, X } from "lucide-react";
+import { Loader2, Check, Smartphone, Wallet, CreditCard, Tag, X, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useValidatePromoCode, useIncrementPromoCodeUsage, PromoCode } from "@/hooks/use-promo-codes";
 import { supabase } from "@/integrations/supabase/client";
@@ -56,6 +56,12 @@ const paymentMethods: PaymentMethod[] = [
   },
 ];
 
+interface ReferralDiscountInfo {
+  percent: number;
+  referrerName: string;
+  originalPrice: number;
+}
+
 interface PaymentMethodDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -63,6 +69,7 @@ interface PaymentMethodDialogProps {
   planId?: string;
   price: number;
   subscriptionId?: string;
+  referralDiscount?: ReferralDiscountInfo;
   onPaymentSuccess: () => void;
 }
 
@@ -73,6 +80,7 @@ export function PaymentMethodDialog({
   planId,
   price,
   subscriptionId,
+  referralDiscount,
   onPaymentSuccess,
 }: PaymentMethodDialogProps) {
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
@@ -86,16 +94,22 @@ export function PaymentMethodDialog({
   const validatePromoCode = useValidatePromoCode();
   const incrementPromoUsage = useIncrementPromoCodeUsage();
 
-  const calculateDiscount = () => {
+  // Calculate promo code discount (on top of referral discount if any)
+  const calculatePromoDiscount = () => {
     if (!appliedPromo) return 0;
+    // Apply promo discount on the already reduced price (after referral)
     if (appliedPromo.discount_type === "percentage") {
       return Math.round((price * appliedPromo.discount_value) / 100);
     }
     return Math.min(appliedPromo.discount_value, price);
   };
 
-  const discount = calculateDiscount();
-  const finalPrice = Math.max(0, price - discount);
+  const promoDiscount = calculatePromoDiscount();
+  const finalPrice = Math.max(0, price - promoDiscount);
+  
+  // Calculate total savings
+  const referralSavings = referralDiscount ? referralDiscount.originalPrice - price : 0;
+  const totalSavings = referralSavings + promoDiscount;
 
   const handleApplyPromoCode = async () => {
     if (!promoCodeInput.trim()) return;
@@ -144,8 +158,8 @@ export function PaymentMethodDialog({
         user_id: user.id,
         subscription_id: subscriptionId || null,
         plan_name: planName,
-        amount_original: price,
-        discount_applied: discount,
+        amount_original: referralDiscount?.originalPrice || price,
+        discount_applied: totalSavings,
         promo_code_used: appliedPromo?.code || null,
         amount_paid: finalPrice,
         payment_method: methodName,
@@ -206,9 +220,11 @@ export function PaymentMethodDialog({
             ) : (
               <>
                 Plan <strong>{planName}</strong> -{" "}
-                {discount > 0 ? (
+                {totalSavings > 0 ? (
                   <>
-                    <span className="line-through text-muted-foreground">{price.toLocaleString()} CFA</span>{" "}
+                    <span className="line-through text-muted-foreground">
+                      {(referralDiscount?.originalPrice || price).toLocaleString()} CFA
+                    </span>{" "}
                     <strong className="text-green-600">{finalPrice.toLocaleString()} CFA</strong>
                   </>
                 ) : (
@@ -240,17 +256,32 @@ export function PaymentMethodDialog({
           </div>
         ) : (
           <div className="space-y-4">
+            {/* Referral Discount Display (if applicable) */}
+            {referralDiscount && (
+              <div className="flex items-center justify-between p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                <div className="flex items-center gap-2">
+                  <UserPlus className="w-4 h-4 text-green-600" />
+                  <span className="text-sm text-green-700">
+                    Parrainage de {referralDiscount.referrerName}
+                  </span>
+                </div>
+                <span className="font-bold text-green-600">
+                  -{referralDiscount.percent}%
+                </span>
+              </div>
+            )}
+
             {/* Promo Code Section */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
                 <Tag className="w-4 h-4" />
-                Code promo
+                Code promo {referralDiscount && "(cumulable)"}
               </Label>
               {appliedPromo ? (
-                <div className="flex items-center justify-between p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
                   <div>
-                    <span className="font-mono font-bold text-green-600">{appliedPromo.code}</span>
-                    <span className="text-sm text-green-600 ml-2">
+                    <span className="font-mono font-bold text-blue-600">{appliedPromo.code}</span>
+                    <span className="text-sm text-blue-600 ml-2">
                       -{appliedPromo.discount_type === "percentage" 
                         ? `${appliedPromo.discount_value}%` 
                         : `${appliedPromo.discount_value.toLocaleString()} CFA`}
@@ -324,8 +355,8 @@ export function PaymentMethodDialog({
               onClick={handlePayment}
             >
               Payer {finalPrice.toLocaleString()} CFA
-              {discount > 0 && (
-                <span className="ml-2 text-xs opacity-75">(-{discount.toLocaleString()} CFA)</span>
+              {totalSavings > 0 && (
+                <span className="ml-2 text-xs opacity-75">(-{totalSavings.toLocaleString()} CFA)</span>
               )}
             </Button>
 

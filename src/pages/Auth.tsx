@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserSubscription } from "@/hooks/use-feature-access";
 import { supabase } from "@/integrations/supabase/client";
+import { recordReferral } from "@/hooks/use-referral-validation";
 
 // Pays d'Afrique de l'Ouest supportés
 const COUNTRIES = [
@@ -204,7 +205,7 @@ const Auth = () => {
 
     try {
       if (isNewUser) {
-        const { error } = await signUp(fakeEmail, password);
+        const { error, data } = await signUp(fakeEmail, password);
         if (error) {
           if (error.message.includes("already registered")) {
             toast.error("Ce numéro est déjà utilisé");
@@ -216,7 +217,18 @@ const Auth = () => {
           // Reset rate limiting on successful signup
           setFailedAttempts(0);
           setLockoutUntil(null);
-          toast.success("Compte créé avec succès !");
+          
+          // Record referral if there's a ref code
+          if (refCode && data?.user?.id) {
+            const recorded = await recordReferral(data.user.id, refCode);
+            if (recorded) {
+              toast.success("Compte créé ! Votre parrainage a été enregistré 🎉");
+            } else {
+              toast.success("Compte créé avec succès !");
+            }
+          } else {
+            toast.success("Compte créé avec succès !");
+          }
         }
       } else {
         const { error } = await signIn(fakeEmail, password);
