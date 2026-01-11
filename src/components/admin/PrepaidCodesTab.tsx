@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useAdminCodes, useAdminPlans } from "@/hooks/use-admin-stats";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -46,11 +47,16 @@ import {
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Copy, QrCode, Check, Clock, Download, MoreHorizontal, Trash2, Power, PowerOff } from "lucide-react";
+import { Plus, Copy, QrCode, Check, Clock, Download, MoreHorizontal, Trash2, Power, PowerOff, Users } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
+import { QRCodeSVG } from "qrcode.react";
+
+interface Reseller {
+  id: string;
+  name: string;
+}
 
 export function PrepaidCodesTab() {
   const { data: codes, isLoading } = useAdminCodes();
@@ -65,6 +71,27 @@ export function PrepaidCodesTab() {
   const [filter, setFilter] = useState<"all" | "used" | "available">("all");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [codeToDelete, setCodeToDelete] = useState<string | null>(null);
+  const [qrDialogOpen, setQrDialogOpen] = useState(false);
+  const [selectedCodeForQr, setSelectedCodeForQr] = useState<string | null>(null);
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [selectedCodeToAssign, setSelectedCodeToAssign] = useState<string | null>(null);
+  const [selectedReseller, setSelectedReseller] = useState<string>("");
+  const qrRef = useRef<SVGSVGElement>(null);
+
+  // Fetch resellers
+  const { data: resellers } = useQuery({
+    queryKey: ["admin-resellers-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("resellers")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
+
+      if (error) throw error;
+      return data as Reseller[];
+    },
+  });
 
   const generateCode = () => {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -154,6 +181,51 @@ export function PrepaidCodesTab() {
       toast.success(currentStatus ? "Code désactivé" : "Code activé");
     } catch (error) {
       toast.error("Erreur lors de la mise à jour");
+    }
+  };
+
+  const downloadQR = useCallback(() => {
+    if (!qrRef.current || !selectedCodeForQr) return;
+    
+    const svg = qrRef.current;
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    const img = new Image();
+    
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx?.drawImage(img, 0, 0);
+      const pngUrl = canvas.toDataURL("image/png");
+      
+      const downloadLink = document.createElement("a");
+      downloadLink.href = pngUrl;
+      downloadLink.download = `${selectedCodeForQr}.png`;
+      downloadLink.click();
+    };
+    
+    img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+  }, [selectedCodeForQr]);
+
+  const handleAssignToReseller = async () => {
+    if (!selectedCodeToAssign || !selectedReseller) return;
+    
+    try {
+      const { error } = await supabase
+        .from("recharge_codes")
+        .update({ reseller_id: selectedReseller })
+        .eq("id", selectedCodeToAssign);
+
+      if (error) throw error;
+
+      queryClient.invalidateQueries({ queryKey: ["admin-codes"] });
+      toast.success("Code attribué au revendeur");
+      setAssignDialogOpen(false);
+      setSelectedCodeToAssign(null);
+      setSelectedReseller("");
+    } catch (error) {
+      toast.error("Erreur lors de l'attribution");
     }
   };
 
@@ -372,6 +444,25 @@ export function PrepaidCodesTab() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem
+                                  onClick={() => {
+                                    setSelectedCodeForQr(code.code);
+                                    setQrDialogOpen(true);
+                                  }}
+                                >
+                                  <QrCode className="w-4 h-4 mr-2" />
+                                  Voir QR Code
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setSelectedCodeToAssign(code.id);
+                                    setAssignDialogOpen(true);
+                                  }}
+                                  disabled={code.is_used}
+                                >
+                                  <Users className="w-4 h-4 mr-2" />
+                                  Attribuer revendeur
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
                                   onClick={() => handleToggleActive(code.id, isActive)}
                                   disabled={code.is_used}
                                 >
@@ -432,6 +523,64 @@ export function PrepaidCodesTab() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* QR Code Dialog */}
+      <Dialog open={qrDialogOpen} onOpenChange={setQrDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>QR Code</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4 py-4">
+            <div className="p-4 bg-white rounded-xl shadow-sm">
+              <QRCodeSVG 
+                ref={qrRef}
+                value={selectedCodeForQr || ""}
+                size={200}
+                level="H"
+                includeMargin
+              />
+            </div>
+            <p className="font-mono text-lg font-bold">{selectedCodeForQr}</p>
+            <Button onClick={downloadQR}>
+              <Download className="w-4 h-4 mr-2" />
+              Télécharger PNG
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign to Reseller Dialog */}
+      <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Attribuer à un revendeur</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Revendeur</Label>
+              <Select value={selectedReseller} onValueChange={setSelectedReseller}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner un revendeur" />
+                </SelectTrigger>
+                <SelectContent>
+                  {resellers?.map((reseller) => (
+                    <SelectItem key={reseller.id} value={reseller.id}>
+                      {reseller.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              className="w-full"
+              onClick={handleAssignToReseller}
+              disabled={!selectedReseller}
+            >
+              Attribuer
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

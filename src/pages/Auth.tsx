@@ -163,11 +163,37 @@ const Auth = () => {
       return;
     }
     
-    if (!subscription) {
-      navigate("/subscriptions", { replace: true });
-    } else {
-      navigate("/dashboard", { replace: true });
-    }
+    const checkProfileAndRedirect = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("shop_name, owner_name")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        
+        const isProfileComplete = Boolean(
+          profile?.shop_name && 
+          profile.shop_name !== "Ma Boutique" && 
+          profile?.owner_name
+        );
+        
+        if (!isProfileComplete) {
+          navigate("/profile-setup", { replace: true });
+        } else if (!subscription) {
+          navigate("/subscriptions", { replace: true });
+        } else {
+          navigate("/dashboard", { replace: true });
+        }
+      } catch (error) {
+        console.error("Error checking profile:", error);
+        navigate("/profile-setup", { replace: true });
+      }
+    };
+    
+    checkProfileAndRedirect();
   }, [isAuthenticated, loading, subLoading, subscription, navigate, inviteCode]);
 
   const formatPhone = (value: string) => {

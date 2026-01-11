@@ -4,6 +4,7 @@ import { ArrowUpRight, Share, Plus, Check, ArrowUp, X, MoreVertical, Download } 
 import { motion, AnimatePresence } from "framer-motion";
 import { Onboarding } from "@/components/Onboarding";
 import { usePWA } from "@/hooks/use-pwa";
+import KorLogo from "@/assets/logo-kor.svg";
 
 const ONBOARDING_KEY = "kor_onboarding_completed";
 
@@ -292,11 +293,7 @@ const Landing = () => {
         className="relative z-10 px-6 pt-4"
       >
         <div className="flex items-center gap-3">
-          <div className="flex gap-1 items-end">
-            <div className="w-1.5 h-8 bg-[#4f7df3] rounded-full" />
-            <div className="w-1.5 h-6 bg-[#4f7df3] rounded-full" />
-            <div className="w-1.5 h-4 bg-[#4f7df3] rounded-full" />
-          </div>
+          <img src={KorLogo} alt="KÒR" className="w-10 h-10 rounded-xl" />
           <span className="text-xl font-bold text-[#2d3748] tracking-tight">KÒR</span>
         </div>
       </motion.div>
