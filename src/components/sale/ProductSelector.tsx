@@ -5,9 +5,14 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { Search, Plus, Package, AlertTriangle, Check, Trash2, Loader2 } from "lucide-react";
+import { 
+  FullScreenSheet, 
+  FullScreenSheetHeader, 
+  FullScreenSheetTitle, 
+  FullScreenSheetContent 
+} from "@/components/ui/fullscreen-sheet";
+import { Search, Plus, Package, AlertTriangle, Check, Trash2, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface StockItem {
@@ -322,27 +327,34 @@ export function ProductSelector({
         Ajouter un produit
       </button>
 
-      {/* Add custom product dialog */}
-      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Ajouter un produit</DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
+      {/* Add custom product FullScreen Sheet */}
+      <FullScreenSheet open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <FullScreenSheetHeader className="border-b border-border/50">
+          <FullScreenSheetTitle className="text-xl">Ajouter un produit</FullScreenSheetTitle>
+          <p className="text-sm text-muted-foreground mt-1">
+            Créez un nouveau produit pour cette vente
+          </p>
+        </FullScreenSheetHeader>
+        <FullScreenSheetContent className="flex flex-col">
+          <div className="flex-1 space-y-6 py-6">
+            {/* Nom du produit */}
             <div>
-              <Label>Nom du produit</Label>
+              <Label className="text-sm font-medium mb-3 block">Nom du produit</Label>
               <Input
                 placeholder="Ex: Écran iPhone 12"
                 value={newProduct.product_name}
                 onChange={(e) =>
                   setNewProduct({ ...newProduct, product_name: e.target.value })
                 }
+                className="h-14 text-base px-4 rounded-xl"
+                autoFocus
               />
             </div>
-          <div className="grid grid-cols-2 gap-3">
+            
+            {/* Quantité et Prix */}
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Quantité</Label>
+                <Label className="text-sm font-medium mb-3 block">Quantité</Label>
                 <Input
                   type="number"
                   min={1}
@@ -353,10 +365,11 @@ export function ProductSelector({
                       quantity: parseInt(e.target.value) || 1,
                     })
                   }
+                  className="h-14 text-base text-center rounded-xl"
                 />
               </div>
               <div>
-                <Label>Prix unitaire (CFA)</Label>
+                <Label className="text-sm font-medium mb-3 block">Prix unitaire (CFA)</Label>
                 <Input
                   type="number"
                   min={0}
@@ -367,18 +380,29 @@ export function ProductSelector({
                       unit_price: parseInt(e.target.value) || 0,
                     })
                   }
+                  className="h-14 text-base text-center rounded-xl"
                 />
               </div>
             </div>
 
+            {/* Aperçu du total */}
+            {newProduct.product_name.trim() && newProduct.unit_price > 0 && (
+              <div className="p-4 bg-secondary/50 rounded-2xl">
+                <p className="text-sm text-muted-foreground mb-1">Aperçu</p>
+                <p className="font-bold text-lg">
+                  {newProduct.quantity} × {formatMoney(newProduct.unit_price)} = {formatMoney(newProduct.quantity * newProduct.unit_price)} CFA
+                </p>
+              </div>
+            )}
+
             {/* Add to stock toggle */}
             {onCreateStockItem && (
-              <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
+              <div className="flex items-center justify-between p-4 bg-secondary/50 rounded-2xl">
                 <div>
                   <Label htmlFor="add-to-stock" className="text-sm font-medium">
                     Ajouter au stock
                   </Label>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground mt-0.5">
                     Le produit sera aussi créé dans votre inventaire
                   </p>
                 </div>
@@ -390,25 +414,38 @@ export function ProductSelector({
               </div>
             )}
           </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddDialog(false)}>
-              Annuler
-            </Button>
-            <Button
+          
+          {/* Boutons avec espacement */}
+          <div className="space-y-4 pb-[env(safe-area-inset-bottom)] pt-4 border-t border-border/50">
+            <button
               onClick={addCustomProduct}
               disabled={!newProduct.product_name.trim() || newProduct.quantity <= 0 || isCreatingStock}
+              className="w-full h-14 rounded-full flex items-center justify-center gap-2
+                bg-gradient-to-r from-[#4f7df3] via-[#5b8af5] to-[#3b6ce8]
+                text-white font-bold text-base tracking-wide
+                shadow-lg shadow-blue-500/30 hover:shadow-xl
+                active:scale-[0.98] transition-all
+                disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
             >
               {isCreatingStock ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
-                <Check className="w-4 h-4 mr-2" />
+                <Check className="w-5 h-5" />
               )}
-              {isCreatingStock ? "Création..." : "Ajouter"}
+              {isCreatingStock ? "Création..." : "Ajouter le produit"}
+            </button>
+            
+            <Button 
+              variant="outline" 
+              className="w-full h-14 rounded-full text-base font-semibold"
+              onClick={() => setShowAddDialog(false)}
+            >
+              <X className="w-5 h-5 mr-2" />
+              Annuler
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </FullScreenSheetContent>
+      </FullScreenSheet>
     </div>
   );
 }

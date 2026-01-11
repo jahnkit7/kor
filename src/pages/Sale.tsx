@@ -302,36 +302,60 @@ const Sale = () => {
 
         {/* Note button - Bottom right of header */}
         <div className="flex justify-end pb-2">
-          <Sheet open={showNoteSheet} onOpenChange={setShowNoteSheet}>
-            <SheetTrigger asChild>
-              <button className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-foreground/10 rounded-full text-primary-foreground/90 hover:bg-primary-foreground/20 transition-colors">
-                <MessageSquare className="w-3.5 h-3.5" />
-                <span className="text-xs font-medium">Note</span>
-                {note && <span className="w-1.5 h-1.5 rounded-full bg-primary-foreground" />}
-              </button>
-            </SheetTrigger>
-            <SheetContent side="bottom" className="h-[40vh]">
-              <SheetHeader>
-                <SheetTitle>Note de vente</SheetTitle>
-              </SheetHeader>
-              <div className="mt-4">
-                <textarea
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="Ajouter une note (optionnel)..."
-                  className="w-full h-32 p-3 border rounded-lg resize-none bg-secondary/30 text-sm"
-                />
-                <Button 
-                  className="w-full mt-3" 
-                  onClick={() => setShowNoteSheet(false)}
-                >
-                  Enregistrer
-                </Button>
-              </div>
-            </SheetContent>
-          </Sheet>
+          <button 
+            onClick={() => setShowNoteSheet(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-foreground/10 rounded-full text-primary-foreground/90 hover:bg-primary-foreground/20 transition-colors"
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+            <span className="text-xs font-medium">Note</span>
+            {note && <span className="w-1.5 h-1.5 rounded-full bg-primary-foreground" />}
+          </button>
         </div>
       </div>
+
+      {/* Note FullScreen Sheet */}
+      <FullScreenSheet open={showNoteSheet} onOpenChange={setShowNoteSheet}>
+        <FullScreenSheetHeader className="border-b border-border/50">
+          <FullScreenSheetTitle className="text-xl">Note de vente</FullScreenSheetTitle>
+          <p className="text-sm text-muted-foreground mt-1">
+            Ajoutez des détails supplémentaires à cette vente
+          </p>
+        </FullScreenSheetHeader>
+        <FullScreenSheetContent className="flex flex-col">
+          <div className="flex-1 py-6">
+            <label className="text-sm font-medium text-muted-foreground mb-3 block">
+              Ajouter une note (optionnel)
+            </label>
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Ex: Réparation écran + batterie, client revient demain..."
+              className="w-full h-48 p-4 border border-border rounded-2xl resize-none 
+                bg-secondary/30 text-base leading-relaxed
+                focus:ring-2 focus:ring-primary/20 focus:border-primary
+                placeholder:text-muted-foreground/60
+                transition-all"
+              autoFocus
+            />
+            <p className="text-xs text-muted-foreground mt-2">
+              {note.length} caractères
+            </p>
+          </div>
+          <div className="pb-[env(safe-area-inset-bottom)] pt-4 border-t border-border/50">
+            <button
+              onClick={() => setShowNoteSheet(false)}
+              className="w-full h-14 rounded-full flex items-center justify-center gap-2
+                bg-gradient-to-r from-[#4f7df3] via-[#5b8af5] to-[#3b6ce8]
+                text-white font-bold text-base tracking-wide
+                shadow-lg shadow-blue-500/30 hover:shadow-xl
+                active:scale-[0.98] transition-all"
+            >
+              <Check className="w-5 h-5" />
+              Enregistrer la note
+            </button>
+          </div>
+        </FullScreenSheetContent>
+      </FullScreenSheet>
 
       {/* Content - Flex grow with controlled overflow */}
       <div className="flex-1 flex flex-col min-h-0 px-3 py-2">
