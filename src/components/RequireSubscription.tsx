@@ -2,6 +2,7 @@ import { ReactNode, useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useUserSubscription } from "@/hooks/use-feature-access";
 import { useAuth } from "@/hooks/use-auth";
+import { useRole } from "@/hooks/use-role";
 
 interface RequireSubscriptionProps {
   children: ReactNode;
@@ -14,11 +15,14 @@ const SUB_CACHE_KEY = "subscription_status_";
  * NON-BLOCKING subscription guard.
  * Renders children immediately if cached, checks in background.
  * Only redirects when we're CERTAIN user has no subscription.
+ * ADMIN users are always allowed through (no subscription required).
  */
 export function RequireSubscription({ children }: RequireSubscriptionProps) {
   const { user, loading: authLoading } = useAuth();
+  const { role, loading: roleLoading } = useRole();
   const { data: subscription, isLoading: subLoading } = useUserSubscription();
   const navigate = useNavigate();
+  const isAdmin = role === "admin";
   const checkedRef = useRef(false);
   
   // Check session cache for instant render
@@ -42,8 +46,11 @@ export function RequireSubscription({ children }: RequireSubscriptionProps) {
 
   // Handle redirect in effect (non-blocking)
   useEffect(() => {
-    // Wait for both auth and subscription to finish loading
-    if (authLoading || subLoading) return;
+    // Wait for auth, role, and subscription to finish loading
+    if (authLoading || roleLoading || subLoading) return;
+    
+    // Admins bypass subscription check entirely
+    if (isAdmin) return;
     
     // Not logged in - redirect to auth
     if (!user) {
@@ -56,7 +63,12 @@ export function RequireSubscription({ children }: RequireSubscriptionProps) {
       checkedRef.current = true;
       navigate("/subscriptions", { replace: true });
     }
-  }, [authLoading, subLoading, user, subscription, hasCachedSub, navigate]);
+  }, [authLoading, roleLoading, subLoading, user, subscription, hasCachedSub, navigate, isAdmin]);
+
+  // Admins bypass all subscription checks
+  if (isAdmin && !roleLoading) {
+    return <>{children}</>;
+  }
 
   // If we have cached subscription, render immediately
   if (hasCachedSub) {
@@ -65,7 +77,7 @@ export function RequireSubscription({ children }: RequireSubscriptionProps) {
 
   // If still loading but we don't have cache, show minimal non-blocking indicator
   // But still render children to keep BottomNav visible
-  if (authLoading || subLoading) {
+  if (authLoading || roleLoading || subLoading) {
     return <>{children}</>;
   }
 
