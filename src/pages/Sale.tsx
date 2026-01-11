@@ -335,7 +335,7 @@ const Sale = () => {
 
       {/* Content - Flex grow with controlled overflow */}
       <div className="flex-1 flex flex-col min-h-0 px-3 py-2">
-        {/* Quick Amounts - 2 rows, 3 columns */}
+        {/* Quick Amounts - 2 rows, 3 columns - Taller buttons */}
         <div className="grid grid-cols-3 gap-2 mb-3 shrink-0">
           {quickAmounts.map((quickAmount) => (
             <Button
@@ -343,7 +343,7 @@ const Sale = () => {
               variant="secondary"
               size="sm"
               onClick={() => setAmount(String(quickAmount))}
-              className="text-sm font-bold h-10 px-2"
+              className="text-sm font-bold h-12 px-2"
             >
               {new Intl.NumberFormat("fr-FR").format(quickAmount)}
             </Button>
@@ -525,10 +525,10 @@ const Sale = () => {
         {/* Spacer to push numpad down */}
         <div className="flex-1 min-h-0" />
 
-        {/* Numpad - Compact */}
+        {/* Numpad - Taller keys */}
         <div className="shrink-0">
           {selectedProducts.length === 0 ? (
-            <div className="grid grid-cols-3 gap-1.5 max-w-xs mx-auto mb-2">
+            <div className="grid grid-cols-3 gap-2 max-w-xs mx-auto mb-4">
               {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((num) => (
                 <NumpadButton key={num} onClick={() => handleNumberClick(num)}>
                   {num}
@@ -543,15 +543,15 @@ const Sale = () => {
               </NumpadButton>
             </div>
           ) : (
-            <div className="text-center text-xs text-muted-foreground mb-2 py-1">
+            <div className="text-center text-xs text-muted-foreground mb-4 py-1">
               Montant calculé depuis les produits
             </div>
           )}
 
+          {/* Submit button - Auth style with more margin */}
           <Button
-            variant={isCash ? "cash" : "credit"}
             size="lg"
-            className="w-full h-12"
+            className="w-full h-14 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg"
             onClick={handleSubmit}
             disabled={effectiveAmount === 0 || (!isCash && !selectedClient) || isLoading}
           >
@@ -575,7 +575,7 @@ const NumpadButton = ({
 }) => (
   <button
     onClick={onClick}
-    className={`h-[clamp(3.5rem,16vw,4.5rem)] rounded-xl text-xl font-bold transition-all duration-150 active:scale-95 ${
+    className={`h-[clamp(4rem,18vw,5rem)] rounded-xl text-xl font-bold transition-all duration-150 active:scale-95 ${
       variant === "secondary"
         ? "bg-secondary text-secondary-foreground"
         : "bg-card text-foreground border border-border hover:bg-secondary"
