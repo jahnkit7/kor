@@ -193,13 +193,23 @@ export async function updateClient(id: string, updates: Partial<Client>): Promis
   return updated;
 }
 
+// Helper: Get local day string (YYYY-MM-DD in local timezone)
+function getLocalDayString(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 // Sale operations
-export async function addSale(sale: Omit<Sale, "id" | "createdAt" | "synced">): Promise<Sale> {
+export async function addSale(sale: Omit<Sale, "id" | "createdAt" | "createdAtLocalDay" | "synced">): Promise<Sale> {
   const db = await getDB();
   const newSale: Sale = {
     ...sale,
     id: generateId(),
     createdAt: new Date().toISOString(),
+    createdAtLocalDay: getLocalDayString(), // Local timezone day
     synced: false,
   };
   await db.put("sales", newSale);
@@ -220,9 +230,25 @@ export async function getSales(): Promise<Sale[]> {
 
 export async function getTodaySales(): Promise<Sale[]> {
   const db = await getDB();
-  const today = new Date().toISOString().split("T")[0];
+  const todayLocal = getLocalDayString();
   const allSales = await db.getAll("sales");
-  return allSales.filter((s) => s.createdAt.startsWith(today));
+  // Use createdAtLocalDay if available, fallback to createdAt for old records
+  return allSales.filter((s) => {
+    if (s.createdAtLocalDay) {
+      return s.createdAtLocalDay === todayLocal;
+    }
+    // Fallback for old records without createdAtLocalDay
+    return s.createdAt.startsWith(todayLocal);
+  });
+}
+
+/**
+ * Get today's sales COUNT (optimized for limit checks)
+ * Uses createdAtLocalDay for timezone-safe counting
+ */
+export async function getTodaySalesCount(): Promise<number> {
+  const sales = await getTodaySales();
+  return sales.length;
 }
 
 // Debt operations

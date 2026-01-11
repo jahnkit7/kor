@@ -6,6 +6,7 @@ import { BrowserRouter } from "react-router-dom";
 import { OfflineProvider } from "./contexts/OfflineContext";
 import { FeatureNotificationsProvider } from "./contexts/FeatureNotificationsContext";
 import { SubscriptionNotificationsProvider } from "./contexts/SubscriptionNotificationsContext";
+import { PlanGuardProvider } from "./contexts/PlanGuardContext";
 import { PWAStatus } from "./components/PWAStatus";
 import { AnimatedRoutes } from "./components/layout/AnimatedRoutes";
 
@@ -30,9 +31,11 @@ const App = () => (
           <Sonner />
           <PWAStatus />
           <BrowserRouter>
-            <SubscriptionNotificationsProvider>
-              <AnimatedRoutes />
-            </SubscriptionNotificationsProvider>
+            <PlanGuardProvider>
+              <SubscriptionNotificationsProvider>
+                <AnimatedRoutes />
+              </SubscriptionNotificationsProvider>
+            </PlanGuardProvider>
           </BrowserRouter>
         </TooltipProvider>
       </FeatureNotificationsProvider>
