@@ -293,15 +293,26 @@ const Auth = () => {
           }
         }
       } else {
-        const { error } = await signIn(fakeEmail, password);
-        if (error) {
+        // Try login with new domain first (@kor.local), then fallback to old domain (@dekon.local)
+        let loginResult = await signIn(fakeEmail, password);
+        
+        // If login fails with new domain, try old domain for backward compatibility
+        if (loginResult.error && loginResult.error.message.includes("Invalid login")) {
+          const oldEmail = `${selectedCountry.prefix.replace("+", "")}${phone}@dekon.local`;
+          const oldResult = await signIn(oldEmail, password);
+          if (!oldResult.error) {
+            loginResult = oldResult; // Old domain worked
+          }
+        }
+        
+        if (loginResult.error) {
           const newFailedAttempts = failedAttempts + 1;
           setFailedAttempts(newFailedAttempts);
           
           const lockoutDuration = Math.min(Math.pow(2, newFailedAttempts) * 1000, 30000);
           setLockoutUntil(Date.now() + lockoutDuration);
           
-          if (error.message.includes("Invalid login")) {
+          if (loginResult.error.message.includes("Invalid login")) {
             if (newFailedAttempts >= 3) {
               toast.error(`Numéro ou code PIN incorrect. Veuillez attendre ${Math.ceil(lockoutDuration / 1000)}s.`);
             } else {
