@@ -193,11 +193,15 @@
     font-family: 'Manrope', system-ui, sans-serif;
     -webkit-tap-highlight-color: transparent;
     overflow-x: clip;
+    overflow-y: auto;
+    height: 100%;
   }
 
   body {
     @apply bg-background text-foreground antialiased;
     overflow-x: clip;
+    overflow-y: auto;
+    min-height: 100%;
   }
 
   /* Big readable numbers */

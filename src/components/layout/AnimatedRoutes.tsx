@@ -2,6 +2,7 @@ import { Routes, Route, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { PageTransition } from "./PageTransition";
 import { ProtectedLayout } from "./ProtectedLayout";
+import { FullScreenProtectedLayout } from "./FullScreenProtectedLayout";
 
 // Public pages
 import Landing from "@/pages/Landing";
@@ -57,9 +58,10 @@ const PublicPage = ({ children }: { children: React.ReactNode }) => (
 export const AnimatedRoutes = () => {
   const location = useLocation();
 
-  // Determine if we're on a protected route (not public, not admin)
-  const isProtectedRoute = location.pathname.startsWith('/dashboard') ||
-    location.pathname.startsWith('/sale') ||
+  // Check route type
+  const isFullscreenRoute = location.pathname.startsWith('/sale');
+  const isProtectedRoute = !isFullscreenRoute && (
+    location.pathname.startsWith('/dashboard') ||
     location.pathname.startsWith('/debts') ||
     location.pathname.startsWith('/clients') ||
     location.pathname.startsWith('/reports') ||
@@ -69,12 +71,14 @@ export const AnimatedRoutes = () => {
     location.pathname.startsWith('/invoices') ||
     location.pathname.startsWith('/employees') ||
     location.pathname.startsWith('/network') ||
-    location.pathname.startsWith('/referrals');
+    location.pathname.startsWith('/referrals')
+  );
+  const isPublicOrAdmin = !isFullscreenRoute && !isProtectedRoute;
 
   return (
     <>
       {/* Public and Admin routes - with AnimatePresence wrapper */}
-      {!isProtectedRoute && (
+      {isPublicOrAdmin && (
         <AnimatePresence mode="popLayout" initial={false}>
           <Routes location={location} key={location.pathname}>
             {/* Public routes */}
@@ -110,12 +114,20 @@ export const AnimatedRoutes = () => {
         </AnimatePresence>
       )}
 
-      {/* Protected routes - ProtectedLayout stays mounted, only content animates */}
+      {/* Fullscreen routes (Sale) - No BottomNav, no AppLayout */}
+      {isFullscreenRoute && (
+        <Routes location={location}>
+          <Route element={<FullScreenProtectedLayout />}>
+            <Route path="/sale/:type" element={<Sale />} />
+          </Route>
+        </Routes>
+      )}
+
+      {/* Protected routes - ProtectedLayout stays mounted with BottomNav */}
       {isProtectedRoute && (
         <Routes location={location}>
           <Route element={<ProtectedLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/sale/:type" element={<Sale />} />
             <Route path="/debts" element={<Debts />} />
             <Route path="/debts/:id" element={<DebtDetail />} />
             <Route path="/clients" element={<Clients />} />
