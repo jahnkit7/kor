@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "./use-auth";
 import { isSupabaseConfigured, getSupabaseClient } from "@/lib/supabase";
 
@@ -31,17 +31,26 @@ function setCachedRole(userId: string, role: AppRole): void {
   sessionStorage.setItem(`${ROLE_CACHE_KEY}${userId}`, role);
 }
 
+// CRITICAL: Unified state to prevent race conditions
+interface UnifiedState {
+  role: AppRole;
+  loading: boolean;
+}
+
 export function useRole(): RoleState {
   const { user, loading: authLoading } = useAuth();
   
-  // Initialize with cached role if available
-  const [role, setRole] = useState<AppRole>(() => {
+  // CRITICAL: Single unified state - role and loading MUST be updated together
+  const [state, setState] = useState<UnifiedState>(() => {
+    // Try to initialize with cached role immediately
     if (user?.id) {
-      return getCachedRole(user.id);
+      const cachedRole = getCachedRole(user.id);
+      if (cachedRole) {
+        return { role: cachedRole, loading: false };
+      }
     }
-    return null;
+    return { role: null, loading: true };
   });
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Wait for auth to finish loading first
@@ -51,23 +60,23 @@ export function useRole(): RoleState {
 
     // No user = no role to fetch
     if (!user) {
-      setRole(null);
-      setLoading(false);
+      setState({ role: null, loading: false });
       return;
     }
 
-    // Check cache first - if we have a cached role, use it immediately
+    // Check cache and apply ATOMICALLY
     const cachedRole = getCachedRole(user.id);
     if (cachedRole) {
-      setRole(cachedRole);
-      setLoading(false);
-      // Still fetch in background to verify cache is valid
+      // CRITICAL: Set role AND loading together in one atomic update
+      setState({ role: cachedRole, loading: false });
+    } else {
+      // No cache - ensure we're in loading state
+      setState(prev => ({ ...prev, loading: true }));
     }
 
     if (!isSupabaseConfigured()) {
-      setRole("owner");
       setCachedRole(user.id, "owner");
-      setLoading(false);
+      setState({ role: "owner", loading: false });
       return;
     }
 
@@ -83,42 +92,39 @@ export function useRole(): RoleState {
         if (error) {
           console.error("Error fetching role:", error);
           const fallback = cachedRole || "owner";
-          setRole(fallback);
           setCachedRole(user.id, fallback);
+          setState({ role: fallback, loading: false });
         } else {
           const fetchedRole = data?.role || "owner";
-          setRole(fetchedRole);
           setCachedRole(user.id, fetchedRole);
+          setState({ role: fetchedRole, loading: false });
         }
       } catch (error) {
         console.error("Error fetching role:", error);
         const fallback = cachedRole || "owner";
-        setRole(fallback);
         setCachedRole(user.id, fallback);
-      } finally {
-        setLoading(false);
+        setState({ role: fallback, loading: false });
       }
     };
 
     fetchRole();
-  }, [user, authLoading]);
+  }, [user?.id, authLoading]);
 
-  // Determine if still loading - use cache to avoid loading state
-  const hasCache = user?.id ? !!getCachedRole(user.id) : false;
-  const isStillLoading = loading && !hasCache;
+  // CRITICAL: Include authLoading in final loading state
+  const finalLoading = authLoading || state.loading;
 
   return {
-    role: role ?? "owner",
-    loading: isStillLoading,
-    isOwner: role === "owner" || role === null,
-    isEmployee: role === "employee",
-    isAdmin: role === "admin",
+    role: state.role ?? "owner",
+    loading: finalLoading,
+    isOwner: state.role === "owner" || state.role === null,
+    isEmployee: state.role === "employee",
+    isAdmin: state.role === "admin",
   };
 }
 
 // Permissions helper
 export function usePermissions() {
-  const { role, isOwner, isEmployee, loading } = useRole();
+  const { role, isOwner, loading } = useRole();
 
   return {
     role,
