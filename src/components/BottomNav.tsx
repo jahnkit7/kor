@@ -110,7 +110,10 @@ const BottomNav = () => {
   const visibleItems = navItems.filter(item => item.show);
 
   return (
-    <nav 
+    <motion.nav 
+      initial={{ y: 100, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ type: "spring", bounce: 0.3, duration: 0.6, delay: 0.1 }}
       className="fixed bottom-4 left-4 right-4 z-50"
       style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
     >
@@ -235,7 +238,7 @@ const BottomNav = () => {
           );
         })}
       </div>
-    </nav>
+    </motion.nav>
   );
 };
 
