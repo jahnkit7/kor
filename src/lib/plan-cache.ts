@@ -3,10 +3,12 @@
  * - TTL: 7 days max
  * - User binding: cache is tied to specific user ID
  * - Version control: cache invalidated on version change
+ * - Grace period: 14 days for offline access (Bug 4 fix)
  */
 
-const CACHE_VERSION = 1;
+const CACHE_VERSION = 2; // Bumped for lastVerifiedAt field
 const CACHE_TTL_DAYS = 7;
+const GRACE_PERIOD_DAYS = 14; // Extended offline grace period
 
 // Cache keys
 const SUBSCRIPTION_CACHE_KEY = "kor_subscription_cache";
@@ -20,6 +22,7 @@ export interface CachedSubscription {
   is_active: boolean;
   max_clients: number | null;
   max_sales_per_day: number | null;
+  trial_used_at?: string | null; // Bug 3: track trial usage
 }
 
 export interface PlanLimitsMap {
@@ -34,6 +37,7 @@ export interface PlanLimitsMap {
 interface SecureCache<T> {
   userId: string;
   cachedAt: string;
+  lastVerifiedAt: string; // Bug 4: Last time we verified online
   cacheVersion: number;
   data: T;
 }
@@ -46,11 +50,44 @@ function isCacheValid<T>(cache: SecureCache<T> | null, userId: string): boolean 
   if (cache.userId !== userId) return false;
   if (cache.cacheVersion !== CACHE_VERSION) return false;
   
-  const cachedDate = new Date(cache.cachedAt);
+  const lastVerified = new Date(cache.lastVerifiedAt || cache.cachedAt);
   const now = new Date();
-  const daysSinceCached = (now.getTime() - cachedDate.getTime()) / (1000 * 60 * 60 * 24);
+  const daysSinceVerified = (now.getTime() - lastVerified.getTime()) / (1000 * 60 * 60 * 24);
   
-  return daysSinceCached <= CACHE_TTL_DAYS;
+  return daysSinceVerified <= CACHE_TTL_DAYS;
+}
+
+/**
+ * Check if cache is valid for OFFLINE use (with grace period)
+ * Bug 4 fix: Allows extended offline access with grace period
+ */
+export function isCacheValidForOffline(userId: string): { valid: boolean; inGracePeriod: boolean } {
+  try {
+    const raw = localStorage.getItem(SUBSCRIPTION_CACHE_KEY);
+    if (!raw) return { valid: false, inGracePeriod: false };
+    
+    const cache: SecureCache<CachedSubscription> = JSON.parse(raw);
+    if (cache.userId !== userId) return { valid: false, inGracePeriod: false };
+    // Allow old cache version for offline grace period
+    if (cache.cacheVersion !== CACHE_VERSION && cache.cacheVersion !== CACHE_VERSION - 1) {
+      return { valid: false, inGracePeriod: false };
+    }
+    
+    const lastVerified = new Date(cache.lastVerifiedAt || cache.cachedAt);
+    const daysSinceVerified = (Date.now() - lastVerified.getTime()) / (1000 * 60 * 60 * 24);
+    
+    if (daysSinceVerified <= CACHE_TTL_DAYS) {
+      return { valid: true, inGracePeriod: false };
+    }
+    
+    if (daysSinceVerified <= GRACE_PERIOD_DAYS) {
+      return { valid: true, inGracePeriod: true };
+    }
+    
+    return { valid: false, inGracePeriod: false };
+  } catch {
+    return { valid: false, inGracePeriod: false };
+  }
 }
 
 /**
@@ -58,9 +95,11 @@ function isCacheValid<T>(cache: SecureCache<T> | null, userId: string): boolean 
  */
 export function cacheSubscription(userId: string, data: CachedSubscription): void {
   try {
+    const now = new Date().toISOString();
     const cache: SecureCache<CachedSubscription> = {
       userId,
-      cachedAt: new Date().toISOString(),
+      cachedAt: now,
+      lastVerifiedAt: now, // Set on cache creation/update
       cacheVersion: CACHE_VERSION,
       data,
     };
@@ -98,9 +137,11 @@ export function getCachedSubscription(userId: string): CachedSubscription | null
  */
 export function cachePlanLimits(userId: string, plans: PlanLimitsMap): void {
   try {
+    const now = new Date().toISOString();
     const cache: SecureCache<PlanLimitsMap> = {
       userId,
-      cachedAt: new Date().toISOString(),
+      cachedAt: now,
+      lastVerifiedAt: now,
       cacheVersion: CACHE_VERSION,
       data: plans,
     };

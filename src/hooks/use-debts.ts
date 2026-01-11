@@ -101,13 +101,21 @@ export function useDebts(): DebtsState {
               synced: true,
             }));
 
-            // Merge
+            // BUG 2 FIX: Deduplicate by id to prevent double entries
             const unsyncedLocalDebts = mappedLocalDebts.filter(d => !d.synced);
+            const seenIds = new Set<string>();
             const cloudDebtIds = new Set(cloudDebts.map(d => d.id));
+            
             const finalDebts = [
               ...unsyncedLocalDebts.filter(d => !cloudDebtIds.has(d.id)),
               ...cloudDebts,
-            ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+            ]
+              .filter(d => {
+                if (seenIds.has(d.id)) return false;
+                seenIds.add(d.id);
+                return true;
+              })
+              .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
             setDebts(finalDebts);
 

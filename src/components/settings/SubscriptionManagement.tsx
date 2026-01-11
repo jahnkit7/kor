@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,22 +23,24 @@ import {
   ArrowRight,
   Loader2,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserSubscription } from "@/hooks/use-feature-access";
+import { useSubscriptionUpgrade } from "@/hooks/use-subscription-upgrade";
 import { PaymentMethodDialog } from "@/components/payment/PaymentMethodDialog";
 import { PaymentHistory } from "@/components/settings/PaymentHistory";
 import { formatDistanceToNow, format, isPast, differenceInDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
 
-// Plans statiques
+// Plans statiques with limits (Bug 1 fix: include max_clients and max_sales_per_day)
 const plans = [
   {
     id: "gratuit",
     name: "Gratuit",
     price: 0,
     duration_days: 365,
+    max_clients: 5,
+    max_sales_per_day: 5,
     description: "Pour démarrer",
     icon: Zap,
     features: ["Gestion des ventes", "Suivi du stock", "Gestion des clients", "Suivi des dettes"],
@@ -49,6 +51,8 @@ const plans = [
     name: "Starter",
     price: 5000,
     duration_days: 30,
+    max_clients: 10,
+    max_sales_per_day: 10,
     description: "Pour les petites boutiques",
     icon: Star,
     features: ["Tout du plan Gratuit", "Rapports détaillés", "Gestion des employés", "Entrée vocale"],
@@ -59,6 +63,8 @@ const plans = [
     name: "Premium",
     price: 10000,
     duration_days: 30,
+    max_clients: null, // Unlimited
+    max_sales_per_day: null, // Unlimited
     description: "Fonctionnalités avancées",
     icon: Crown,
     features: ["Tout du plan Starter", "Réseau de marchands", "Analytics avancés", "Support prioritaire"],
@@ -70,10 +76,22 @@ export function SubscriptionManagement() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { data: subscription, isLoading, refetch } = useUserSubscription();
+  const { applyPlanToSubscription } = useSubscriptionUpgrade();
   const [changePlanOpen, setChangePlanOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<typeof plans[0] | null>(null);
   const [processing, setProcessing] = useState(false);
+
+  // Bug 3: Filter out gratuit plan if trial has been used
+  const availablePlans = useMemo(() => {
+    if (!subscription) return plans;
+    // @ts-expect-error trial_used_at may not be in type yet
+    const trialUsed = subscription.trial_used_at;
+    if (trialUsed) {
+      return plans.filter(p => p.id !== "gratuit");
+    }
+    return plans;
+  }, [subscription]);
 
   if (isLoading) {
     return (
@@ -147,29 +165,24 @@ export function SubscriptionManagement() {
     }
   };
 
+  // Bug 1 FIX: Use centralized applyPlanToSubscription
   const handleFreeSubscription = async (plan: typeof plans[0]) => {
     if (!user) return;
     setProcessing(true);
 
     try {
-      const endDate = new Date();
-      endDate.setDate(endDate.getDate() + plan.duration_days);
+      const success = await applyPlanToSubscription(user.id, {
+        id: plan.id,
+        name: plan.name,
+        duration_days: plan.duration_days,
+        max_clients: plan.max_clients,
+        max_sales_per_day: plan.max_sales_per_day,
+      });
 
-      const { error } = await supabase.from("subscriptions").upsert(
-        {
-          user_id: user.id,
-          plan: plan.id,
-          is_active: true,
-          trial_started_at: new Date().toISOString(),
-          trial_ends_at: endDate.toISOString(),
-        },
-        { onConflict: "user_id" }
-      );
-
-      if (error) throw error;
-
-      toast.success(`Plan ${plan.name} activé !`);
-      refetch();
+      if (success) {
+        toast.success(`Plan ${plan.name} activé !`);
+        refetch();
+      }
     } catch (error) {
       toast.error("Erreur lors du changement de plan");
     } finally {
@@ -177,29 +190,24 @@ export function SubscriptionManagement() {
     }
   };
 
+  // Bug 1 FIX: Use centralized applyPlanToSubscription
   const handlePaymentSuccess = async () => {
     if (!user || !selectedPlan) return;
 
     try {
-      const endDate = new Date();
-      endDate.setDate(endDate.getDate() + selectedPlan.duration_days);
+      const success = await applyPlanToSubscription(user.id, {
+        id: selectedPlan.id,
+        name: selectedPlan.name,
+        duration_days: selectedPlan.duration_days,
+        max_clients: selectedPlan.max_clients,
+        max_sales_per_day: selectedPlan.max_sales_per_day,
+      }, { markTrialUsed: true });
 
-      const { error } = await supabase.from("subscriptions").upsert(
-        {
-          user_id: user.id,
-          plan: selectedPlan.id,
-          is_active: true,
-          trial_started_at: new Date().toISOString(),
-          trial_ends_at: endDate.toISOString(),
-        },
-        { onConflict: "user_id" }
-      );
-
-      if (error) throw error;
-
-      toast.success(`Plan ${selectedPlan.name} activé !`);
-      setPaymentOpen(false);
-      refetch();
+      if (success) {
+        toast.success(`Plan ${selectedPlan.name} activé !`);
+        setPaymentOpen(false);
+        refetch();
+      }
     } catch (error) {
       toast.error("Erreur lors de l'activation");
     }
@@ -317,7 +325,7 @@ export function SubscriptionManagement() {
           </DialogHeader>
 
           <div className="space-y-3 py-4">
-            {plans.map((plan) => {
+            {availablePlans.map((plan) => {
               const Icon = plan.icon;
               const isCurrent = plan.id === subscription.plan?.toLowerCase();
 

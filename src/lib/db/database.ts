@@ -203,6 +203,8 @@ function getLocalDayString(): string {
 }
 
 // Sale operations
+// BUG 2 FIX: Removed automatic debt creation here - it's now handled ONLY in use-sales.ts
+// with idempotent UPSERT using sale_id to prevent duplicates
 export async function addSale(sale: Omit<Sale, "id" | "createdAt" | "createdAtLocalDay" | "synced">): Promise<Sale> {
   const db = await getDB();
   const newSale: Sale = {
@@ -215,12 +217,54 @@ export async function addSale(sale: Omit<Sale, "id" | "createdAt" | "createdAtLo
   await db.put("sales", newSale);
   await addToSyncQueue("create", "sales", newSale);
   
-  // If credit sale, create/update debt
-  if (sale.type === "credit" && sale.clientId) {
-    await addOrUpdateDebt(sale.clientId, sale.amount);
-  }
+  // NOTE: Debt creation is NO LONGER done here to prevent duplicates
+  // It's now handled exclusively in use-sales.ts with idempotent UPSERT
   
   return newSale;
+}
+
+/**
+ * Create debt for a sale with idempotency (Bug 2 fix)
+ * Uses sale_id to ensure 1 debt = 1 credit sale
+ */
+export async function createDebtForSale(params: {
+  id: string;
+  saleId: string;
+  clientId: string;
+  amount: number;
+  paid: number;
+  userId?: string;
+  clientName?: string;
+}): Promise<Debt> {
+  const db = await getDB();
+  const now = new Date().toISOString();
+  
+  // Check if debt for this sale already exists (idempotency)
+  const existingDebts = await db.getAllFromIndex("debts", "by-client", params.clientId);
+  const existingDebtForSale = existingDebts.find(d => d.sale_id === params.saleId);
+  
+  if (existingDebtForSale) {
+    // Debt already exists for this sale - return it (idempotent)
+    return existingDebtForSale;
+  }
+  
+  const newDebt: Debt = {
+    id: params.id,
+    clientId: params.clientId,
+    client_name: params.clientName,
+    amount: params.amount,
+    paid: params.paid,
+    user_id: params.userId,
+    sale_id: params.saleId,
+    createdAt: now,
+    updatedAt: now,
+    synced: false,
+  };
+  
+  await db.put("debts", newDebt);
+  await addToSyncQueue("create", "debts", newDebt);
+  
+  return newDebt;
 }
 
 export async function getSales(): Promise<Sale[]> {

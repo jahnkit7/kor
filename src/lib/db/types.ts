@@ -42,6 +42,7 @@ export interface Debt {
   amount: number;
   paid: number;
   user_id?: string;
+  sale_id?: string; // NEW: Link to the sale that created this debt (for idempotency)
   createdAt: string;
   updatedAt: string;
   synced: boolean;
