@@ -16,7 +16,7 @@ import {
   TrendingUp,
   FileText,
 } from "lucide-react";
-import AppLayout from "@/components/layout/AppLayout";
+
 import { useHiddenAmount } from "@/components/HideAmountsToggle";
 import { useSales, Sale } from "@/hooks/use-sales";
 import { FeatureGate } from "@/components/FeatureGate";

@@ -14,15 +14,17 @@ import {
   TrendingUp,
   AlertTriangle,
   MessageCircle,
+  FileText,
 } from "lucide-react";
 import { Skeleton, ListSkeleton } from "@/components/ui/loading-skeleton";
 import { ClientWarningBadge } from "@/components/ClientWarningBadge";
 import { useHiddenAmount } from "@/components/HideAmountsToggle";
 import { useClients } from "@/hooks/use-clients";
-import { useSales } from "@/hooks/use-sales";
+import { useSales, Sale } from "@/hooks/use-sales";
 import { useDebts } from "@/hooks/use-debts";
 import { useProfile } from "@/hooks/use-profile";
 import { supabase } from "@/integrations/supabase/client";
+import { InvoiceDialog } from "@/components/invoice/InvoiceDialog";
 
 interface Payment {
   id: string;
@@ -49,6 +51,8 @@ const ClientDetail = () => {
   const { profile } = useProfile();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState(true);
+  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [showInvoice, setShowInvoice] = useState(false);
 
   const client = clients.find((c) => c.id === id);
 
@@ -295,14 +299,22 @@ const ClientDetail = () => {
                     Aucune transaction
                   </p>
                 ) : (
-                  allTransactions.map((tx) => (
-                    <TransactionCard
-                      key={tx.id}
-                      transaction={tx}
-                      formatMoney={formatMoney}
-                      formatDate={formatDate}
-                    />
-                  ))
+                  allTransactions.map((tx) => {
+                    // Find matching sale for invoice generation
+                    const matchingSale = clientSales.find(s => s.id === tx.id);
+                    return (
+                      <TransactionCard
+                        key={tx.id}
+                        transaction={tx}
+                        formatMoney={formatMoney}
+                        formatDate={formatDate}
+                        onGenerateInvoice={matchingSale ? () => {
+                          setSelectedSale(matchingSale);
+                          setShowInvoice(true);
+                        } : undefined}
+                      />
+                    );
+                  })
                 )}
               </div>
             </ScrollArea>
@@ -328,6 +340,10 @@ const ClientDetail = () => {
                       }}
                       formatMoney={formatMoney}
                       formatDate={formatDate}
+                      onGenerateInvoice={() => {
+                        setSelectedSale(sale);
+                        setShowInvoice(true);
+                      }}
                     />
                   ))
                 )}
@@ -363,6 +379,13 @@ const ClientDetail = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Invoice Dialog */}
+      <InvoiceDialog
+        open={showInvoice}
+        onOpenChange={setShowInvoice}
+        sale={selectedSale}
+      />
     </>
   );
 };
@@ -371,10 +394,12 @@ const TransactionCard = ({
   transaction,
   formatMoney,
   formatDate,
+  onGenerateInvoice,
 }: {
   transaction: Transaction;
   formatMoney: (amount: number) => string;
   formatDate: (date: string) => string;
+  onGenerateInvoice?: () => void;
 }) => {
   const config = {
     cash: {
@@ -402,8 +427,13 @@ const TransactionCard = ({
 
   const { icon: Icon, color, label, badgeClass } = config[transaction.type];
 
+  const showInvoiceIcon = onGenerateInvoice && (transaction.type === "cash" || transaction.type === "credit");
+
   return (
-    <Card className="animate-fade-in">
+    <Card 
+      className={`animate-fade-in ${showInvoiceIcon ? "cursor-pointer hover:bg-accent/50 transition-colors group" : ""}`}
+      onClick={showInvoiceIcon ? onGenerateInvoice : undefined}
+    >
       <CardContent className="p-4">
         <div className="flex items-center gap-4">
           <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${color}`}>
@@ -424,12 +454,17 @@ const TransactionCard = ({
               {formatDate(transaction.created_at)}
             </p>
           </div>
-          <p className={`text-lg font-bold ${
-            transaction.type === "payment" ? "text-success" : 
-            transaction.type === "credit" ? "text-credit" : "text-foreground"
-          }`}>
-            {transaction.type === "payment" ? "+" : ""}{formatMoney(transaction.amount)} CFA
-          </p>
+          <div className="flex items-center gap-3">
+            <p className={`text-lg font-bold ${
+              transaction.type === "payment" ? "text-success" : 
+              transaction.type === "credit" ? "text-credit" : "text-foreground"
+            }`}>
+              {transaction.type === "payment" ? "+" : ""}{formatMoney(transaction.amount)} CFA
+            </p>
+            {showInvoiceIcon && (
+              <FileText className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
