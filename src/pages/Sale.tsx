@@ -7,6 +7,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { 
+  FullScreenSheet, 
+  FullScreenSheetHeader, 
+  FullScreenSheetTitle, 
+  FullScreenSheetContent 
+} from "@/components/ui/fullscreen-sheet";
 import { ArrowLeft, Check, User, MessageSquare, Mic, Wallet, CreditCard, Clock, Lock, Package, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { useClients } from "@/hooks/use-clients";
@@ -339,7 +345,7 @@ const Sale = () => {
               onClick={() => setAmount(String(quickAmount))}
               className="text-sm font-bold h-10 px-2"
             >
-              {quickAmount >= 1000 ? `${quickAmount / 1000}k` : quickAmount}
+              {new Intl.NumberFormat("fr-FR").format(quickAmount)}
             </Button>
           ))}
         </div>
@@ -347,120 +353,125 @@ const Sale = () => {
         {/* Produits / Récentes - 50/50 */}
         <div className="grid grid-cols-2 gap-2 mb-3 shrink-0">
           {/* Produits */}
-          <Sheet open={showProductsSheet} onOpenChange={setShowProductsSheet}>
-            <SheetTrigger asChild>
-              <button className="flex items-center justify-between px-3 py-3 bg-secondary/50 rounded-xl">
-                <span className="flex items-center gap-2 text-sm font-medium">
-                  <Package className="w-4 h-4 text-muted-foreground" />
-                  Produits
-                </span>
-                {selectedProducts.length > 0 && (
-                  <Badge variant="secondary" className="text-xs h-5 px-2">{selectedProducts.length}</Badge>
-                )}
-              </button>
-            </SheetTrigger>
-            <SheetContent side="bottom" className="h-[100dvh] rounded-t-none pb-[env(safe-area-inset-bottom)]">
-              <SheetHeader className="pt-2">
-                <SheetTitle>Sélectionner des produits</SheetTitle>
-              </SheetHeader>
-              <div className="mt-4 h-[calc(100%-4rem)] overflow-auto">
-                <ProductSelector
-                  stockItems={stockItems}
-                  selectedProducts={selectedProducts}
-                  onProductsChange={setSelectedProducts}
-                  onCreateStockItem={async (item) => {
-                    const result = await addItem({
-                      name: item.name,
-                      quantity: item.quantity,
-                      unit_price: item.unit_price,
-                      source: "manual",
-                    });
-                    if (result) {
-                      return { id: result.id };
-                    }
-                    return null;
-                  }}
-                />
-              </div>
-            </SheetContent>
-          </Sheet>
+          <button 
+            onClick={() => setShowProductsSheet(true)}
+            className="flex items-center justify-between px-3 py-3 bg-secondary/50 rounded-xl"
+          >
+            <span className="flex items-center gap-2 text-sm font-medium">
+              <Package className="w-4 h-4 text-muted-foreground" />
+              Produits
+            </span>
+            {selectedProducts.length > 0 && (
+              <Badge variant="secondary" className="text-xs h-5 px-2">{selectedProducts.length}</Badge>
+            )}
+          </button>
 
           {/* Ventes récentes */}
-          <Sheet open={showHistorySheet} onOpenChange={setShowHistorySheet}>
-            <SheetTrigger asChild>
-              <button className="flex items-center justify-between px-3 py-3 bg-secondary/50 rounded-xl">
-                <span className="flex items-center gap-2 text-sm font-medium">
-                  <Clock className="w-4 h-4 text-muted-foreground" />
-                  Récentes
-                </span>
-                {sales.length > 0 && (
-                  <Badge variant="secondary" className="text-xs h-5 px-2">{sales.length}</Badge>
-                )}
-              </button>
-            </SheetTrigger>
-            <SheetContent side="bottom" className="h-[100dvh] rounded-t-none pb-[env(safe-area-inset-bottom)]">
-              <SheetHeader className="pt-2">
-                <SheetTitle>Ventes récentes</SheetTitle>
-              </SheetHeader>
-              <ScrollArea className="mt-4 h-[calc(100%-4rem)]">
-                <div className="space-y-2 pr-2">
-                  {sales.slice(0, 20).map((sale) => (
-                    <Card key={sale.id} className="bg-card/50">
-                      <CardContent className="p-3 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className={cn(
-                            "w-8 h-8 rounded-full flex items-center justify-center",
-                            sale.type === "cash" ? "bg-cash/20" : "bg-credit/20"
-                          )}>
-                            {sale.type === "cash" ? (
-                              <Wallet className="w-4 h-4 text-cash" />
-                            ) : (
-                              <CreditCard className="w-4 h-4 text-credit" />
-                            )}
-                          </div>
-                          <div>
-                            <p className="font-semibold text-sm">
-                              {formatMoney(String(sale.amount))} CFA
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {sale.client_name || "Vente anonyme"}
-                            </p>
-                          </div>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(sale.created_at).toLocaleTimeString("fr-FR", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </ScrollArea>
-            </SheetContent>
-          </Sheet>
+          <button 
+            onClick={() => setShowHistorySheet(true)}
+            className="flex items-center justify-between px-3 py-3 bg-secondary/50 rounded-xl"
+          >
+            <span className="flex items-center gap-2 text-sm font-medium">
+              <Clock className="w-4 h-4 text-muted-foreground" />
+              Récentes
+            </span>
+            {sales.length > 0 && (
+              <Badge variant="secondary" className="text-xs h-5 px-2">{sales.length}</Badge>
+            )}
+          </button>
         </div>
+
+        {/* FullScreen Sheet - Produits */}
+        <FullScreenSheet open={showProductsSheet} onOpenChange={setShowProductsSheet}>
+          <FullScreenSheetHeader>
+            <FullScreenSheetTitle>Sélectionner des produits</FullScreenSheetTitle>
+          </FullScreenSheetHeader>
+          <FullScreenSheetContent className="h-[calc(100%-4rem)]">
+            <ProductSelector
+              stockItems={stockItems}
+              selectedProducts={selectedProducts}
+              onProductsChange={setSelectedProducts}
+              onCreateStockItem={async (item) => {
+                const result = await addItem({
+                  name: item.name,
+                  quantity: item.quantity,
+                  unit_price: item.unit_price,
+                  source: "manual",
+                });
+                if (result) {
+                  return { id: result.id };
+                }
+                return null;
+              }}
+            />
+          </FullScreenSheetContent>
+        </FullScreenSheet>
+
+        {/* FullScreen Sheet - Ventes récentes */}
+        <FullScreenSheet open={showHistorySheet} onOpenChange={setShowHistorySheet}>
+          <FullScreenSheetHeader>
+            <FullScreenSheetTitle>Ventes récentes</FullScreenSheetTitle>
+          </FullScreenSheetHeader>
+          <FullScreenSheetContent className="h-[calc(100%-4rem)]">
+            <div className="space-y-2 pr-2">
+              {sales.slice(0, 20).map((sale) => (
+                <Card key={sale.id} className="bg-card/50">
+                  <CardContent className="p-3 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        "w-8 h-8 rounded-full flex items-center justify-center",
+                        sale.type === "cash" ? "bg-cash/20" : "bg-credit/20"
+                      )}>
+                        {sale.type === "cash" ? (
+                          <Wallet className="w-4 h-4 text-cash" />
+                        ) : (
+                          <CreditCard className="w-4 h-4 text-credit" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-sm">
+                          {formatMoney(String(sale.amount))} CFA
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {sale.client_name || "Vente anonyme"}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(sale.created_at).toLocaleTimeString("fr-FR", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </FullScreenSheetContent>
+        </FullScreenSheet>
 
         {/* Client Selection (Credit only) - Compact button */}
         {!isCash && (
-          <Sheet open={showClientSheet} onOpenChange={setShowClientSheet}>
-            <SheetTrigger asChild>
-              <button className="w-full flex items-center justify-between px-3 py-2.5 bg-secondary/50 rounded-lg mb-2 shrink-0">
-                <span className="flex items-center gap-2">
-                  <User className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">
-                    {selectedClientName || "Sélectionner un client"}
-                  </span>
+          <>
+            <button 
+              onClick={() => setShowClientSheet(true)}
+              className="w-full flex items-center justify-between px-3 py-2.5 bg-secondary/50 rounded-lg mb-2 shrink-0"
+            >
+              <span className="flex items-center gap-2">
+                <User className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm font-medium">
+                  {selectedClientName || "Sélectionner un client"}
                 </span>
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              </button>
-            </SheetTrigger>
-            <SheetContent side="bottom" className="h-[100dvh] rounded-t-none pb-[env(safe-area-inset-bottom)]">
-              <SheetHeader className="pt-[env(safe-area-inset-top)]">
-                <SheetTitle>Sélectionner un client</SheetTitle>
-              </SheetHeader>
-              <ScrollArea className="mt-4 h-[calc(100%-10rem)]">
+              </span>
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            </button>
+
+            {/* FullScreen Sheet - Clients */}
+            <FullScreenSheet open={showClientSheet} onOpenChange={setShowClientSheet}>
+              <FullScreenSheetHeader>
+                <FullScreenSheetTitle>Sélectionner un client</FullScreenSheetTitle>
+              </FullScreenSheetHeader>
+              <FullScreenSheetContent className="h-[calc(100%-10rem)]">
                 <div className="space-y-2 pr-2">
                   {clientsLoading ? (
                     <p className="text-center text-muted-foreground py-4">Chargement...</p>
@@ -493,8 +504,8 @@ const Sale = () => {
                     ))
                   )}
                 </div>
-              </ScrollArea>
-              <div className="pt-4 px-1">
+              </FullScreenSheetContent>
+              <div className="absolute bottom-0 left-0 right-0 p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] bg-background">
                 <button 
                   onClick={() => navigate("/clients/new")}
                   className="w-full h-14 rounded-full flex items-center justify-center gap-2
@@ -507,8 +518,8 @@ const Sale = () => {
                   Nouveau client
                 </button>
               </div>
-            </SheetContent>
-          </Sheet>
+            </FullScreenSheet>
+          </>
         )}
 
         {/* Spacer to push numpad down */}

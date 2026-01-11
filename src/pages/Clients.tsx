@@ -100,10 +100,17 @@ const Clients = () => {
             <Card>
               <CardContent className="p-6 text-center">
                 <p className="text-muted-foreground mb-4">Aucun client trouvé</p>
-                <Button onClick={() => navigate("/clients/new")}>
-                  <Plus className="w-4 h-4 mr-2" />
+                <button 
+                  onClick={() => navigate("/clients/new")}
+                  className="w-full h-14 rounded-full flex items-center justify-center gap-2
+                    bg-gradient-to-r from-[#4f7df3] via-[#5b8af5] to-[#3b6ce8]
+                    text-white font-bold text-base tracking-wide uppercase
+                    shadow-lg shadow-blue-500/30 hover:shadow-xl
+                    active:scale-[0.98] transition-all"
+                >
+                  <Plus className="w-5 h-5" />
                   Ajouter un client
-                </Button>
+                </button>
               </CardContent>
             </Card>
           ) : (

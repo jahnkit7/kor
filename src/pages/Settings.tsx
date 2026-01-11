@@ -476,15 +476,17 @@ const Settings = () => {
           </p>
           <Card className="border-destructive/50">
             <CardContent className="p-4 space-y-3">
-              <Button
-                variant="outline"
-                size="lg"
-                className="w-full"
+              <button
                 onClick={handleLogout}
+                className="w-full h-14 rounded-full flex items-center justify-center gap-2
+                  bg-gradient-to-r from-[#ef4444] via-[#dc2626] to-[#b91c1c]
+                  text-white font-bold text-base tracking-wide uppercase
+                  shadow-lg shadow-red-500/30 hover:shadow-xl
+                  active:scale-[0.98] transition-all"
               >
-                <LogOut className="w-5 h-5 mr-2" />
+                <LogOut className="w-5 h-5" />
                 Déconnexion
-              </Button>
+              </button>
               <DeleteAccountDialog />
             </CardContent>
           </Card>
