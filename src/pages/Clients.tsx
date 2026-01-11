@@ -47,7 +47,7 @@ const Clients = () => {
   if (loading) {
     return (
       <AppLayout>
-        <div className="bg-gradient-to-b from-[#f8f9ff] to-white px-4 pt-4 pb-6 border-b border-border">
+      <div className="bg-gradient-to-b from-[#f8f9ff] to-white px-4 pb-6 border-b border-border" style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)' }}>
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
               <Skeleton className="h-10 w-10 rounded-lg" />
@@ -69,7 +69,7 @@ const Clients = () => {
     <AppLayout>
       <FeatureGate featureKey="clients" showUpgradePrompt>
       {/* Header */}
-      <div className="bg-gradient-to-b from-[#f8f9ff] to-white px-4 pt-4 pb-6 border-b border-border">
+      <div className="bg-gradient-to-b from-[#f8f9ff] to-white px-4 pb-6 border-b border-border" style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)' }}>
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
             <Button
