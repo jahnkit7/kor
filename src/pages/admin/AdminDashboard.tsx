@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton, CardSkeleton } from "@/components/ui/loading-skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 
@@ -108,7 +108,7 @@ export default function AdminDashboard() {
         {statsLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {[...Array(8)].map((_, i) => (
-              <Skeleton key={i} className="h-40 rounded-3xl" />
+              <CardSkeleton key={i} className="h-40 rounded-3xl" />
             ))}
           </div>
         ) : (
@@ -230,7 +230,7 @@ export default function AdminDashboard() {
             {logsLoading ? (
               <div className="space-y-3">
                 {[...Array(5)].map((_, i) => (
-                  <Skeleton key={i} className="h-12 rounded-xl" />
+                  <CardSkeleton key={i} className="h-12 rounded-xl" />
                 ))}
               </div>
             ) : activityLogs && activityLogs.length > 0 ? (

@@ -15,6 +15,7 @@ import {
   AlertTriangle,
   MessageCircle,
 } from "lucide-react";
+import { Skeleton, ListSkeleton } from "@/components/ui/loading-skeleton";
 import AppLayout from "@/components/layout/AppLayout";
 import { ClientWarningBadge } from "@/components/ClientWarningBadge";
 import { useHiddenAmount } from "@/components/HideAmountsToggle";
@@ -166,9 +167,29 @@ const ClientDetail = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
-      </div>
+      <AppLayout>
+        <div className="bg-gradient-to-b from-[#f8f9ff] to-white px-4 pt-4 pb-6 border-b border-border">
+          <div className="flex items-center gap-4 mb-4">
+            <Skeleton className="h-10 w-10 rounded-lg" />
+            <Skeleton className="h-6 w-36" />
+          </div>
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-16 w-16 rounded-full" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-4 w-28" />
+            </div>
+          </div>
+        </div>
+        <div className="p-4 grid grid-cols-2 gap-3">
+          <Skeleton className="h-20 rounded-xl" />
+          <Skeleton className="h-20 rounded-xl" />
+        </div>
+        <div className="px-4">
+          <Skeleton className="h-10 w-full rounded-lg mb-4" />
+          <ListSkeleton count={4} variant="transaction" />
+        </div>
+      </AppLayout>
     );
   }
 
