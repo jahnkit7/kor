@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { PrimaryActionButton } from "@/components/ui/primary-action-button";
 import { ArrowLeft, User, Phone, Camera, Check } from "lucide-react";
 import { toast } from "sonner";
 import { useClients } from "@/hooks/use-clients";
@@ -104,16 +105,13 @@ const NewClient = () => {
 
       {/* Submit */}
       <div className="p-4 safe-bottom">
-        <Button
-          variant="action"
-          size="lg"
-          className="w-full"
+        <PrimaryActionButton
           onClick={handleSubmit}
           disabled={!name.trim() || phone.length < 8 || isLoading}
         >
-          <Check className="w-6 h-6 mr-2" />
+          <Check className="w-5 h-5" />
           Ajouter le client
-        </Button>
+        </PrimaryActionButton>
       </div>
     </div>
   );
