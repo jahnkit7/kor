@@ -332,17 +332,47 @@ const DebtDetail = () => {
       {showPaymentModal && (
         <div className="fixed inset-0 bg-foreground/50 flex items-end z-50">
           <div className="bg-card w-full rounded-t-3xl p-6 animate-slide-up safe-bottom">
-            <div className="w-12 h-1 bg-border rounded-full mx-auto mb-6" />
-            <h3 className="text-xl font-bold mb-4 text-center">Recevoir un paiement</h3>
+            <div className="w-12 h-1 bg-border rounded-full mx-auto mb-4" />
+            <h3 className="text-xl font-bold mb-2 text-center">Recevoir un paiement</h3>
             
             {selectedDebtId && (
-              <p className="text-sm text-muted-foreground text-center mb-2">
+              <p className="text-sm text-muted-foreground text-center mb-4">
                 Dette: {formatMoney(clientDebts.find(d => d.id === selectedDebtId)?.remaining || 0)} CFA restant
               </p>
             )}
             
+            {/* Boutons en HAUT */}
+            <div className="space-y-3 mb-6">
+              <PrimaryActionButton
+                variant="green"
+                onClick={handlePayment}
+                disabled={processingPayment || !paymentAmount || parseInt(paymentAmount) === 0}
+              >
+                {processingPayment ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <>
+                    <Check className="w-5 h-5" />
+                    Confirmer {paymentAmount && parseInt(paymentAmount) > 0 ? `${formatMoney(parseInt(paymentAmount))} CFA` : ''}
+                  </>
+                )}
+              </PrimaryActionButton>
+              
+              <Button
+                variant="outline"
+                className="w-full h-12 rounded-full"
+                onClick={() => {
+                  setShowPaymentModal(false);
+                  setSelectedDebtId(null);
+                }}
+                disabled={processingPayment}
+              >
+                Annuler
+              </Button>
+            </div>
+            
             <p className="text-sm text-muted-foreground text-center mb-2">Montant reçu</p>
-            <div className="text-center mb-6">
+            <div className="text-center mb-4">
               <input
                 type="number"
                 value={paymentAmount}
@@ -353,7 +383,7 @@ const DebtDetail = () => {
               <span className="text-lg text-muted-foreground">CFA</span>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 mb-6">
+            <div className="grid grid-cols-3 gap-2">
               {[10000, 25000, 50000].map((amount) => (
                 <Button
                   key={amount}
@@ -364,35 +394,6 @@ const DebtDetail = () => {
                   {formatMoney(amount)}
                 </Button>
               ))}
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                variant="secondary"
-                size="lg"
-                onClick={() => {
-                  setShowPaymentModal(false);
-                  setSelectedDebtId(null);
-                }}
-                disabled={processingPayment}
-              >
-                Annuler
-              </Button>
-              <Button
-                variant="cash"
-                size="lg"
-                onClick={handlePayment}
-                disabled={processingPayment}
-              >
-                {processingPayment ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <>
-                    <Check className="w-5 h-5 mr-2" />
-                    Confirmer
-                  </>
-                )}
-              </Button>
             </div>
           </div>
         </div>

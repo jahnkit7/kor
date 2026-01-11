@@ -129,7 +129,6 @@ const SalesHistory = () => {
 
   return (
     <>
-      <FeatureGate featureKey="sales" showUpgradePrompt>
       {/* Header */}
       <div className="bg-gradient-to-b from-[#f8f9ff] to-white px-4 pb-6 border-b border-border" style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)' }}>
         <div className="flex items-center gap-4 mb-4">
@@ -287,7 +286,6 @@ const SalesHistory = () => {
           </div>
         </ScrollArea>
       </div>
-      </FeatureGate>
 
       {/* Invoice Dialog */}
       <InvoiceDialog
