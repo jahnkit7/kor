@@ -10,18 +10,19 @@ interface AppLayoutProps {
 
 /**
  * Main app layout wrapper that handles:
- * - Safe area insets for iOS (notch, home indicator)
  * - Bottom navigation positioning
  * - Proper scrolling behavior
  * - Subscription reminder popup for expired subscriptions
+ * 
+ * NOTE: Safe area removed for compact design - BottomNav is now floating
  */
 const AppLayout = ({ children, showBottomNav = true, className = "" }: AppLayoutProps) => {
   return (
     <div 
       className={`min-h-screen min-h-[100dvh] bg-gradient-to-b from-[#f8f9ff] via-white to-[#f8f9ff] overflow-x-hidden ${className}`}
       style={{
-        paddingTop: 'env(safe-area-inset-top)',
-        paddingBottom: showBottomNav ? 'calc(4rem + env(safe-area-inset-bottom))' : 'env(safe-area-inset-bottom)',
+        // Minimal padding for floating nav (48px height + 16px bottom gap + 8px extra)
+        paddingBottom: showBottomNav ? '72px' : '0',
       }}
     >
       {children}

@@ -221,7 +221,7 @@ const Network = () => {
       </div>
 
       {/* Content */}
-      <div className="px-4 py-4 pb-24">
+      <div className="px-4 py-4 pb-8">
         {/* DEMANDES TAB */}
         {activeTab === "requests" && (
           <div className="space-y-4">
