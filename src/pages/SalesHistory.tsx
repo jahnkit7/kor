@@ -112,7 +112,7 @@ const SalesHistory = () => {
   if (loading) {
     return (
       <AppLayout>
-        <div className="bg-gradient-to-b from-[#f8f9ff] to-white px-4 pt-4 pb-6 border-b border-border">
+        <div className="bg-gradient-to-b from-[#f8f9ff] to-white px-4 pb-6 border-b border-border" style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)' }}>
           <div className="flex items-center gap-4 mb-4">
             <Skeleton className="h-10 w-10 rounded-lg" />
             <Skeleton className="h-6 w-48" />
@@ -131,7 +131,7 @@ const SalesHistory = () => {
     <AppLayout>
       <FeatureGate featureKey="sales" showUpgradePrompt>
       {/* Header */}
-      <div className="bg-gradient-to-b from-[#f8f9ff] to-white px-4 pt-4 pb-6 border-b border-border">
+      <div className="bg-gradient-to-b from-[#f8f9ff] to-white px-4 pb-6 border-b border-border" style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)' }}>
         <div className="flex items-center gap-4 mb-4">
           <Button
             variant="ghost"

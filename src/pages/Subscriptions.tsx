@@ -273,7 +273,7 @@ export default function Subscriptions() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="gradient-hero text-primary-foreground px-4 pt-12 pb-16 text-center">
+      <div className="gradient-hero text-primary-foreground px-4 pb-16 text-center" style={{ paddingTop: 'max(env(safe-area-inset-top), 48px)' }}>
         <div className="flex items-center justify-center gap-2 mb-4">
           <Sparkles className="w-6 h-6" />
           <h1 className="text-2xl font-bold">Choisissez votre plan</h1>

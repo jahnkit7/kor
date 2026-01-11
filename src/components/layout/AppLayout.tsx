@@ -19,10 +19,9 @@ interface AppLayoutProps {
 const AppLayout = ({ children, showBottomNav = true, className = "" }: AppLayoutProps) => {
   return (
     <div 
-      className={`min-h-[100dvh] bg-gradient-to-b from-[#f8f9ff] via-white to-[#f8f9ff] ${className}`}
+      className={`min-h-[100dvh] bg-gradient-to-b from-[#f8f9ff] via-white to-[#f8f9ff] overflow-y-auto scrollbar-hide ${className}`}
       style={{
-        // Smart safe-area: top for iOS notch, bottom for floating nav
-        paddingTop: 'max(env(safe-area-inset-top), 12px)',
+        // Only bottom padding for floating nav - pages handle their own top safe-area
         paddingBottom: showBottomNav ? '80px' : '0',
       }}
     >

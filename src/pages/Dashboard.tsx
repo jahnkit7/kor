@@ -106,7 +106,8 @@ const Dashboard = () => {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="px-5 pt-6 pb-4"
+          className="px-5 pb-4"
+          style={{ paddingTop: 'max(env(safe-area-inset-top), 24px)' }}
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">

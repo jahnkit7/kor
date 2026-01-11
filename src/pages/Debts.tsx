@@ -90,7 +90,7 @@ const Debts = () => {
   if (loading) {
     return (
       <AppLayout>
-        <div className="bg-gradient-to-b from-[#f8f9ff] to-white px-4 pt-4 pb-6 border-b border-border">
+        <div className="bg-gradient-to-b from-[#f8f9ff] to-white px-4 pb-6 border-b border-border" style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)' }}>
           <div className="flex items-center gap-4 mb-6">
             <Skeleton className="h-10 w-10 rounded-lg" />
             <Skeleton className="h-6 w-20" />
@@ -110,7 +110,7 @@ const Debts = () => {
     <AppLayout>
       <FeatureGate featureKey="debts" showUpgradePrompt>
       {/* Header */}
-      <div className="bg-gradient-to-b from-[#f8f9ff] to-white px-4 pt-4 pb-6 border-b border-border">
+      <div className="bg-gradient-to-b from-[#f8f9ff] to-white px-4 pb-6 border-b border-border" style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)' }}>
         <div className="flex items-center gap-4 mb-6">
           <Button
             variant="ghost"
