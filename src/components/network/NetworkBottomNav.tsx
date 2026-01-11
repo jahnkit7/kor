@@ -87,8 +87,11 @@ export function NetworkBottomNav({
   const centerIndex = Math.floor(tabs.length / 2);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-[#f8f9ff] via-[#f8f9ff]/95 to-transparent backdrop-blur-sm pb-[env(safe-area-inset-bottom)]">
-      <div className="relative flex items-center justify-center gap-1 h-16 max-w-md mx-auto px-2">
+    <nav 
+      className="fixed bottom-4 left-4 right-4 z-50"
+      style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
+    >
+      <div className="relative flex items-center justify-center gap-1 h-14 max-w-md mx-auto px-3 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-2xl shadow-lg shadow-black/10 border border-gray-100 dark:border-gray-800">
         {tabs.map((tab, index) => {
           const isActive = activeTab === tab.id;
           
