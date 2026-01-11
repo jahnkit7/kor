@@ -28,6 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const getActivityIcon = (actionType: string) => {
   switch (actionType) {
@@ -98,6 +99,46 @@ export default function AdminDashboard() {
       setLastUpdate(new Date(latestUpdate));
     }
   }, [statsUpdatedAt, logsUpdatedAt]);
+  
+  // Supabase Realtime subscription for admin dashboard
+  useEffect(() => {
+    const channel = supabase
+      .channel('admin-realtime-dashboard')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'sales' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'profiles' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
+          queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'activity_logs' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["activity-logs"] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'subscriptions' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
   
   // Manual refresh function
   const handleRefresh = async () => {
