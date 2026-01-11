@@ -7,7 +7,7 @@ import {
   Briefcase01Icon,
   Add01Icon
 } from "@hugeicons/core-free-icons";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, type Transition } from "framer-motion";
 
 type TabType = "requests" | "offers" | "merchants" | "activity";
 
@@ -19,6 +19,33 @@ interface NetworkBottomNavProps {
   hasProfile: boolean;
   onAddNew: () => void;
 }
+
+// Animation variants pour le style ExpandableTabs
+const buttonVariants = {
+  initial: {
+    gap: 0,
+    paddingLeft: "0.75rem",
+    paddingRight: "0.75rem",
+  },
+  animate: {
+    gap: "0.5rem",
+    paddingLeft: "1rem",
+    paddingRight: "1rem",
+  },
+};
+
+const spanVariants = {
+  initial: { width: 0, opacity: 0 },
+  animate: { width: "auto", opacity: 1 },
+  exit: { width: 0, opacity: 0 },
+};
+
+const transition: Transition = { 
+  delay: 0.05, 
+  type: "spring", 
+  bounce: 0, 
+  duration: 0.5 
+};
 
 export function NetworkBottomNav({
   activeTab,
@@ -61,7 +88,7 @@ export function NetworkBottomNav({
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-[#f8f9ff] via-[#f8f9ff]/95 to-transparent backdrop-blur-sm pb-[env(safe-area-inset-bottom)]">
-      <div className="relative flex items-center justify-around h-16 max-w-md mx-auto">
+      <div className="relative flex items-center justify-center gap-1 h-16 max-w-md mx-auto px-2">
         {tabs.map((tab, index) => {
           const isActive = activeTab === tab.id;
           
@@ -70,64 +97,60 @@ export function NetworkBottomNav({
           
           return (
             <div key={tab.id} className="contents">
-              <button
+              <motion.button
                 onClick={() => onTabChange(tab.id)}
-                className="relative flex flex-col items-center justify-center px-4 py-2 min-w-[64px] transition-all"
+                whileTap={{ scale: 0.95 }}
+                variants={buttonVariants}
+                initial="initial"
+                animate={isActive ? "animate" : "initial"}
+                transition={transition}
+                className={cn(
+                  "relative flex items-center rounded-full py-2.5 transition-colors duration-200",
+                  isActive 
+                    ? "bg-[#4f7df3]/15 text-[#4f7df3]" 
+                    : "text-[#6F7A95] hover:bg-muted/50"
+                )}
               >
-                <motion.div 
-                  className="relative flex flex-col items-center"
-                  animate={{ scale: isActive ? 1.05 : 1 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                >
-                  <HugeiconsIcon 
-                    icon={tab.icon}
-                    className={cn(
-                      "w-6 h-6 transition-colors",
-                      isActive ? "text-[#4f7df3]" : "text-[#718096] hover:text-[#2d3748]"
-                    )}
-                    strokeWidth={isActive ? 2 : 1.5}
-                  />
-                  
-                  {/* Badge count */}
-                  {tab.count > 0 && (
-                    <span className="absolute -top-1 -right-2 h-4 min-w-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center">
-                      {tab.count > 99 ? "99+" : tab.count}
-                    </span>
-                  )}
+                {/* Icon */}
+                <HugeiconsIcon 
+                  icon={tab.icon}
+                  className="w-5 h-5 flex-shrink-0"
+                  strokeWidth={isActive ? 2 : 1.5}
+                />
+                
+                {/* Badge count */}
+                {tab.count > 0 && (
+                  <span className="absolute -top-1 left-1/2 -translate-x-1/2 min-w-[16px] h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] flex items-center justify-center font-bold">
+                    {tab.count > 99 ? "99+" : tab.count}
+                  </span>
+                )}
 
-                  {/* Label - only shown for active item */}
-                  <AnimatePresence>
-                    {isActive && (
-                      <motion.span 
-                        initial={{ opacity: 0, y: -2 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -2 }}
-                        className="text-[10px] font-semibold mt-1 text-[#4f7df3]"
-                      >
-                        {tab.label}
-                      </motion.span>
-                    )}
-                  </AnimatePresence>
-
-                  {/* Active indicator dot */}
+                {/* Animated label */}
+                <AnimatePresence>
                   {isActive && (
-                    <motion.div 
-                      layoutId="networkActiveIndicator"
-                      className="w-1 h-1 rounded-full bg-[#4f7df3] mt-0.5"
-                    />
+                    <motion.span
+                      variants={spanVariants}
+                      initial="initial"
+                      animate="animate"
+                      exit="exit"
+                      transition={transition}
+                      className="text-xs font-semibold whitespace-nowrap overflow-hidden"
+                    >
+                      {tab.label}
+                    </motion.span>
                   )}
-                </motion.div>
-              </button>
+                </AnimatePresence>
+              </motion.button>
               
               {/* FAB Button - rendered after center item */}
               {renderFabAfterThis && (
                 <motion.button
                   onClick={onAddNew}
-                  className="w-14 h-14 -mt-6 rounded-full bg-gradient-to-br from-[#22c55e] to-[#16a34a] text-white shadow-lg shadow-green-500/30 flex items-center justify-center hover:shadow-xl hover:shadow-green-500/40 transition-shadow"
+                  className="w-12 h-12 -mt-4 mx-1 rounded-full bg-gradient-to-br from-[#22c55e] to-[#16a34a] text-white shadow-lg shadow-green-500/30 flex items-center justify-center hover:shadow-xl hover:shadow-green-500/40 transition-shadow flex-shrink-0"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  <HugeiconsIcon icon={Add01Icon} className="w-7 h-7" strokeWidth={2} />
+                  <HugeiconsIcon icon={Add01Icon} className="w-6 h-6" strokeWidth={2} />
                 </motion.button>
               )}
             </div>
