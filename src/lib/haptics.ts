@@ -1,5 +1,3 @@
-import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
-
 /**
  * Types de patterns haptic disponibles
  */
@@ -26,6 +24,39 @@ const isNativeApp = (): boolean => {
 };
 
 /**
+ * Déclenche une vibration haptique native via Capacitor
+ * Import dynamique pour éviter les erreurs de build web
+ */
+const triggerNativeHaptic = async (pattern: HapticPattern): Promise<boolean> => {
+  try {
+    const { Haptics, ImpactStyle, NotificationType } = await import('@capacitor/haptics');
+    
+    switch (pattern) {
+      case 'light':
+        await Haptics.impact({ style: ImpactStyle.Light });
+        break;
+      case 'medium':
+        await Haptics.impact({ style: ImpactStyle.Medium });
+        break;
+      case 'success':
+        await Haptics.notification({ type: NotificationType.Success });
+        break;
+      case 'warning':
+        await Haptics.notification({ type: NotificationType.Warning });
+        break;
+      case 'error':
+        await Haptics.notification({ type: NotificationType.Error });
+        break;
+      default:
+        await Haptics.impact({ style: ImpactStyle.Light });
+    }
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+/**
  * Déclenche une vibration haptique
  * Utilise Capacitor Haptics sur iOS/Android natif, sinon navigator.vibrate
  * @param pattern - type de pattern: 'light' | 'medium' | 'success' | 'warning' | 'error'
@@ -33,35 +64,17 @@ const isNativeApp = (): boolean => {
 export const triggerHaptic = async (pattern: HapticPattern = 'light'): Promise<void> => {
   try {
     if (isNativeApp()) {
-      // Utiliser l'API native Capacitor
-      switch (pattern) {
-        case 'light':
-          await Haptics.impact({ style: ImpactStyle.Light });
-          break;
-        case 'medium':
-          await Haptics.impact({ style: ImpactStyle.Medium });
-          break;
-        case 'success':
-          await Haptics.notification({ type: NotificationType.Success });
-          break;
-        case 'warning':
-          await Haptics.notification({ type: NotificationType.Warning });
-          break;
-        case 'error':
-          await Haptics.notification({ type: NotificationType.Error });
-          break;
-        default:
-          await Haptics.impact({ style: ImpactStyle.Light });
-      }
-    } else {
-      // Fallback vers navigator.vibrate pour Android web
-      if (typeof navigator !== "undefined" && navigator.vibrate) {
-        const duration = hapticPatterns[pattern];
-        if (Array.isArray(duration)) {
-          navigator.vibrate([...duration]);
-        } else {
-          navigator.vibrate(duration);
-        }
+      const success = await triggerNativeHaptic(pattern);
+      if (success) return;
+    }
+    
+    // Fallback vers navigator.vibrate pour Android web
+    if (typeof navigator !== "undefined" && navigator.vibrate) {
+      const duration = hapticPatterns[pattern];
+      if (Array.isArray(duration)) {
+        navigator.vibrate([...duration]);
+      } else {
+        navigator.vibrate(duration);
       }
     }
   } catch (error) {
@@ -78,10 +91,18 @@ export const triggerHaptic = async (pattern: HapticPattern = 'light'): Promise<v
 export const triggerSelectionHaptic = async (): Promise<void> => {
   try {
     if (isNativeApp()) {
-      await Haptics.selectionStart();
-      await Haptics.selectionChanged();
-      await Haptics.selectionEnd();
-    } else if (typeof navigator !== "undefined" && navigator.vibrate) {
+      try {
+        const { Haptics } = await import('@capacitor/haptics');
+        await Haptics.selectionStart();
+        await Haptics.selectionChanged();
+        await Haptics.selectionEnd();
+        return;
+      } catch {
+        // Fallback to vibrate
+      }
+    }
+    
+    if (typeof navigator !== "undefined" && navigator.vibrate) {
       navigator.vibrate(5);
     }
   } catch {
