@@ -232,8 +232,8 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Bottom spacing for BottomNav */}
-        <div className="h-24" />
+        {/* Bottom spacing for BottomNav - reduced */}
+        <div className="h-4" />
       </div>
     </AppLayout>
   );

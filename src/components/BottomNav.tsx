@@ -155,12 +155,17 @@ const BottomNav = () => {
         )}
       </AnimatePresence>
       
-      {/* Floating navigation bar - Pill shape with glass-morphism */}
+      {/* Floating navigation bar - Pill shape with animated gradient border */}
       <div className="relative">
-        {/* Subtle top reflection */}
-        <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/20 to-transparent rounded-t-full pointer-events-none z-10" />
+        {/* Animated gradient border */}
+        <div 
+          className="absolute -inset-[1.5px] rounded-full bg-gradient-to-r from-[#4f7df3] via-[#a78bfa] via-[#f472b6] to-[#4f7df3] bg-[length:200%_200%] animate-gradient-border opacity-60"
+        />
         
-        <div className="relative flex items-center justify-center gap-0.5 h-12 px-2 bg-white/80 dark:bg-gray-900/80 backdrop-blur-2xl rounded-full shadow-xl shadow-black/15 border border-white/50 dark:border-white/10 overflow-hidden">
+        {/* Subtle top reflection */}
+        <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/30 to-transparent rounded-t-full pointer-events-none z-10" />
+        
+        <div className="relative flex items-center justify-center gap-0.5 h-12 px-2 bg-white/90 dark:bg-gray-900/90 backdrop-blur-2xl rounded-full shadow-xl shadow-black/10 overflow-hidden">
         {visibleItems.map(({ icon, label, path, badge, isBeta }) => {
           const isActive = location.pathname === path || 
             (path !== "/dashboard" && location.pathname.startsWith(path));
@@ -187,12 +192,14 @@ const BottomNav = () => {
                   : "text-[#6F7A95] hover:bg-muted/50"
               )}
             >
-              {/* Icon */}
-              <HugeiconsIcon 
-                icon={icon}
-                className="w-5 h-5 flex-shrink-0"
-                strokeWidth={isActive ? 2 : 1.5}
-              />
+              {/* Icon with bounce animation on tap */}
+              <motion.span whileTap={{ y: -2 }} transition={{ type: "spring", stiffness: 600, damping: 15 }}>
+                <HugeiconsIcon 
+                  icon={icon}
+                  className="w-5 h-5 flex-shrink-0"
+                  strokeWidth={isActive ? 2 : 1.5}
+                />
+              </motion.span>
               
               {/* Badge for unread messages */}
               {badge > 0 && (
