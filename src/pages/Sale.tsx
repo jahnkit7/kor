@@ -456,11 +456,11 @@ const Sale = () => {
                 <ChevronRight className="w-4 h-4 text-muted-foreground" />
               </button>
             </SheetTrigger>
-            <SheetContent side="bottom" className="h-[70vh]">
-              <SheetHeader>
+            <SheetContent side="bottom" className="h-[100dvh] rounded-t-none pb-[env(safe-area-inset-bottom)]">
+              <SheetHeader className="pt-[env(safe-area-inset-top)]">
                 <SheetTitle>Sélectionner un client</SheetTitle>
               </SheetHeader>
-              <ScrollArea className="mt-4 h-[calc(100%-5rem)]">
+              <ScrollArea className="mt-4 h-[calc(100%-10rem)]">
                 <div className="space-y-2 pr-2">
                   {clientsLoading ? (
                     <p className="text-center text-muted-foreground py-4">Chargement...</p>
@@ -494,11 +494,18 @@ const Sale = () => {
                   )}
                 </div>
               </ScrollArea>
-              <div className="pt-3">
-                <Button variant="outline" className="w-full" onClick={() => navigate("/clients/new")}>
-                  <User className="w-4 h-4 mr-2" />
+              <div className="pt-4 px-1">
+                <button 
+                  onClick={() => navigate("/clients/new")}
+                  className="w-full h-14 rounded-full flex items-center justify-center gap-2
+                    bg-gradient-to-r from-[#4f7df3] via-[#5b8af5] to-[#3b6ce8]
+                    text-white font-bold text-base tracking-wide uppercase
+                    shadow-lg shadow-blue-500/30 hover:shadow-xl
+                    active:scale-[0.98] transition-all"
+                >
+                  <User className="w-5 h-5" />
                   Nouveau client
-                </Button>
+                </button>
               </div>
             </SheetContent>
           </Sheet>
@@ -557,7 +564,7 @@ const NumpadButton = ({
 }) => (
   <button
     onClick={onClick}
-    className={`h-[clamp(3.25rem,14vw,4rem)] rounded-xl text-xl font-bold transition-all duration-150 active:scale-95 ${
+    className={`h-[clamp(3.5rem,16vw,4.5rem)] rounded-xl text-xl font-bold transition-all duration-150 active:scale-95 ${
       variant === "secondary"
         ? "bg-secondary text-secondary-foreground"
         : "bg-card text-foreground border border-border hover:bg-secondary"

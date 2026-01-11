@@ -310,14 +310,17 @@ export function ProductSelector({
       )}
 
       {/* Add custom product button */}
-      <Button
-        variant="outline"
+      <button 
         onClick={() => setShowAddDialog(true)}
-        className="w-full gap-2 h-12 text-base"
+        className="w-full h-14 rounded-full flex items-center justify-center gap-2
+          bg-gradient-to-r from-[#4f7df3] via-[#5b8af5] to-[#3b6ce8]
+          text-white font-bold text-base tracking-wide uppercase
+          shadow-lg shadow-blue-500/30 hover:shadow-xl
+          active:scale-[0.98] transition-all"
       >
         <Plus className="w-5 h-5" />
-        Ajouter un produit manuellement
-      </Button>
+        Ajouter un produit
+      </button>
 
       {/* Add custom product dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>

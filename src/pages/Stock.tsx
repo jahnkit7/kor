@@ -197,9 +197,12 @@ export default function Stock() {
             <RefreshCw className={`h-4 w-4 ${isManualSyncing || isSyncing ? 'animate-spin' : ''}`} />
           </Button>
           
-          <Button onClick={() => setIsAddSheetOpen(true)} className="gap-2">
+          <Button 
+            onClick={() => setIsAddSheetOpen(true)} 
+            size="icon"
+            className="shrink-0"
+          >
             <Plus className="h-4 w-4" />
-            Ajouter
           </Button>
         </div>
 
