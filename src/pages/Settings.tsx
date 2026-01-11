@@ -97,7 +97,7 @@ const Settings = () => {
   }
 
   return (
-    <AppLayout>
+    <>
       {/* Header */}
       <div className="bg-card px-4 pb-6 border-b border-border" style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)' }}>
         <div className="flex items-center justify-between mb-2">
@@ -497,7 +497,7 @@ const Settings = () => {
           CAISSE+ v1.0.0
         </p>
       </div>
-    </AppLayout>
+    </>
   );
 };
 

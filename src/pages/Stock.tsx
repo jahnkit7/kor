@@ -158,7 +158,7 @@ export default function Stock() {
 
   return (
     <FeatureGate featureKey="stock" showUpgradePrompt>
-    <AppLayout>
+    <>
       {/* Header */}
       <header className="sticky top-0 z-10 bg-gradient-to-b from-[#f8f9ff] to-white border-b" style={{ paddingTop: 'max(env(safe-area-inset-top), 0px)' }}>
         <div className="flex items-center gap-4 p-4">
@@ -382,7 +382,7 @@ export default function Stock() {
           return success;
         }}
       />
-    </AppLayout>
+    </>
     </FeatureGate>
   );
 }

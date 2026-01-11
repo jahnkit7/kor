@@ -14,7 +14,6 @@ import {
   Clock,
   TrendingUp
 } from "lucide-react";
-import AppLayout from "@/components/layout/AppLayout";
 import { ClientWarningBadge } from "@/components/ClientWarningBadge";
 import { WhatsAppShare } from "@/components/WhatsAppShare";
 import { useHiddenAmount } from "@/components/HideAmountsToggle";
@@ -89,7 +88,7 @@ const Debts = () => {
 
   if (loading) {
     return (
-      <AppLayout>
+      <>
         <div className="bg-gradient-to-b from-[#f8f9ff] to-white px-4 pb-6 border-b border-border" style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)' }}>
           <div className="flex items-center gap-4 mb-6">
             <Skeleton className="h-10 w-10 rounded-lg" />
@@ -102,13 +101,12 @@ const Debts = () => {
           <Skeleton className="h-4 w-32 mb-3" />
           <ListSkeleton count={5} variant="debt" />
         </div>
-      </AppLayout>
+      </>
     );
   }
 
   return (
-    <AppLayout>
-      <FeatureGate featureKey="debts" showUpgradePrompt>
+    <FeatureGate featureKey="debts" showUpgradePrompt>
       {/* Header */}
       <div className="bg-gradient-to-b from-[#f8f9ff] to-white px-4 pb-6 border-b border-border" style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)' }}>
         <div className="flex items-center gap-4 mb-6">
@@ -230,8 +228,7 @@ const Debts = () => {
           )}
         </div>
       </div>
-      </FeatureGate>
-    </AppLayout>
+    </FeatureGate>
   );
 };
 

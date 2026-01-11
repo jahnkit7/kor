@@ -195,6 +195,13 @@
     overflow-x: clip;
     overflow-y: auto;
     height: 100%;
+    /* Hide scrollbar */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  html::-webkit-scrollbar {
+    display: none;
   }
 
   body {
@@ -202,6 +209,13 @@
     overflow-x: clip;
     overflow-y: auto;
     min-height: 100%;
+    /* Hide scrollbar */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  body::-webkit-scrollbar {
+    display: none;
   }
 
   /* Big readable numbers */

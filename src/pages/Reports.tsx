@@ -49,7 +49,7 @@ const Reports = () => {
   // Access denied for employees
   if (!canViewReports) {
     return (
-      <AppLayout>
+      <>
         <div className="bg-card px-4 pt-4 pb-6 border-b border-border">
           <div className="flex items-center gap-4">
             <Button
@@ -72,7 +72,7 @@ const Reports = () => {
             Seul le propriétaire peut voir les rapports.
           </p>
         </div>
-      </AppLayout>
+      </>
     );
   }
 
@@ -93,7 +93,7 @@ const Reports = () => {
 
   return (
     <FeatureGate featureKey="reports" showUpgradePrompt>
-    <AppLayout>
+    <>
       {/* Header */}
       <div className="bg-gradient-to-b from-[#f8f9ff] to-white px-4 pb-6 border-b border-border" style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)' }}>
         <div className="flex items-center gap-4 mb-6">
@@ -227,7 +227,7 @@ const Reports = () => {
           Télécharger
         </PrimaryActionButton>
       </div>
-    </AppLayout>
+    </>
     </FeatureGate>
   );
 };

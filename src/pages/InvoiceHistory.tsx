@@ -130,7 +130,7 @@ export default function InvoiceHistory() {
   };
 
   return (
-    <AppLayout>
+    <>
       {/* Header */}
       <div className="bg-card px-4 pb-6 border-b border-border" style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)' }}>
         <div className="flex items-center justify-between mb-4">
@@ -344,6 +344,6 @@ export default function InvoiceHistory() {
           </div>
         </DialogContent>
       </Dialog>
-    </AppLayout>
+    </>
   );
 }
