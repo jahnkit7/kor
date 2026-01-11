@@ -21,6 +21,7 @@ import { usePlanGuard } from "@/contexts/PlanGuardContext";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { parseSalesLocally, setKnownStockItems, setLearnedCorrections } from "@/lib/local-sale-parser";
+import { debugEnforcement } from "@/lib/enforcement-debug";
 
 // Voice history storage key
 const VOICE_HISTORY_KEY = "voice_sale_history";
@@ -817,6 +818,14 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
     const salesCount = parsedSales.length;
     const check = await planGuard.checkCanAddSale(salesCount);
     if (!check.allowed) {
+      debugEnforcement({
+        action: "voiceMultiSale",
+        source: "VoiceSaleInput.handleConfirmAll",
+        reason: check.reason ?? "unknown",
+        currentCount: check.currentCount,
+        maxAllowed: check.maxAllowed,
+        attemptedCount: salesCount,
+      });
       const dialogType = check.reason === "no_data" ? "no_data" : "sales_multi";
       planGuard.showLimitDialog(dialogType, {
         currentCount: check.currentCount,
