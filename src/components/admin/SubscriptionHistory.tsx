@@ -36,7 +36,7 @@ interface SubscriptionWithProfile {
   max_clients: number | null;
   max_sales_per_day: number | null;
   created_at: string;
-  profiles: { shop_name: string; phone: string | null } | null;
+  profile?: { shop_name: string; phone: string | null };
 }
 
 export function SubscriptionHistory() {
@@ -47,16 +47,31 @@ export function SubscriptionHistory() {
   const { data: subscriptions, isLoading } = useQuery({
     queryKey: ["admin-subscription-history"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Fetch subscriptions
+      const { data: subs, error: subsError } = await supabase
         .from("subscriptions")
-        .select(`
-          *,
-          profiles!subscriptions_user_id_fkey (shop_name, phone)
-        `)
+        .select("*")
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
-      return data as unknown as SubscriptionWithProfile[];
+      if (subsError) throw subsError;
+      if (!subs || subs.length === 0) return [];
+
+      // Fetch profiles for all user_ids
+      const userIds = [...new Set(subs.map(s => s.user_id))];
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("user_id, shop_name, phone")
+        .in("user_id", userIds);
+
+      if (profilesError) throw profilesError;
+
+      // Map profiles to subscriptions
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+      
+      return subs.map(sub => ({
+        ...sub,
+        profile: profileMap.get(sub.user_id) || undefined,
+      })) as SubscriptionWithProfile[];
     },
   });
 
@@ -68,8 +83,8 @@ export function SubscriptionHistory() {
 
   const filteredSubscriptions = subscriptions?.filter((sub) => {
     const matchesSearch = 
-      sub.profiles?.shop_name?.toLowerCase().includes(search.toLowerCase()) ||
-      sub.profiles?.phone?.includes(search) ||
+      sub.profile?.shop_name?.toLowerCase().includes(search.toLowerCase()) ||
+      sub.profile?.phone?.includes(search) ||
       sub.plan.toLowerCase().includes(search.toLowerCase());
     
     const matchesPlan = filterPlan === "all" || sub.plan.toLowerCase() === filterPlan;
@@ -192,8 +207,8 @@ export function SubscriptionHistory() {
                       <TableRow key={sub.id}>
                         <TableCell>
                           <div>
-                            <p className="font-medium">{sub.profiles?.shop_name || "N/A"}</p>
-                            <p className="text-xs text-muted-foreground">{sub.profiles?.phone || "-"}</p>
+                            <p className="font-medium">{sub.profile?.shop_name || "N/A"}</p>
+                            <p className="text-xs text-muted-foreground">{sub.profile?.phone || "-"}</p>
                           </div>
                         </TableCell>
                         <TableCell>
