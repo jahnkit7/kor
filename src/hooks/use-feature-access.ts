@@ -27,7 +27,9 @@ export interface UserSubscription {
   is_active: boolean;
   trial_started_at: string;
   trial_ends_at: string;
+  trial_used_at: string | null;
   max_clients: number | null;
+  max_sales_per_day: number | null;
   created_at: string;
   updated_at: string;
 }

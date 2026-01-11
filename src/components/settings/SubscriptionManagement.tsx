@@ -82,10 +82,9 @@ export function SubscriptionManagement() {
   const [selectedPlan, setSelectedPlan] = useState<typeof plans[0] | null>(null);
   const [processing, setProcessing] = useState(false);
 
-  // Bug 3: Filter out gratuit plan if trial has been used
+  // Filter out gratuit plan if trial has been used
   const availablePlans = useMemo(() => {
     if (!subscription) return plans;
-    // @ts-expect-error trial_used_at may not be in type yet
     const trialUsed = subscription.trial_used_at;
     if (trialUsed) {
       return plans.filter(p => p.id !== "gratuit");
