@@ -18,6 +18,7 @@ import {
 import { useUserSubscription } from "@/hooks/use-feature-access";
 import { useSubscriptionPlans } from "@/hooks/use-subscription-plans";
 import { useAuth } from "@/hooks/use-auth";
+import { useSubscriptionUpgrade } from "@/hooks/use-subscription-upgrade";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { PaymentMethodDialog } from "@/components/payment/PaymentMethodDialog";
@@ -81,6 +82,8 @@ interface PlanUI {
   features: string[];
   color: string;
   popular: boolean;
+  max_clients?: number | null;
+  max_sales_per_day?: number | null;
 }
 
 export default function Subscriptions() {
@@ -93,6 +96,7 @@ export default function Subscriptions() {
   const { profile, refetch: refetchProfile } = useProfile();
   const { data: currentSubscription, isLoading: subLoading, refetch } = useUserSubscription();
   const { plans: dbPlans, loading: plansLoading } = useSubscriptionPlans();
+  const { applyPlanToSubscription } = useSubscriptionUpgrade();
   const { data: referralDiscount, refetch: refetchReferralDiscount } = useReferralDiscount();
   const [subscribing, setSubscribing] = useState<string | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
@@ -159,6 +163,8 @@ export default function Subscriptions() {
         features: displayInfo.displayFeatures,
         color: config.color,
         popular: config.popular,
+        max_clients: dbPlan.max_clients,
+        max_sales_per_day: dbPlan.max_sales_per_day,
       };
     });
   }, [dbPlans]);
@@ -190,23 +196,15 @@ export default function Subscriptions() {
     setSubscribing(plan.name);
 
     try {
-      const startDate = new Date().toISOString();
-      const endDate = new Date();
-      endDate.setDate(endDate.getDate() + plan.duration_days);
+      const success = await applyPlanToSubscription(user.id, {
+        id: plan.id,
+        name: plan.name,
+        duration_days: plan.duration_days,
+        max_clients: plan.max_clients,
+        max_sales_per_day: plan.max_sales_per_day,
+      });
 
-      const { error } = await supabase
-        .from("subscriptions")
-        .upsert({
-          user_id: user.id,
-          plan: plan.name.toLowerCase(),
-          is_active: true,
-          trial_started_at: startDate,
-          trial_ends_at: endDate.toISOString(),
-        }, {
-          onConflict: "user_id",
-        });
-
-      if (error) throw error;
+      if (!success) throw new Error("Failed to apply plan");
 
       toast.success(`Plan ${plan.name} activé pour ${plan.duration_days} jours ! 🎉`);
       setJustActivated(true);
@@ -224,23 +222,15 @@ export default function Subscriptions() {
     if (!user || !selectedPlan) return;
 
     try {
-      const startDate = new Date().toISOString();
-      const endDate = new Date();
-      endDate.setDate(endDate.getDate() + selectedPlan.duration_days);
+      const success = await applyPlanToSubscription(user.id, {
+        id: selectedPlan.id,
+        name: selectedPlan.name,
+        duration_days: selectedPlan.duration_days,
+        max_clients: selectedPlan.max_clients,
+        max_sales_per_day: selectedPlan.max_sales_per_day,
+      });
 
-      const { error } = await supabase
-        .from("subscriptions")
-        .upsert({
-          user_id: user.id,
-          plan: selectedPlan.name.toLowerCase(),
-          is_active: true,
-          trial_started_at: startDate,
-          trial_ends_at: endDate.toISOString(),
-        }, {
-          onConflict: "user_id",
-        });
-
-      if (error) throw error;
+      if (!success) throw new Error("Failed to apply plan");
 
       // Convert referral if user was referred
       if (referralDiscount) {
