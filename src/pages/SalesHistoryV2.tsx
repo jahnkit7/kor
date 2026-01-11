@@ -2,37 +2,35 @@ import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useFeatureTracking } from "@/hooks/use-feature-tracking";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft,
   Wallet,
   CreditCard,
   User,
-  Calendar,
   TrendingUp,
-  FileText,
+  ChevronRight,
   AlertTriangle,
   RefreshCw,
   WifiOff,
   SlidersHorizontal,
+  Receipt,
 } from "lucide-react";
 
 import { useHiddenAmount } from "@/components/HideAmountsToggle";
 import { useSalesReadonly, SaleReadonly } from "@/hooks/use-sales-readonly";
 import { InvoiceDialog } from "@/components/invoice/InvoiceDialog";
-import { Skeleton, StatsSkeleton, ListSkeleton } from "@/components/ui/loading-skeleton";
+import { Skeleton } from "@/components/ui/loading-skeleton";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useNetworkStatus } from "@/hooks/use-network-status";
 import { SalesFilters, SaleTypeFilter, DateRange } from "@/components/sales/SalesFilters";
 import {
   Collapsible,
   CollapsibleContent,
-  CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { cn } from "@/lib/utils";
 
 type Period = "day" | "week" | "month" | "all";
 
@@ -47,24 +45,35 @@ const safeParseDate = (dateStr: string | null | undefined): Date | null => {
   }
 };
 
-// Skeleton component for loading state
+// Modern Skeleton component
 const SalesHistorySkeleton = () => (
-  <>
-    <div className="bg-gradient-to-b from-muted/50 to-background px-4 pb-6 border-b border-border" style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)' }}>
-      <div className="flex items-center gap-4 mb-4">
-        <Skeleton className="h-10 w-10 rounded-lg" />
-        <Skeleton className="h-6 w-48" />
+  <div className="min-h-screen bg-background">
+    {/* Header skeleton */}
+    <div className="gradient-hero px-4 pb-8 pt-safe" style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)' }}>
+      <div className="flex items-center gap-3 mb-6">
+        <Skeleton className="h-10 w-10 rounded-xl bg-white/20" />
+        <Skeleton className="h-7 w-40 bg-white/20" />
       </div>
-      <Skeleton className="h-10 w-full rounded-lg" />
+      <div className="space-y-2 mb-6">
+        <Skeleton className="h-4 w-24 bg-white/20" />
+        <Skeleton className="h-12 w-48 bg-white/20" />
+      </div>
+      <div className="flex gap-3">
+        {[1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-16 flex-1 rounded-2xl bg-white/10" />
+        ))}
+      </div>
     </div>
-    <div className="p-4 space-y-4">
-      <StatsSkeleton />
-      <ListSkeleton count={5} variant="transaction" />
+    {/* List skeleton */}
+    <div className="p-4 -mt-4 space-y-3">
+      {[1, 2, 3, 4].map((i) => (
+        <Skeleton key={i} className="h-20 w-full rounded-2xl" />
+      ))}
     </div>
-  </>
+  </div>
 );
 
-// Error recovery UI component
+// Error recovery UI
 const ErrorRecoveryUI = ({ 
   error, 
   onRetry 
@@ -72,27 +81,146 @@ const ErrorRecoveryUI = ({
   error: Error | null; 
   onRetry: () => void;
 }) => (
-  <div className="flex flex-col items-center justify-center min-h-[50vh] p-6 text-center">
-    <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
-      <AlertTriangle className="w-8 h-8 text-destructive" />
+  <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 text-center">
+    <div className="w-20 h-20 rounded-full bg-destructive/10 flex items-center justify-center mb-6">
+      <AlertTriangle className="w-10 h-10 text-destructive" />
     </div>
-    <h2 className="text-lg font-semibold mb-2">Erreur de chargement</h2>
-    <p className="text-sm text-muted-foreground mb-4">
-      {error?.message || "Une erreur inattendue s'est produite"}
+    <h2 className="text-xl font-bold mb-2">Oups !</h2>
+    <p className="text-muted-foreground mb-6 max-w-xs">
+      {error?.message || "Impossible de charger vos ventes"}
     </p>
-    <Button onClick={onRetry} variant="outline" className="gap-2">
+    <Button onClick={onRetry} size="lg" className="gap-2 rounded-xl">
       <RefreshCw className="w-4 h-4" />
       Réessayer
     </Button>
   </div>
 );
 
-// Offline banner component
+// Offline banner
 const OfflineBanner = () => (
-  <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mx-4 mb-4 flex items-center gap-3">
-    <WifiOff className="w-5 h-5 text-amber-600 flex-shrink-0" />
-    <p className="text-sm text-amber-700">
-      Mode hors-ligne - Affichage des données locales
+  <div className="mx-4 mb-4 px-4 py-3 bg-muted/80 backdrop-blur-sm rounded-2xl flex items-center gap-3 border border-border">
+    <div className="w-8 h-8 rounded-full bg-muted-foreground/20 flex items-center justify-center">
+      <WifiOff className="w-4 h-4 text-muted-foreground" />
+    </div>
+    <p className="text-sm text-muted-foreground font-medium">
+      Mode hors-ligne
+    </p>
+  </div>
+);
+
+// Stat Card component
+const StatCard = ({ 
+  label, 
+  value, 
+  variant = "default" 
+}: { 
+  label: string; 
+  value: string; 
+  variant?: "cash" | "credit" | "default";
+}) => (
+  <div className={cn(
+    "flex-1 px-4 py-3 rounded-2xl backdrop-blur-sm transition-all",
+    variant === "cash" && "bg-white/15",
+    variant === "credit" && "bg-white/15",
+    variant === "default" && "bg-white/10"
+  )}>
+    <p className="text-xs text-white/70 mb-1 font-medium">{label}</p>
+    <p className={cn(
+      "text-base font-bold",
+      variant === "cash" && "text-white",
+      variant === "credit" && "text-white",
+      variant === "default" && "text-white"
+    )}>
+      {value}
+    </p>
+  </div>
+);
+
+// Sale Item component - modern card design
+const SaleItem = ({ 
+  sale, 
+  formatMoney, 
+  formatTime, 
+  onClick 
+}: { 
+  sale: SaleReadonly;
+  formatMoney: (amount: number) => string;
+  formatTime: (dateString: string) => string;
+  onClick: () => void;
+}) => (
+  <button
+    onClick={onClick}
+    className="w-full bg-card rounded-2xl p-4 shadow-card border border-border/50 
+               flex items-center gap-4 transition-all duration-200
+               hover:shadow-md hover:border-primary/20 hover:scale-[1.01]
+               active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-primary/20"
+  >
+    {/* Icon */}
+    <div className={cn(
+      "w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0",
+      sale.type === "cash" 
+        ? "bg-gradient-to-br from-cash to-cash/80" 
+        : "bg-gradient-to-br from-credit to-credit/80"
+    )}>
+      {sale.type === "cash" ? (
+        <Wallet className="w-5 h-5 text-white" />
+      ) : (
+        <CreditCard className="w-5 h-5 text-white" />
+      )}
+    </div>
+
+    {/* Content */}
+    <div className="flex-1 min-w-0 text-left">
+      <div className="flex items-center gap-2 mb-1">
+        <span className="font-semibold text-foreground">
+          {formatMoney(sale.amount)} CFA
+        </span>
+        <Badge 
+          variant="secondary"
+          className={cn(
+            "text-xs font-medium px-2 py-0.5",
+            sale.type === "cash" 
+              ? "bg-cash/10 text-cash border-0" 
+              : "bg-credit/10 text-credit border-0"
+          )}
+        >
+          {sale.type === "cash" ? "Cash" : "Crédit"}
+        </Badge>
+      </div>
+      
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        {sale.client_name ? (
+          <>
+            <User className="w-3.5 h-3.5" />
+            <span className="truncate">{sale.client_name}</span>
+            <span>•</span>
+          </>
+        ) : null}
+        <span>{formatTime(sale.created_at)}</span>
+      </div>
+      
+      {sale.note && (
+        <p className="text-xs text-muted-foreground truncate mt-1">
+          {sale.note}
+        </p>
+      )}
+    </div>
+
+    {/* Arrow */}
+    <ChevronRight className="w-5 h-5 text-muted-foreground/50 flex-shrink-0" />
+  </button>
+);
+
+// Empty state
+const EmptyState = ({ period }: { period: string }) => (
+  <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+    <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-6">
+      <Receipt className="w-10 h-10 text-muted-foreground" />
+    </div>
+    <h3 className="text-lg font-semibold mb-2">Aucune vente</h3>
+    <p className="text-muted-foreground text-sm max-w-xs">
+      Vous n'avez pas encore de vente {period.toLowerCase()}. 
+      Commencez à vendre pour voir apparaître vos transactions ici.
     </p>
   </div>
 );
@@ -107,21 +235,18 @@ const SalesHistoryContent = () => {
   const [selectedSale, setSelectedSale] = useState<SaleReadonly | null>(null);
   const [showInvoice, setShowInvoice] = useState(false);
   
-  // New filter states
   const [showFilters, setShowFilters] = useState(false);
   const [typeFilter, setTypeFilter] = useState<SaleTypeFilter>("all");
   const [dateRange, setDateRange] = useState<DateRange>({ from: undefined, to: undefined });
 
-  // Track page view
   useEffect(() => {
     try {
       trackFeature("sales_history", { action: "page_view" });
     } catch {
-      // Ignore tracking errors
+      // Ignore
     }
   }, [trackFeature]);
 
-  // Count active filters
   const activeFiltersCount = useMemo(() => {
     let count = 0;
     if (typeFilter !== "all") count++;
@@ -134,11 +259,9 @@ const SalesHistoryContent = () => {
     setDateRange({ from: undefined, to: undefined });
   };
 
-  // Filter sales by period, type, and date range
   const filteredSales = useMemo(() => {
     let filtered = [...sales];
 
-    // Apply period filter (if no custom date range)
     if (!dateRange.from && !dateRange.to) {
       const now = new Date();
       let startDate: Date | null = null;
@@ -166,7 +289,6 @@ const SalesHistoryContent = () => {
         });
       }
     } else {
-      // Apply custom date range
       filtered = filtered.filter((s) => {
         const saleDate = safeParseDate(s.created_at);
         if (!saleDate) return false;
@@ -181,7 +303,6 @@ const SalesHistoryContent = () => {
       });
     }
 
-    // Apply type filter
     if (typeFilter !== "all") {
       filtered = filtered.filter((s) => s.type === typeFilter);
     }
@@ -189,7 +310,6 @@ const SalesHistoryContent = () => {
     return filtered;
   }, [sales, period, typeFilter, dateRange]);
 
-  // Calculate stats for filtered sales
   const stats = useMemo(() => {
     const total = filteredSales.reduce((sum, s) => sum + (s.amount || 0), 0);
     const cash = filteredSales
@@ -203,18 +323,12 @@ const SalesHistoryContent = () => {
     return { total, cash, credit, count };
   }, [filteredSales]);
 
-  // Group sales by date with safe parsing
   const groupedSales = useMemo(() => {
     const groups: Record<string, typeof filteredSales> = {};
 
     filteredSales.forEach((sale) => {
       const saleDate = safeParseDate(sale.created_at);
-      if (!saleDate) {
-        if (import.meta.env.DEV) {
-          console.warn("[SalesHistoryV2] Skipping invalid date:", sale.id, sale.created_at);
-        }
-        return;
-      }
+      if (!saleDate) return;
 
       try {
         const dateKey = saleDate.toLocaleDateString("fr-FR", {
@@ -227,7 +341,7 @@ const SalesHistoryContent = () => {
         }
         groups[dateKey].push(sale);
       } catch {
-        // Skip if formatting fails
+        // Skip
       }
     });
 
@@ -251,65 +365,125 @@ const SalesHistoryContent = () => {
     day: "Aujourd'hui",
     week: "Cette semaine",
     month: "Ce mois",
-    all: "Tout",
+    all: "Historique complet",
   };
 
-  // Show error state
   if (error) {
     return <ErrorRecoveryUI error={error} onRetry={refetch} />;
   }
 
-  // Show loading skeleton
   if (loading) {
     return <SalesHistorySkeleton />;
   }
 
   return (
-    <>
-      {/* Header */}
-      <div className="bg-gradient-to-b from-muted/50 to-background px-4 pb-4 border-b border-border" style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)' }}>
-        <div className="flex items-center gap-4 mb-4">
+    <div className="min-h-screen bg-background pb-24">
+      {/* Hero Header with gradient */}
+      <div 
+        className="gradient-hero px-4 pb-8 relative overflow-hidden"
+        style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)' }}
+      >
+        {/* Decorative circles */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+        
+        {/* Navigation */}
+        <div className="flex items-center justify-between mb-6 relative z-10">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate("/dashboard")}
+            className="text-white hover:bg-white/10 rounded-xl h-10 w-10"
           >
-            <ArrowLeft className="w-6 h-6 text-foreground" />
+            <ArrowLeft className="w-5 h-5" />
           </Button>
-          <h1 className="text-xl font-bold text-foreground flex-1">Historique des ventes</h1>
+          
+          <h1 className="text-lg font-bold text-white">Ventes</h1>
+          
           <Button
-            variant={showFilters || activeFiltersCount > 0 ? "default" : "outline"}
+            variant="ghost"
             size="icon"
             onClick={() => setShowFilters(!showFilters)}
-            className="relative"
+            className={cn(
+              "text-white rounded-xl h-10 w-10 relative",
+              showFilters || activeFiltersCount > 0 
+                ? "bg-white/20" 
+                : "hover:bg-white/10"
+            )}
           >
             <SlidersHorizontal className="w-5 h-5" />
             {activeFiltersCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center">
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-accent text-accent-foreground text-xs font-bold rounded-full flex items-center justify-center">
                 {activeFiltersCount}
               </span>
             )}
           </Button>
         </div>
 
-        {/* Period Tabs */}
-        <Tabs value={dateRange.from || dateRange.to ? "custom" : period} onValueChange={(v) => {
-          if (v !== "custom") {
-            setPeriod(v as Period);
-            setDateRange({ from: undefined, to: undefined });
-          }
-        }}>
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="day" disabled={!!(dateRange.from || dateRange.to)}>Jour</TabsTrigger>
-            <TabsTrigger value="week" disabled={!!(dateRange.from || dateRange.to)}>Semaine</TabsTrigger>
-            <TabsTrigger value="month" disabled={!!(dateRange.from || dateRange.to)}>Mois</TabsTrigger>
-            <TabsTrigger value="all" disabled={!!(dateRange.from || dateRange.to)}>Tout</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        {/* Stats */}
+        <div className="relative z-10 mb-6">
+          <p className="text-white/70 text-sm font-medium mb-1">
+            {dateRange.from || dateRange.to ? "Période personnalisée" : periodLabels[period]}
+          </p>
+          <p className="text-4xl font-extrabold text-white tracking-tight">
+            {formatMoney(stats.total)}
+            {!hideAmounts && <span className="text-xl ml-2 font-semibold opacity-80">CFA</span>}
+          </p>
+        </div>
 
-        {/* Collapsible Filters */}
-        <Collapsible open={showFilters} onOpenChange={setShowFilters}>
-          <CollapsibleContent className="pt-4">
+        {/* Mini stats */}
+        <div className="flex gap-3 relative z-10">
+          <StatCard 
+            label="Cash" 
+            value={`${formatMoney(stats.cash)} CFA`} 
+            variant="cash" 
+          />
+          <StatCard 
+            label="Crédit" 
+            value={`${formatMoney(stats.credit)} CFA`} 
+            variant="credit" 
+          />
+          <StatCard 
+            label="Transactions" 
+            value={stats.count.toString()} 
+            variant="default" 
+          />
+        </div>
+      </div>
+
+      {/* Period Tabs - Floating */}
+      <div className="px-4 -mt-4 mb-4 relative z-20">
+        <div className="bg-card rounded-2xl p-1.5 shadow-card border border-border/50">
+          <Tabs 
+            value={dateRange.from || dateRange.to ? "custom" : period} 
+            onValueChange={(v) => {
+              if (v !== "custom") {
+                setPeriod(v as Period);
+                setDateRange({ from: undefined, to: undefined });
+              }
+            }}
+          >
+            <TabsList className="grid w-full grid-cols-4 h-10 bg-transparent gap-1">
+              {(["day", "week", "month", "all"] as Period[]).map((p) => (
+                <TabsTrigger 
+                  key={p}
+                  value={p} 
+                  disabled={!!(dateRange.from || dateRange.to)}
+                  className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground 
+                             data-[state=active]:shadow-sm text-sm font-medium"
+                >
+                  {p === "day" ? "Jour" : p === "week" ? "Semaine" : p === "month" ? "Mois" : "Tout"}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        </div>
+      </div>
+
+      {/* Collapsible Filters */}
+      <Collapsible open={showFilters} onOpenChange={setShowFilters}>
+        <CollapsibleContent className="px-4 pb-4">
+          <div className="bg-card rounded-2xl p-4 border border-border/50 shadow-card">
             <SalesFilters
               typeFilter={typeFilter}
               onTypeFilterChange={setTypeFilter}
@@ -318,170 +492,69 @@ const SalesHistoryContent = () => {
               activeFiltersCount={activeFiltersCount}
               onClearFilters={clearFilters}
             />
-          </CollapsibleContent>
-        </Collapsible>
-      </div>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
 
       {/* Offline Banner */}
       {!isOnline && <OfflineBanner />}
 
-      {/* Stats Summary */}
-      <div className="p-4">
-        <Card className="bg-gradient-to-br from-primary/10 to-primary/5">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Calendar className="w-4 h-4 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">
-                {dateRange.from || dateRange.to ? "Période personnalisée" : periodLabels[period]}
-                {typeFilter !== "all" && ` • ${typeFilter === "cash" ? "Cash" : "Crédit"}`}
-              </p>
-            </div>
-            <p className="text-2xl font-bold mb-3">
-              {formatMoney(stats.total)} {!hideAmounts && "CFA"}
-            </p>
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <p className="text-xs text-muted-foreground">Cash</p>
-                <p className="text-sm font-semibold text-cash">
-                  {formatMoney(stats.cash)}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Crédit</p>
-                <p className="text-sm font-semibold text-credit">
-                  {formatMoney(stats.credit)}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Ventes</p>
-                <p className="text-sm font-semibold">{stats.count}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Sales List */}
-      <div className="px-4">
-        <ScrollArea className="h-[calc(100vh-340px)]">
-          <div className="space-y-6 pr-2 pb-4">
-            {Object.keys(groupedSales).length === 0 ? (
-              <div className="text-center py-12">
-                <TrendingUp className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">
-                  Aucune vente {periodLabels[period].toLowerCase()}
-                </p>
-              </div>
-            ) : (
-              Object.entries(groupedSales).map(([date, daySales]) => (
-                <div key={date}>
-                  <div className="flex items-center gap-3 mb-3">
-                    <p className="text-sm font-semibold text-muted-foreground capitalize">
-                      {date}
-                    </p>
-                    <Separator className="flex-1" />
-                    <p className="text-xs text-muted-foreground">
-                      {daySales.length} vente{daySales.length > 1 ? "s" : ""}
-                    </p>
-                  </div>
-
-                  <div className="space-y-3">
-                    {daySales.map((sale) => (
-                      <Card 
-                        key={sale.id} 
-                        className="animate-fade-in cursor-pointer hover:bg-accent/50 transition-colors group"
-                        onClick={() => {
-                          setSelectedSale(sale);
-                          setShowInvoice(true);
-                        }}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-4">
-                            <div
-                              className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                                sale.type === "cash"
-                                  ? "bg-cash/10 text-cash"
-                                  : "bg-credit/10 text-credit"
-                              }`}
-                            >
-                              {sale.type === "cash" ? (
-                                <Wallet className="w-5 h-5" />
-                              ) : (
-                                <CreditCard className="w-5 h-5" />
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <Badge
-                                  variant="outline"
-                                  className={
-                                    sale.type === "cash"
-                                      ? "border-cash text-cash"
-                                      : "border-credit text-credit"
-                                  }
-                                >
-                                  {sale.type === "cash" ? "Cash" : "Crédit"}
-                                </Badge>
-                                {sale.client_name && (
-                                  <span className="text-sm text-muted-foreground flex items-center gap-1">
-                                    <User className="w-3 h-3" />
-                                    {sale.client_name}
-                                  </span>
-                                )}
-                              </div>
-                              {sale.note && (
-                                <p className="text-sm text-muted-foreground truncate">
-                                  {sale.note}
-                                </p>
-                              )}
-                              <p className="text-xs text-muted-foreground">
-                                {formatTime(sale.created_at)}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <p
-                                className={`text-lg font-bold ${
-                                  sale.type === "credit"
-                                    ? "text-credit"
-                                    : "text-foreground"
-                                }`}
-                              >
-                                {formatMoney(sale.amount)} CFA
-                              </p>
-                              <FileText className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
+      <ScrollArea className="h-[calc(100vh-380px)]">
+        <div className="px-4 space-y-6 pb-4">
+          {Object.keys(groupedSales).length === 0 ? (
+            <EmptyState period={periodLabels[period]} />
+          ) : (
+            Object.entries(groupedSales).map(([date, daySales]) => (
+              <div key={date} className="animate-fade-in">
+                {/* Date header */}
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-foreground capitalize">
+                    {date}
+                  </h3>
+                  <span className="text-xs text-muted-foreground bg-muted px-2.5 py-1 rounded-full font-medium">
+                    {daySales.length} vente{daySales.length > 1 ? "s" : ""}
+                  </span>
                 </div>
-              ))
-            )}
-          </div>
-        </ScrollArea>
-      </div>
 
-      {/* Invoice Dialog - cast to compatible type */}
+                {/* Sales cards */}
+                <div className="space-y-3">
+                  {daySales.map((sale) => (
+                    <SaleItem
+                      key={sale.id}
+                      sale={sale}
+                      formatMoney={formatMoney}
+                      formatTime={formatTime}
+                      onClick={() => {
+                        setSelectedSale(sale);
+                        setShowInvoice(true);
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </ScrollArea>
+
+      {/* Invoice Dialog */}
       <InvoiceDialog
         open={showInvoice}
         onOpenChange={setShowInvoice}
         sale={selectedSale as any}
       />
-    </>
+    </div>
   );
 };
 
-// Main component wrapped in ErrorBoundary
 const SalesHistoryV2 = () => {
   const [mounted, setMounted] = useState(false);
 
-  // Ensure component is mounted before rendering content
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Show skeleton during initial mount
   if (!mounted) {
     return <SalesHistorySkeleton />;
   }
