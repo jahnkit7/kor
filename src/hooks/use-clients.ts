@@ -5,6 +5,7 @@ import { isSupabaseConfigured, getSupabaseClient } from "@/lib/supabase";
 import * as localDB from "@/lib/db";
 import { toast } from "sonner";
 import { usePlanLimits } from "./use-plan-limits";
+import { debugEnforcement } from "@/lib/enforcement-debug";
 
 export interface Client {
   id: string;
@@ -136,6 +137,13 @@ export function useClients(): ClientsState {
     // ========== STRICT ENFORCEMENT (via usePlanLimits - always executed) ==========
     const check = await planLimits.checkCanAddClient();
     if (!check.allowed) {
+      debugEnforcement({
+        action: "addClient",
+        source: "useClients.addClient",
+        reason: check.reason ?? "unknown",
+        currentCount: check.currentCount,
+        maxAllowed: check.maxAllowed,
+      });
       // Toast feedback (UI component can show dialog separately)
       const message = check.reason === "no_data" 
         ? "Connexion requise pour vérifier votre plan"

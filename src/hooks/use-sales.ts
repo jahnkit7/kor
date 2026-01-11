@@ -6,6 +6,7 @@ import * as localDB from "@/lib/db";
 import { toast } from "sonner";
 import { withTimeout } from "@/lib/promise-utils";
 import { usePlanLimits } from "./use-plan-limits";
+import { debugEnforcement } from "@/lib/enforcement-debug";
 
 export interface Sale {
   id: string;
@@ -145,6 +146,11 @@ export function useSales(): SalesState {
     // Check subscription validity first
     const subCheck = planLimits.checkSubscriptionValid();
     if (!subCheck.allowed) {
+      debugEnforcement({
+        action: "addSale",
+        source: "useSales.addSale",
+        reason: subCheck.reason ?? "unknown",
+      });
       const message = subCheck.reason === "expired"
         ? "Votre période d'essai est terminée. Passez à un plan supérieur."
         : "Connexion requise pour vérifier votre plan";
@@ -155,6 +161,13 @@ export function useSales(): SalesState {
     // Check daily sales limit
     const salesCheck = await planLimits.checkCanAddSale(1);
     if (!salesCheck.allowed) {
+      debugEnforcement({
+        action: "addSale",
+        source: "useSales.addSale",
+        reason: salesCheck.reason ?? "unknown",
+        currentCount: salesCheck.currentCount,
+        maxAllowed: salesCheck.maxAllowed,
+      });
       const message = salesCheck.reason === "no_data"
         ? "Connexion requise pour vérifier votre plan"
         : `Limite quotidienne atteinte (${salesCheck.currentCount}/${salesCheck.maxAllowed})`;
