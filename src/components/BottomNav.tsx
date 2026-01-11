@@ -114,8 +114,7 @@ const BottomNav = () => {
       initial={{ y: 100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ type: "spring", bounce: 0.3, duration: 0.6, delay: 0.1 }}
-      className="fixed bottom-4 left-4 right-4 z-50"
-      style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
+      className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50"
     >
       {/* Sync status bar - shown when pending items exist */}
       <AnimatePresence>
@@ -156,8 +155,12 @@ const BottomNav = () => {
         )}
       </AnimatePresence>
       
-      {/* Floating navigation bar */}
-      <div className="flex items-center justify-center gap-1 h-14 px-3 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-2xl shadow-lg shadow-black/10 border border-gray-100 dark:border-gray-800">
+      {/* Floating navigation bar - Pill shape with glass-morphism */}
+      <div className="relative">
+        {/* Subtle top reflection */}
+        <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/20 to-transparent rounded-t-full pointer-events-none z-10" />
+        
+        <div className="relative flex items-center justify-center gap-0.5 h-12 px-2 bg-white/80 dark:bg-gray-900/80 backdrop-blur-2xl rounded-full shadow-xl shadow-black/15 border border-white/50 dark:border-white/10 overflow-hidden">
         {visibleItems.map(({ icon, label, path, badge, isBeta }) => {
           const isActive = location.pathname === path || 
             (path !== "/dashboard" && location.pathname.startsWith(path));
@@ -237,6 +240,7 @@ const BottomNav = () => {
             </motion.button>
           );
         })}
+        </div>
       </div>
     </motion.nav>
   );
