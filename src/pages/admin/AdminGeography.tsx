@@ -1,4 +1,4 @@
-import { AdminLayout } from "@/components/admin/AdminLayout";
+// AdminLayout is now provided by AdminProtectedLayout
 import { useAdminCountries, useAdminRegions } from "@/hooks/use-admin-stats";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -29,8 +29,7 @@ export default function AdminGeography() {
   };
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Géographie</h1>
           <p className="text-muted-foreground">Gérez les pays et régions disponibles</p>
@@ -69,6 +68,5 @@ export default function AdminGeography() {
           </div>
         )}
       </div>
-    </AdminLayout>
   );
 }

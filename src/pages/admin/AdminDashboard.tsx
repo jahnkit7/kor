@@ -1,4 +1,4 @@
-import { AdminLayout } from "@/components/admin/AdminLayout";
+// AdminLayout is now provided by AdminProtectedLayout
 import { BentoCard, BentoCardHeader, BentoCardValue } from "@/components/admin/BentoCard";
 import { BentoGrid } from "@/components/admin/BentoGrid";
 import { useAdminStats } from "@/hooks/use-admin-stats";
@@ -87,8 +87,7 @@ export default function AdminDashboard() {
   };
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -271,6 +270,5 @@ export default function AdminDashboard() {
           </div>
         </BentoCard>
       </div>
-    </AdminLayout>
   );
 }

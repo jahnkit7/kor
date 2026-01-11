@@ -82,7 +82,7 @@ function StatCard({
   );
 }
 
-import { AdminLayout } from "@/components/admin/AdminLayout";
+// AdminLayout is now provided by AdminProtectedLayout
 
 export default function AdminFinancials() {
   const { data: financialStats, isLoading: statsLoading } = useFinancialStats();
@@ -94,7 +94,6 @@ export default function AdminFinancials() {
   const { data: referralStats } = useAdminReferralStats();
 
   return (
-    <AdminLayout>
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Tableau de Bord Financier</h1>
@@ -442,6 +441,5 @@ export default function AdminFinancials() {
         </TabsContent>
       </Tabs>
     </div>
-    </AdminLayout>
   );
 }

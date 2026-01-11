@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AdminLayout } from "@/components/admin/AdminLayout";
+// AdminLayout is now provided by AdminProtectedLayout
 import { BentoCard, BentoCardHeader, BentoCardValue } from "@/components/admin/BentoCard";
 import { BentoGrid } from "@/components/admin/BentoGrid";
 import { 
@@ -234,8 +234,7 @@ export default function AdminCommissions() {
     : 0;
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -775,6 +774,5 @@ export default function AdminCommissions() {
           </TabsContent>
         </Tabs>
       </div>
-    </AdminLayout>
   );
 }

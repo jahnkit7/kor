@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AdminLayout } from "@/components/admin/AdminLayout";
+// AdminLayout is now provided by AdminProtectedLayout
 import { useAdminPlans, useAdminFeatureFlags } from "@/hooks/use-admin-stats";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -230,8 +230,7 @@ export default function AdminSubscriptions() {
   };
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -488,6 +487,5 @@ export default function AdminSubscriptions() {
           </div>
         )}
       </div>
-    </AdminLayout>
   );
 }

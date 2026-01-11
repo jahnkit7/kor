@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { AdminLayout } from "@/components/admin/AdminLayout";
+// AdminLayout is now provided by AdminProtectedLayout
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -194,7 +194,7 @@ export default function AdminSyncDiagnostic() {
   }).length || 0;
 
   return (
-    <AdminLayout>
+    <>
       {/* Page Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Diagnostic Sync</h1>
@@ -398,6 +398,6 @@ export default function AdminSyncDiagnostic() {
           </CardContent>
         </Card>
       </div>
-    </AdminLayout>
+    </>
   );
 }

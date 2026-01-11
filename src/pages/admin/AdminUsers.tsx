@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AdminLayout } from "@/components/admin/AdminLayout";
+// AdminLayout is now provided by AdminProtectedLayout
 import { useAdminUsers } from "@/hooks/use-admin-stats";
 import { useSubscriptionPlans } from "@/hooks/use-subscription-plans";
 import { Input } from "@/components/ui/input";
@@ -160,8 +160,7 @@ export default function AdminUsers() {
   };
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
@@ -496,6 +495,5 @@ export default function AdminUsers() {
           </DialogContent>
         </Dialog>
       </div>
-    </AdminLayout>
   );
 }

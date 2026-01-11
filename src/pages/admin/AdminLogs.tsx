@@ -1,4 +1,4 @@
-import { AdminLayout } from "@/components/admin/AdminLayout";
+// AdminLayout is now provided by AdminProtectedLayout
 import { useAdminLogs } from "@/hooks/use-admin-stats";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,8 +11,7 @@ export default function AdminLogs() {
   const { data: logs, isLoading } = useAdminLogs();
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Logs</h1>
           <p className="text-muted-foreground">Historique des actions administratives</p>
@@ -55,6 +54,5 @@ export default function AdminLogs() {
           </CardContent>
         </Card>
       </div>
-    </AdminLayout>
   );
 }

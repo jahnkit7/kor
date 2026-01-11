@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AdminLayout } from "@/components/admin/AdminLayout";
+// AdminLayout is now provided by AdminProtectedLayout
 import { useAdminCodes, useAdminPlans } from "@/hooks/use-admin-stats";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -113,8 +113,7 @@ export default function AdminCodes() {
   const availableCount = codes?.filter((c) => !c.is_used).length || 0;
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
@@ -316,6 +315,5 @@ export default function AdminCodes() {
           </CardContent>
         </Card>
       </div>
-    </AdminLayout>
   );
 }

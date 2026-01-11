@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { AdminLayout } from "@/components/admin/AdminLayout";
+// AdminLayout is now provided by AdminProtectedLayout
 import {
   Plus,
   Ticket,
@@ -53,11 +53,7 @@ function generateRandomCode(): string {
 }
 
 export default function AdminPromoCodes() {
-  return (
-    <AdminLayout>
-      <AdminPromoCodesContent />
-    </AdminLayout>
-  );
+  return <AdminPromoCodesContent />;
 }
 
 function AdminPromoCodesContent() {

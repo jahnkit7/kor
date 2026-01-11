@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { AdminLayout } from "@/components/admin/AdminLayout";
+// AdminLayout is now provided by AdminProtectedLayout
 import { BentoGrid } from "@/components/admin/BentoGrid";
 import { BentoCard } from "@/components/admin/BentoCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -268,23 +268,20 @@ export default function AdminNotifications() {
 
   if (isLoading) {
     return (
-      <AdminLayout>
-        <div className="space-y-6">
-          <Skeleton className="h-8 w-64" />
-          <div className="grid grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <Skeleton key={i} className="h-28" />
-            ))}
-          </div>
-          <Skeleton className="h-96" />
+      <div className="space-y-6">
+        <Skeleton className="h-8 w-64" />
+        <div className="grid grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-28" />
+          ))}
         </div>
-      </AdminLayout>
+        <Skeleton className="h-96" />
+      </div>
     );
   }
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -582,6 +579,5 @@ export default function AdminNotifications() {
           </CardContent>
         </Card>
       </div>
-    </AdminLayout>
   );
 }

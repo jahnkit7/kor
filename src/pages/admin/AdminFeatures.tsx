@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { AdminLayout } from "@/components/admin/AdminLayout";
+// AdminLayout is now provided by AdminProtectedLayout
 import { useAdminFeatureFlags } from "@/hooks/use-admin-stats";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -328,8 +328,7 @@ export default function AdminFeatures() {
   };
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div>
           <h1 className="text-2xl font-bold text-foreground">Fonctionnalités</h1>
@@ -454,6 +453,5 @@ export default function AdminFeatures() {
           </TabsContent>
         </Tabs>
       </div>
-    </AdminLayout>
   );
 }

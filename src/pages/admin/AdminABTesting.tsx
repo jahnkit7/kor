@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AdminLayout } from "@/components/admin/AdminLayout";
+// AdminLayout is now provided by AdminProtectedLayout
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,8 +50,7 @@ export default function AdminABTesting() {
   const betaFeatures = (features as any[] || []).filter((f: any) => f.is_beta);
   
   return (
-    <AdminLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -110,7 +109,6 @@ export default function AdminABTesting() {
           featureKey={selectedFeature}
         />
       </div>
-    </AdminLayout>
   );
 }
 

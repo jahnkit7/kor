@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AdminLayout } from "@/components/admin/AdminLayout";
+// AdminLayout is now provided by AdminProtectedLayout
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -291,9 +291,5 @@ function AdminReferralsContent() {
 }
 
 export default function AdminReferrals() {
-  return (
-    <AdminLayout>
-      <AdminReferralsContent />
-    </AdminLayout>
-  );
+  return <AdminReferralsContent />;
 }
