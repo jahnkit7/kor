@@ -174,15 +174,15 @@ export function ProductSelector({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {/* Search bar */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
         <Input
           placeholder="Rechercher un produit..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9"
+          className="pl-10 h-12 text-base"
         />
       </div>
 
@@ -312,11 +312,10 @@ export function ProductSelector({
       {/* Add custom product button */}
       <Button
         variant="outline"
-        size="sm"
         onClick={() => setShowAddDialog(true)}
-        className="w-full gap-2"
+        className="w-full gap-2 h-12 text-base"
       >
-        <Plus className="w-4 h-4" />
+        <Plus className="w-5 h-5" />
         Ajouter un produit manuellement
       </Button>
 
