@@ -19,7 +19,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { 
   Plus, 
@@ -37,9 +36,15 @@ import {
   Mic,
   Brain,
   UserCog,
-  QrCode
+  QrCode,
+  History,
+  AlertTriangle,
+  Store
 } from "lucide-react";
 import { PrepaidCodesTab } from "@/components/admin/PrepaidCodesTab";
+import { SubscriptionHistory } from "@/components/admin/SubscriptionHistory";
+import { SubscriptionDiagnostic } from "@/components/admin/SubscriptionDiagnostic";
+import { AdminResellersContent } from "@/components/admin/AdminResellersContent";
 
 const featureIcons: Record<string, React.ReactNode> = {
   sales: <ShoppingCart className="w-4 h-4" />,
@@ -235,14 +240,26 @@ export default function AdminSubscriptions() {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="plans" className="w-full">
-        <TabsList className="w-full max-w-md">
-          <TabsTrigger value="plans" className="flex-1">
-            <CreditCard className="w-4 h-4 mr-2" />
+        <TabsList className="w-full max-w-2xl grid grid-cols-5">
+          <TabsTrigger value="plans" className="text-xs">
+            <CreditCard className="w-4 h-4 mr-1" />
             Plans
           </TabsTrigger>
-          <TabsTrigger value="codes" className="flex-1">
-            <QrCode className="w-4 h-4 mr-2" />
-            Codes Prépayés
+          <TabsTrigger value="codes" className="text-xs">
+            <QrCode className="w-4 h-4 mr-1" />
+            Codes
+          </TabsTrigger>
+          <TabsTrigger value="history" className="text-xs">
+            <History className="w-4 h-4 mr-1" />
+            Historique
+          </TabsTrigger>
+          <TabsTrigger value="diagnostic" className="text-xs">
+            <AlertTriangle className="w-4 h-4 mr-1" />
+            Diagnostic
+          </TabsTrigger>
+          <TabsTrigger value="resellers" className="text-xs">
+            <Store className="w-4 h-4 mr-1" />
+            Revendeurs
           </TabsTrigger>
         </TabsList>
 
@@ -506,6 +523,18 @@ export default function AdminSubscriptions() {
 
         <TabsContent value="codes" className="mt-6">
           <PrepaidCodesTab />
+        </TabsContent>
+
+        <TabsContent value="history" className="mt-6">
+          <SubscriptionHistory />
+        </TabsContent>
+
+        <TabsContent value="diagnostic" className="mt-6">
+          <SubscriptionDiagnostic />
+        </TabsContent>
+
+        <TabsContent value="resellers" className="mt-6">
+          <AdminResellersContent />
         </TabsContent>
       </Tabs>
     </div>

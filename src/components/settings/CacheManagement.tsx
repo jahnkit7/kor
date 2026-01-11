@@ -12,17 +12,41 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Database, RefreshCw, Trash2, CloudDownload, Loader2 } from "lucide-react";
+import { Database, RefreshCw, Trash2, CloudDownload, Loader2, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import { useOffline } from "@/contexts/OfflineContext";
 import { useAuth } from "@/hooks/use-auth";
 import { pullFromCloud } from "@/lib/supabase-sync";
+import { useEnsureSubscription } from "@/hooks/use-ensure-subscription";
+import { useQueryClient } from "@tanstack/react-query";
 
 export function CacheManagement() {
   const [isClearing, setIsClearing] = useState(false);
   const [isResyncing, setIsResyncing] = useState(false);
+  const [isRefreshingSubscription, setIsRefreshingSubscription] = useState(false);
   const { performSync, pendingCount } = useOffline();
   const { user } = useAuth();
+  const { refreshSubscriptionCache } = useEnsureSubscription();
+  const queryClient = useQueryClient();
+
+  const handleRefreshSubscription = async () => {
+    if (!user?.id) {
+      toast.error("Vous devez être connecté");
+      return;
+    }
+
+    setIsRefreshingSubscription(true);
+    try {
+      await refreshSubscriptionCache(user.id);
+      await queryClient.invalidateQueries({ queryKey: ["user-subscription"] });
+      toast.success("Abonnement actualisé avec succès");
+    } catch (error) {
+      console.error("Subscription refresh error:", error);
+      toast.error("Erreur lors de l'actualisation");
+    } finally {
+      setIsRefreshingSubscription(false);
+    }
+  };
 
   const handleClearCache = async () => {
     if (!user?.id) {
@@ -110,12 +134,27 @@ export function CacheManagement() {
           </div>
         </div>
 
+        {/* Refresh Subscription Button */}
+        <Button
+          variant="outline"
+          className="w-full justify-start"
+          onClick={handleRefreshSubscription}
+          disabled={isRefreshingSubscription || isClearing || isResyncing}
+        >
+          {isRefreshingSubscription ? (
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          ) : (
+            <CreditCard className="w-4 h-4 mr-2" />
+          )}
+          Rafraîchir l'abonnement
+        </Button>
+
         {/* Force Sync Button */}
         <Button
           variant="outline"
           className="w-full justify-start"
           onClick={handleForceSync}
-          disabled={isResyncing || isClearing}
+          disabled={isResyncing || isClearing || isRefreshingSubscription}
         >
           {isResyncing ? (
             <Loader2 className="w-4 h-4 mr-2 animate-spin" />

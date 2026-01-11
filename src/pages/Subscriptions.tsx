@@ -144,7 +144,7 @@ export default function Subscriptions() {
   }, [user, urlRefCode, profile?.referred_by, queryClient, refetchProfile, refetchReferralDiscount]);
 
   // Mapper les plans de la base de données avec la configuration UI
-  const plans: PlanUI[] = useMemo(() => {
+  const allPlans: PlanUI[] = useMemo(() => {
     return dbPlans.map((dbPlan) => {
       const planKey = dbPlan.name.toLowerCase();
       const config = planConfig[planKey] || { icon: Zap, color: "secondary", popular: false };
@@ -168,6 +168,14 @@ export default function Subscriptions() {
       };
     });
   }, [dbPlans]);
+
+  // Filter out Gratuit plan if user already used their trial
+  const plans: PlanUI[] = useMemo(() => {
+    if (currentSubscription?.trial_used_at) {
+      return allPlans.filter(p => p.name.toLowerCase() !== 'gratuit');
+    }
+    return allPlans;
+  }, [allPlans, currentSubscription?.trial_used_at]);
 
   // Calculate discounted price for a plan
   const getDiscountedPrice = (price: number) => {
