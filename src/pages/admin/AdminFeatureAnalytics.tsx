@@ -1,4 +1,4 @@
-import { AdminLayout } from "@/components/admin/AdminLayout";
+// AdminLayout is now provided by AdminProtectedLayout
 import { BentoGrid } from "@/components/admin/BentoGrid";
 import { BentoCard } from "@/components/admin/BentoCard";
 import { useFeatureAnalytics } from "@/hooks/use-feature-analytics";
@@ -72,8 +72,7 @@ export default function AdminFeatureAnalytics() {
 
   if (isLoading) {
     return (
-      <AdminLayout>
-        <div className="space-y-6">
+      <div className="space-y-6">
           <Skeleton className="h-10 w-64" />
           <BentoGrid columns={4}>
             {[...Array(8)].map((_, i) => (
@@ -81,13 +80,11 @@ export default function AdminFeatureAnalytics() {
             ))}
           </BentoGrid>
         </div>
-      </AdminLayout>
     );
   }
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div>
           <h1 className="text-2xl font-bold text-foreground">
@@ -322,6 +319,5 @@ export default function AdminFeatureAnalytics() {
           </div>
         </div>
       </div>
-    </AdminLayout>
   );
 }

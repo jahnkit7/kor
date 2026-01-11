@@ -1,4 +1,4 @@
-import { AdminLayout } from "@/components/admin/AdminLayout";
+// AdminLayout is now provided by AdminProtectedLayout
 import { useAdminTickets } from "@/hooks/use-admin-stats";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -20,8 +20,7 @@ export default function AdminSupport() {
   };
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Support</h1>
           <p className="text-muted-foreground">Gérez les tickets de support</p>
@@ -65,6 +64,5 @@ export default function AdminSupport() {
           </Card>
         )}
       </div>
-    </AdminLayout>
   );
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { AdminLayout } from "@/components/admin/AdminLayout";
+// AdminLayout is now provided by AdminProtectedLayout
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -951,8 +951,7 @@ export default function AdminSetup() {
   ];
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Configuration Initiale</h1>
@@ -1174,6 +1173,5 @@ export default function AdminSetup() {
           </CardContent>
         </Card>
       </div>
-    </AdminLayout>
   );
 }

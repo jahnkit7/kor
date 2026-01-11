@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AdminLayout } from "@/components/admin/AdminLayout";
+// AdminLayout is now provided by AdminProtectedLayout
 import { 
   useRoadmapItems, 
   useCreateRoadmapItem, 
@@ -172,8 +172,7 @@ export default function AdminRoadmap() {
   };
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -420,6 +419,5 @@ export default function AdminRoadmap() {
           </div>
         )}
       </div>
-    </AdminLayout>
   );
 }

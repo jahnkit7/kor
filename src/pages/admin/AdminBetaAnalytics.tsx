@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { AdminLayout } from "@/components/admin/AdminLayout";
+// AdminLayout is now provided by AdminProtectedLayout
 import { BentoGrid } from "@/components/admin/BentoGrid";
 import { BentoCard } from "@/components/admin/BentoCard";
 import { useFeatureAnalytics } from "@/hooks/use-feature-analytics";
@@ -58,25 +58,22 @@ export default function AdminBetaAnalytics() {
 
   if (isLoading) {
     return (
-      <AdminLayout>
-        <div className="space-y-6">
-          <Skeleton className="h-10 w-64" />
-          <BentoGrid columns={4}>
-            {[...Array(4)].map((_, i) => (
-              <Skeleton key={i} className="h-32 rounded-2xl" />
-            ))}
-          </BentoGrid>
-          <Skeleton className="h-64 rounded-2xl" />
-        </div>
-      </AdminLayout>
+      <div className="space-y-6">
+        <Skeleton className="h-10 w-64" />
+        <BentoGrid columns={4}>
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-32 rounded-2xl" />
+          ))}
+        </BentoGrid>
+        <Skeleton className="h-64 rounded-2xl" />
+      </div>
     );
   }
 
   const maxBetaUsage = analytics?.betaFeatureStats?.[0]?.total_uses || 1;
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 flex items-center justify-center">
@@ -454,6 +451,5 @@ export default function AdminBetaAnalytics() {
           )}
         </div>
       </div>
-    </AdminLayout>
   );
 }
