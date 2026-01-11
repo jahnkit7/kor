@@ -1,7 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
-import AppLayout from "@/components/layout/AppLayout";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { ReferralSection } from "@/components/settings/ReferralSection";
 
@@ -9,7 +8,7 @@ const Referrals = () => {
   const navigate = useNavigate();
 
   return (
-    <AppLayout>
+    <>
       {/* Header */}
       <div className="bg-card px-4 pb-6 border-b border-border" style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)' }}>
         <div className="flex items-center justify-between mb-2">
@@ -31,7 +30,7 @@ const Referrals = () => {
       <div className="p-4">
         <ReferralSection />
       </div>
-    </AppLayout>
+    </>
   );
 };
 

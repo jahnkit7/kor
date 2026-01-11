@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { RequireProfile } from "@/components/RequireProfile";
@@ -10,17 +11,29 @@ import { PageTransition } from "./PageTransition";
  * - BottomNav stays mounted (no flicker on navigation)
  * - Only the page content animates in/out
  * - Auth/subscription guards wrap the entire layout
+ * - Scroll resets on every route change
  * 
  * NOTE: Admin redirection is handled by AdminLayout, not here.
  * This prevents redirection conflicts and flickering.
  */
 export function ProtectedLayout() {
   const location = useLocation();
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Reset scroll on route change
+  useEffect(() => {
+    // Reset container scroll
+    if (containerRef.current) {
+      containerRef.current.scrollTo(0, 0);
+    }
+    // Also reset window scroll
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
 
   return (
     <RequireProfile>
       <RequireSubscription>
-        <AppLayout>
+        <AppLayout ref={containerRef}>
           <AnimatePresence mode="popLayout" initial={false}>
             <PageTransition key={location.pathname}>
               <Outlet />

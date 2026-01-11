@@ -111,7 +111,7 @@ const SalesHistory = () => {
 
   if (loading) {
     return (
-      <AppLayout>
+      <>
         <div className="bg-gradient-to-b from-[#f8f9ff] to-white px-4 pb-6 border-b border-border" style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)' }}>
           <div className="flex items-center gap-4 mb-4">
             <Skeleton className="h-10 w-10 rounded-lg" />
@@ -123,12 +123,12 @@ const SalesHistory = () => {
           <StatsSkeleton />
           <ListSkeleton count={5} variant="transaction" />
         </div>
-      </AppLayout>
+      </>
     );
   }
 
   return (
-    <AppLayout>
+    <>
       <FeatureGate featureKey="sales" showUpgradePrompt>
       {/* Header */}
       <div className="bg-gradient-to-b from-[#f8f9ff] to-white px-4 pb-6 border-b border-border" style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)' }}>
@@ -295,7 +295,7 @@ const SalesHistory = () => {
         onOpenChange={setShowInvoice}
         sale={selectedSale}
       />
-    </AppLayout>
+    </>
   );
 };
 

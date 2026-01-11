@@ -16,7 +16,6 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { Skeleton, ListSkeleton } from "@/components/ui/loading-skeleton";
-import AppLayout from "@/components/layout/AppLayout";
 import { ClientWarningBadge } from "@/components/ClientWarningBadge";
 import { useHiddenAmount } from "@/components/HideAmountsToggle";
 import { useClients } from "@/hooks/use-clients";
@@ -167,7 +166,7 @@ const ClientDetail = () => {
 
   if (isLoading) {
     return (
-      <AppLayout>
+      <>
         <div className="bg-gradient-to-b from-[#f8f9ff] to-white px-4 pb-6 border-b border-border" style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)' }}>
           <div className="flex items-center gap-4 mb-4">
             <Skeleton className="h-10 w-10 rounded-lg" />
@@ -189,28 +188,26 @@ const ClientDetail = () => {
           <Skeleton className="h-10 w-full rounded-lg mb-4" />
           <ListSkeleton count={4} variant="transaction" />
         </div>
-      </AppLayout>
+      </>
     );
   }
 
   if (!client) {
     return (
-      <AppLayout>
-        <div className="p-4">
-          <Button variant="ghost" onClick={() => navigate("/clients")}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Retour
-          </Button>
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">Client non trouvé</p>
-          </div>
+      <div className="p-4">
+        <Button variant="ghost" onClick={() => navigate("/clients")}>
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Retour
+        </Button>
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">Client non trouvé</p>
         </div>
-      </AppLayout>
+      </div>
     );
   }
 
   return (
-    <AppLayout>
+    <>
       {/* Header */}
       <div className="bg-gradient-to-b from-[#f8f9ff] to-white px-4 pb-6 border-b border-border" style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)' }}>
         <div className="flex items-center gap-4 mb-4">
@@ -366,7 +363,7 @@ const ClientDetail = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </AppLayout>
+    </>
   );
 };
 
