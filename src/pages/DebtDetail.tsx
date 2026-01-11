@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { AnimatedCard } from "@/components/ui/animated-card";
+import { PrimaryActionButton } from "@/components/ui/primary-action-button";
 import { 
   ArrowLeft, 
   User, 
@@ -297,7 +299,7 @@ const DebtDetail = () => {
         ) : (
           <div className="space-y-3">
             {history.map((item, index) => (
-              <Card key={item.id} className="animate-fade-in" style={{ animationDelay: `${index * 50}ms` }}>
+              <AnimatedCard key={item.id} delay={index}>
                 <CardContent className="p-4">
                   <div className="flex items-center gap-4">
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
@@ -320,7 +322,7 @@ const DebtDetail = () => {
                     </p>
                   </div>
                 </CardContent>
-              </Card>
+              </AnimatedCard>
             ))}
           </div>
         )}

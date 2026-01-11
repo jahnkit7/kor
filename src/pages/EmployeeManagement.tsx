@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PrimaryActionButton } from "@/components/ui/primary-action-button";
+import { AnimatedCard } from "@/components/ui/animated-card";
 import { 
   ArrowLeft, 
   UserPlus,
@@ -171,15 +173,12 @@ ${inviteLink}
 
       <div className="p-4 space-y-6">
         {/* Add Button */}
-        <Button
-          variant="action"
-          size="lg"
-          className="w-full"
+        <PrimaryActionButton
           onClick={() => setShowAddModal(true)}
         >
-          <UserPlus className="w-5 h-5 mr-2" />
+          <UserPlus className="w-5 h-5" />
           Inviter un employé
-        </Button>
+        </PrimaryActionButton>
 
         {/* Info Card */}
         <Card className="bg-primary/5 border-primary/20">
@@ -207,7 +206,7 @@ ${inviteLink}
             </p>
             <div className="space-y-3">
               {pendingInvites.map((invite, index) => (
-                <Card key={invite.id} className="animate-fade-in" style={{ animationDelay: `${index * 50}ms` }}>
+                <AnimatedCard key={invite.id} delay={index}>
                   <CardContent className="p-4">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center">
@@ -229,7 +228,7 @@ ${inviteLink}
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => openWhatsApp(invite.employee_phone, invite.invite_code)}
+                          onClick={(e) => { e.stopPropagation(); openWhatsApp(invite.employee_phone, invite.invite_code); }}
                           className="text-success hover:text-success hover:bg-success/10"
                           title="Renvoyer via WhatsApp"
                         >
@@ -238,7 +237,7 @@ ${inviteLink}
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => cancelInvite(invite.id)}
+                          onClick={(e) => { e.stopPropagation(); cancelInvite(invite.id); }}
                           className="text-destructive hover:text-destructive hover:bg-destructive/10"
                         >
                           <Trash2 className="w-5 h-5" />
@@ -246,7 +245,7 @@ ${inviteLink}
                       </div>
                     </div>
                   </CardContent>
-                </Card>
+                </AnimatedCard>
               ))}
             </div>
           </div>
@@ -260,7 +259,7 @@ ${inviteLink}
             </p>
             <div className="space-y-3">
               {pastInvites.map((invite, index) => (
-                <Card key={invite.id} className="animate-fade-in opacity-70" style={{ animationDelay: `${index * 50}ms` }}>
+                <AnimatedCard key={invite.id} delay={index} className="opacity-70">
                   <CardContent className="p-4">
                     <div className="flex items-center gap-4">
                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
@@ -283,14 +282,14 @@ ${inviteLink}
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => cancelInvite(invite.id)}
+                        onClick={(e) => { e.stopPropagation(); cancelInvite(invite.id); }}
                         className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                       >
                         <Trash2 className="w-5 h-5" />
                       </Button>
                     </div>
                   </CardContent>
-                </Card>
+                </AnimatedCard>
               ))}
             </div>
           </div>
