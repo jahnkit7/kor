@@ -1,8 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "./use-auth";
 import { isSupabaseConfigured, getSupabaseClient } from "@/lib/supabase";
 
 type AppRole = "owner" | "employee" | "admin" | null;
+
+// Cache key for role in sessionStorage
+const ROLE_CACHE_KEY = "user_role_cache_";
 
 interface RoleState {
   role: AppRole;
@@ -12,9 +15,32 @@ interface RoleState {
   isAdmin: boolean;
 }
 
+// Get cached role from sessionStorage
+function getCachedRole(userId: string): AppRole | null {
+  if (typeof window === 'undefined') return null;
+  const cached = sessionStorage.getItem(`${ROLE_CACHE_KEY}${userId}`);
+  if (cached === "admin" || cached === "owner" || cached === "employee") {
+    return cached;
+  }
+  return null;
+}
+
+// Set role in sessionStorage cache
+function setCachedRole(userId: string, role: AppRole): void {
+  if (typeof window === 'undefined' || !role) return;
+  sessionStorage.setItem(`${ROLE_CACHE_KEY}${userId}`, role);
+}
+
 export function useRole(): RoleState {
   const { user, loading: authLoading } = useAuth();
-  const [role, setRole] = useState<AppRole>(null);
+  
+  // Initialize with cached role if available
+  const [role, setRole] = useState<AppRole>(() => {
+    if (user?.id) {
+      return getCachedRole(user.id);
+    }
+    return null;
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -30,8 +56,17 @@ export function useRole(): RoleState {
       return;
     }
 
+    // Check cache first - if we have a cached role, use it immediately
+    const cachedRole = getCachedRole(user.id);
+    if (cachedRole) {
+      setRole(cachedRole);
+      setLoading(false);
+      // Still fetch in background to verify cache is valid
+    }
+
     if (!isSupabaseConfigured()) {
       setRole("owner");
+      setCachedRole(user.id, "owner");
       setLoading(false);
       return;
     }
@@ -47,13 +82,19 @@ export function useRole(): RoleState {
 
         if (error) {
           console.error("Error fetching role:", error);
-          setRole("owner"); // Default to owner if error
+          const fallback = cachedRole || "owner";
+          setRole(fallback);
+          setCachedRole(user.id, fallback);
         } else {
-          setRole(data?.role || "owner");
+          const fetchedRole = data?.role || "owner";
+          setRole(fetchedRole);
+          setCachedRole(user.id, fetchedRole);
         }
       } catch (error) {
         console.error("Error fetching role:", error);
-        setRole("owner");
+        const fallback = cachedRole || "owner";
+        setRole(fallback);
+        setCachedRole(user.id, fallback);
       } finally {
         setLoading(false);
       }
@@ -62,9 +103,13 @@ export function useRole(): RoleState {
     fetchRole();
   }, [user, authLoading]);
 
+  // Determine if still loading - use cache to avoid loading state
+  const hasCache = user?.id ? !!getCachedRole(user.id) : false;
+  const isStillLoading = loading && !hasCache;
+
   return {
-    role: role ?? "owner", // Return "owner" if null for compatibility
-    loading: loading || role === null, // Still loading if role is null
+    role: role ?? "owner",
+    loading: isStillLoading,
     isOwner: role === "owner" || role === null,
     isEmployee: role === "employee",
     isAdmin: role === "admin",
