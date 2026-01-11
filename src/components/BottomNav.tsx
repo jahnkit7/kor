@@ -114,8 +114,9 @@ const BottomNav = () => {
       initial={{ y: 100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ type: "spring", bounce: 0.3, duration: 0.6, delay: 0.1 }}
-      className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50"
+      className="fixed bottom-4 left-0 right-0 z-50 flex justify-center pointer-events-none"
     >
+      <div className="pointer-events-auto">
       {/* Sync status bar - shown when pending items exist */}
       <AnimatePresence>
         {pendingCount > 0 && (
@@ -248,6 +249,7 @@ const BottomNav = () => {
           );
         })}
         </div>
+      </div>
       </div>
     </motion.nav>
   );

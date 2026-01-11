@@ -19,7 +19,7 @@ interface AppLayoutProps {
 const AppLayout = ({ children, showBottomNav = true, className = "" }: AppLayoutProps) => {
   return (
     <div 
-      className={`min-h-screen min-h-[100dvh] bg-gradient-to-b from-[#f8f9ff] via-white to-[#f8f9ff] overflow-x-hidden ${className}`}
+      className={`min-h-screen min-h-[100dvh] bg-gradient-to-b from-[#f8f9ff] via-white to-[#f8f9ff] ${className}`}
       style={{
         // Minimal padding for floating nav (48px height + 16px bottom gap + 8px extra)
         paddingBottom: showBottomNav ? '72px' : '0',
