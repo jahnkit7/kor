@@ -5,6 +5,7 @@ import { isSupabaseConfigured, getSupabaseClient } from "@/lib/supabase";
 import * as localDB from "@/lib/db";
 import { toast } from "sonner";
 import { withTimeout } from "@/lib/promise-utils";
+import { usePlanGuard } from "@/contexts/PlanGuardContext";
 
 export interface Sale {
   id: string;
@@ -49,6 +50,14 @@ export function useSales(): SalesState {
   const { isOnline } = useNetworkStatus();
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Plan guard for enforcement
+  let planGuard: ReturnType<typeof usePlanGuard> | null = null;
+  try {
+    planGuard = usePlanGuard();
+  } catch {
+    // PlanGuardProvider not available yet (during initial render)
+  }
 
   const fetchSales = useCallback(async () => {
     try {
@@ -137,6 +146,29 @@ export function useSales(): SalesState {
   }): Promise<Sale | null> => {
     if (!user) return null;
 
+    // ========== STRICT ENFORCEMENT ==========
+    if (planGuard) {
+      // Check subscription validity first
+      const subCheck = planGuard.checkSubscriptionValid();
+      if (!subCheck.allowed) {
+        planGuard.showLimitDialog(subCheck.reason === "expired" ? "expired" : "no_data");
+        return null;
+      }
+      
+      // Check daily sales limit
+      const salesCheck = await planGuard.checkCanAddSale(1);
+      if (!salesCheck.allowed) {
+        const dialogType = salesCheck.reason === "no_data" ? "no_data" : "sales";
+        planGuard.showLimitDialog(dialogType, {
+          currentCount: salesCheck.currentCount,
+          maxAllowed: salesCheck.maxAllowed,
+        });
+        // BLOCKED - no local write
+        return null;
+      }
+    }
+    // =========================================
+
     try {
       // 1. Save locally first (works offline)
       const localSale = await localDB.addSale({
@@ -184,6 +216,9 @@ export function useSales(): SalesState {
       };
       setSales(prev => [newSale, ...prev]);
       toast.success(saleData.type === "cash" ? "Vente cash ajoutée" : "Vente crédit ajoutée");
+      
+      // Invalidate counts cache after successful creation
+      planGuard?.invalidateCountsCache();
 
       // 3. If online, try to sync immediately
       if (isOnline && isSupabaseConfigured()) {
@@ -269,7 +304,7 @@ export function useSales(): SalesState {
       toast.error("Erreur lors de l'ajout de la vente");
       return null;
     }
-  }, [user, isOnline]);
+  }, [user, isOnline, planGuard]);
 
   const deleteSale = useCallback(async (id: string) => {
     if (!user) return;

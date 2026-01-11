@@ -1679,6 +1679,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           max_clients: number | null
+          max_sales_per_day: number | null
           plan: string
           trial_ends_at: string
           trial_started_at: string
@@ -1690,6 +1691,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           max_clients?: number | null
+          max_sales_per_day?: number | null
           plan?: string
           trial_ends_at?: string
           trial_started_at?: string
@@ -1701,6 +1703,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           max_clients?: number | null
+          max_sales_per_day?: number | null
           plan?: string
           trial_ends_at?: string
           trial_started_at?: string

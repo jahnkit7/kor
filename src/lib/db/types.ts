@@ -21,6 +21,7 @@ export interface Sale {
   client_name?: string;
   user_id?: string;
   createdAt: string;
+  createdAtLocalDay: string;  // "YYYY-MM-DD" in local timezone for daily limit checks
   synced: boolean;
 }
 

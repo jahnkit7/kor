@@ -108,6 +108,10 @@ export async function pullFromCloud(userId: string): Promise<void> {
 
   if (sales) {
     for (const sale of sales) {
+      // Derive local day from created_at for existing cloud records
+      const createdDate = new Date(sale.created_at);
+      const localDay = `${createdDate.getFullYear()}-${String(createdDate.getMonth() + 1).padStart(2, "0")}-${String(createdDate.getDate()).padStart(2, "0")}`;
+      
       const localSale: Sale = {
         id: sale.id,
         type: sale.type as "cash" | "credit",
@@ -115,6 +119,7 @@ export async function pullFromCloud(userId: string): Promise<void> {
         note: sale.note || undefined,
         clientId: sale.client_id || undefined,
         createdAt: sale.created_at,
+        createdAtLocalDay: localDay,
         synced: true,
       };
       await db.put("sales", localSale);

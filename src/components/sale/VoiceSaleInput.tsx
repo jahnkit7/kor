@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useNetworkStatus } from "@/hooks/use-network-status";
 import { useFeatureTracking } from "@/hooks/use-feature-tracking";
 import { useTranscriptionLearning } from "@/hooks/use-transcription-learning";
+import { usePlanGuard } from "@/contexts/PlanGuardContext";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { parseSalesLocally, setKnownStockItems, setLearnedCorrections } from "@/lib/local-sale-parser";
@@ -115,6 +116,14 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
   const { isOnline } = useNetworkStatus();
   const { trackFeature } = useFeatureTracking();
   const { saveCorrection, applyCorrections, corrections } = useTranscriptionLearning();
+  
+  // Plan guard for multi-sale limit check
+  let planGuard: ReturnType<typeof usePlanGuard> | null = null;
+  try {
+    planGuard = usePlanGuard();
+  } catch {
+    // PlanGuardProvider not available
+  }
 
   // Track voice input usage
   useEffect(() => {
@@ -809,6 +818,22 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
   };
 
   const handleConfirmAll = async () => {
+    // ========== STRICT ENFORCEMENT FOR MULTI-SALES ==========
+    if (planGuard) {
+      const salesCount = parsedSales.length;
+      const check = await planGuard.checkCanAddSale(salesCount);
+      if (!check.allowed) {
+        const dialogType = check.reason === "no_data" ? "no_data" : "sales_multi";
+        planGuard.showLimitDialog(dialogType, {
+          currentCount: check.currentCount,
+          maxAllowed: check.maxAllowed,
+          attemptedCount: salesCount,
+        });
+        return; // BLOCKED
+      }
+    }
+    // =========================================================
+    
     setStep("saving");
     setIsSubmitting(true);
 

@@ -4,6 +4,7 @@ import { useNetworkStatus } from "./use-network-status";
 import { isSupabaseConfigured, getSupabaseClient } from "@/lib/supabase";
 import * as localDB from "@/lib/db";
 import { toast } from "sonner";
+import { usePlanGuard } from "@/contexts/PlanGuardContext";
 
 export interface Client {
   id: string;
@@ -36,6 +37,14 @@ export function useClients(): ClientsState {
   const { isOnline } = useNetworkStatus();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Plan guard for enforcement
+  let planGuard: ReturnType<typeof usePlanGuard> | null = null;
+  try {
+    planGuard = usePlanGuard();
+  } catch {
+    // PlanGuardProvider not available yet (during initial render)
+  }
 
   const fetchClients = useCallback(async () => {
     try {
@@ -129,6 +138,24 @@ export function useClients(): ClientsState {
   const addClient = useCallback(async (clientData: { name: string; phone: string }): Promise<Client | null> => {
     if (!user) return null;
 
+    // ========== STRICT ENFORCEMENT ==========
+    if (planGuard) {
+      const check = await planGuard.checkCanAddClient();
+      if (!check.allowed) {
+        // Show appropriate dialog based on reason
+        const dialogType = check.reason === "expired" ? "expired" 
+          : check.reason === "no_data" ? "no_data" 
+          : "clients";
+        planGuard.showLimitDialog(dialogType, {
+          currentCount: check.currentCount,
+          maxAllowed: check.maxAllowed,
+        });
+        // BLOCKED - no local write
+        return null;
+      }
+    }
+    // =========================================
+
     try {
       // 1. Save locally first
       const localClient = await localDB.addClient({
@@ -152,6 +179,9 @@ export function useClients(): ClientsState {
       };
       setClients(prev => [newClient, ...prev]);
       toast.success("Client ajouté");
+      
+      // Invalidate counts cache after successful creation
+      planGuard?.invalidateCountsCache();
 
       // 3. If online, sync immediately
       if (isOnline && isSupabaseConfigured()) {
@@ -181,7 +211,7 @@ export function useClients(): ClientsState {
       toast.error("Erreur lors de l'ajout du client");
       return null;
     }
-  }, [user, isOnline]);
+  }, [user, isOnline, planGuard]);
 
   const quickCreateClient = useCallback(async (name: string): Promise<Client | null> => {
     return addClient({ name: name.trim(), phone: "" });
