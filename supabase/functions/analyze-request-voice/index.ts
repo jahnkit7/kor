@@ -15,9 +15,9 @@ serve(async (req) => {
     const { transcript } = await req.json();
     
     if (!transcript) {
-      console.error('No transcript provided');
+      console.error('Transcription vocale requise');
       return new Response(
-        JSON.stringify({ error: 'No transcript provided' }), 
+        JSON.stringify({ error: 'Transcription vocale requise' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -72,13 +72,13 @@ Exemples:
       console.error('AI API error:', response.status, errorText);
       return new Response(
         JSON.stringify({ 
-          error: 'AI service error',
+          error: 'Erreur du service d\'analyse IA',
           product_name: '',
           quantity: null,
           unit: null,
           max_price: null,
           notes: null 
-        }), 
+        }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -134,7 +134,7 @@ Exemples:
 
   } catch (error) {
     console.error('Error in analyze-request-voice:', error);
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    const message = error instanceof Error ? error.message : 'Erreur inconnue';
     return new Response(
       JSON.stringify({ 
         error: message,
