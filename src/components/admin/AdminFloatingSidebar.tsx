@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { 
   LayoutDashboard, 
@@ -19,15 +20,34 @@ import {
   Database,
   User,
   LogOut,
-  Store
+  Store,
+  Settings2,
+  RotateCcw
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useProfile } from "@/hooks/use-profile";
+import { useAdminLayout } from "@/hooks/use-admin-layout";
+import { DraggableNavItem } from "./DraggableNavItem";
 import KorLogo from "@/assets/logo-kor.svg";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 
-const modules = [
+const allModules = [
   { to: "/admin", icon: LayoutDashboard, label: "Dashboard", exact: true },
   { to: "/admin/financials", icon: TrendingUp, label: "Finances" },
   { to: "/admin/users", icon: Users, label: "Utilisateurs" },
@@ -36,7 +56,7 @@ const modules = [
   { to: "/admin/geography", icon: Globe, label: "Géographie" },
 ];
 
-const features = [
+const allFeatures = [
   { to: "/admin/features", icon: ToggleLeft, label: "Features" },
   { to: "/admin/roadmap", icon: Map, label: "Roadmap" },
   { to: "/admin/feature-analytics", icon: BarChart2, label: "Analytics" },
@@ -44,39 +64,12 @@ const features = [
   { to: "/admin/promo-codes", icon: Percent, label: "Codes Promo" },
 ];
 
-const support = [
+const allSupport = [
   { to: "/admin/notifications", icon: Bell, label: "Notifications" },
   { to: "/admin/support", icon: MessageSquare, label: "Support" },
   { to: "/admin/logs", icon: FileText, label: "Logs" },
   { to: "/admin/setup", icon: Database, label: "Config. Initiale" },
 ];
-
-interface NavItemProps {
-  to: string;
-  icon: React.ElementType;
-  label: string;
-  exact?: boolean;
-}
-
-function NavItem({ to, icon: Icon, label, exact }: NavItemProps) {
-  return (
-    <NavLink
-      to={to}
-      end={exact}
-      className={({ isActive }) =>
-        cn(
-          "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
-          isActive
-            ? "bg-gradient-to-r from-[#4f7df3] via-[#5b8af5] to-[#3b6ce8] text-white shadow-lg shadow-[#4f7df3]/25"
-            : "text-[#718096] hover:bg-[#f8f9ff] hover:text-[#2d3748]"
-        )
-      }
-    >
-      <Icon className="w-4 h-4" />
-      <span>{label}</span>
-    </NavLink>
-  );
-}
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
@@ -89,6 +82,19 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 export function AdminFloatingSidebar() {
   const navigate = useNavigate();
   const { profile } = useProfile();
+  const { layout, updateSidebarSection, resetLayout } = useAdminLayout();
+  const [isDragMode, setIsDragMode] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const handleLogout = async () => {
     try {
@@ -101,18 +107,65 @@ export function AdminFloatingSidebar() {
     }
   };
 
+  const handleDragEnd = (
+    section: "sidebarModules" | "sidebarFeatures" | "sidebarSupport",
+    event: DragEndEvent
+  ) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = layout[section].indexOf(active.id as string);
+      const newIndex = layout[section].indexOf(over.id as string);
+      updateSidebarSection(section, arrayMove(layout[section], oldIndex, newIndex));
+      toast.success("Position sauvegardée");
+    }
+  };
+
+  // Sort items based on saved layout
+  const getSortedItems = (
+    items: typeof allModules,
+    order: string[]
+  ) => {
+    return [...items].sort((a, b) => {
+      const aIndex = order.indexOf(a.to);
+      const bIndex = order.indexOf(b.to);
+      if (aIndex === -1) return 1;
+      if (bIndex === -1) return -1;
+      return aIndex - bIndex;
+    });
+  };
+
+  const sortedModules = getSortedItems(allModules, layout.sidebarModules);
+  const sortedFeatures = getSortedItems(allFeatures, layout.sidebarFeatures);
+  const sortedSupport = getSortedItems(allSupport, layout.sidebarSupport);
+
   return (
     <aside className="hidden lg:flex lg:flex-col lg:w-72 lg:fixed lg:top-4 lg:left-4 lg:bottom-4 bg-white/80 backdrop-blur-xl border border-[#e2e8f0]/50 rounded-3xl shadow-2xl shadow-[#4f7df3]/5 overflow-hidden">
       {/* Header - Branding + Admin Info */}
       <div className="p-6 border-b border-[#e2e8f0]/50">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-2xl overflow-hidden shadow-lg shadow-[#4f7df3]/30">
-            <img src={KorLogo} alt="KÒR" className="w-full h-full object-cover" />
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl overflow-hidden shadow-lg shadow-[#4f7df3]/30">
+              <img src={KorLogo} alt="KÒR" className="w-full h-full object-cover" />
+            </div>
+            <div>
+              <h1 className="font-bold text-lg text-[#2d3748] tracking-tight">KÒR</h1>
+              <p className="text-[11px] text-[#718096] font-medium">Control Center</p>
+            </div>
           </div>
-          <div>
-            <h1 className="font-bold text-lg text-[#2d3748] tracking-tight">KÒR</h1>
-            <p className="text-[11px] text-[#718096] font-medium">Control Center</p>
-          </div>
+          
+          {/* Edit Mode Toggle */}
+          <button
+            onClick={() => setIsDragMode(!isDragMode)}
+            className={cn(
+              "p-2 rounded-xl transition-all",
+              isDragMode 
+                ? "bg-[#4f7df3] text-white shadow-lg shadow-[#4f7df3]/25" 
+                : "text-[#718096] hover:bg-[#f8f9ff]"
+            )}
+            title={isDragMode ? "Terminer l'édition" : "Réorganiser"}
+          >
+            <Settings2 className="w-4 h-4" />
+          </button>
         </div>
         
         {/* Admin Info */}
@@ -127,6 +180,22 @@ export function AdminFloatingSidebar() {
             <p className="text-[10px] text-[#718096]">Admin</p>
           </div>
         </div>
+        
+        {/* Drag Mode Indicator */}
+        {isDragMode && (
+          <div className="mt-3 flex items-center justify-between p-2 rounded-xl bg-amber-50 border border-amber-200">
+            <span className="text-xs text-amber-700 font-medium">
+              Mode édition actif
+            </span>
+            <button
+              onClick={resetLayout}
+              className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-800 transition-colors"
+            >
+              <RotateCcw className="w-3 h-3" />
+              Reset
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Navigation */}
@@ -134,31 +203,79 @@ export function AdminFloatingSidebar() {
         {/* Modules Section */}
         <div>
           <SectionTitle>Modules</SectionTitle>
-          <div className="space-y-1">
-            {modules.map((item) => (
-              <NavItem key={item.to} {...item} />
-            ))}
-          </div>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={(e) => handleDragEnd("sidebarModules", e)}
+          >
+            <SortableContext
+              items={sortedModules.map((m) => m.to)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-1">
+                {sortedModules.map((item) => (
+                  <DraggableNavItem 
+                    key={item.to} 
+                    id={item.to}
+                    {...item} 
+                    isDragMode={isDragMode}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         </div>
 
         {/* Features Section */}
         <div>
           <SectionTitle>Fonctionnalités</SectionTitle>
-          <div className="space-y-1">
-            {features.map((item) => (
-              <NavItem key={item.to} {...item} />
-            ))}
-          </div>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={(e) => handleDragEnd("sidebarFeatures", e)}
+          >
+            <SortableContext
+              items={sortedFeatures.map((m) => m.to)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-1">
+                {sortedFeatures.map((item) => (
+                  <DraggableNavItem 
+                    key={item.to} 
+                    id={item.to}
+                    {...item} 
+                    isDragMode={isDragMode}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         </div>
 
         {/* Support Section */}
         <div>
           <SectionTitle>Support</SectionTitle>
-          <div className="space-y-1">
-            {support.map((item) => (
-              <NavItem key={item.to} {...item} />
-            ))}
-          </div>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={(e) => handleDragEnd("sidebarSupport", e)}
+          >
+            <SortableContext
+              items={sortedSupport.map((m) => m.to)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-1">
+                {sortedSupport.map((item) => (
+                  <DraggableNavItem 
+                    key={item.to} 
+                    id={item.to}
+                    {...item} 
+                    isDragMode={isDragMode}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         </div>
       </nav>
 
