@@ -15,6 +15,8 @@ import {
   Calendar,
   TrendingUp,
   FileText,
+  AlertTriangle,
+  RefreshCw,
 } from "lucide-react";
 
 import { useHiddenAmount } from "@/components/HideAmountsToggle";
@@ -22,17 +24,19 @@ import { useSales, Sale } from "@/hooks/use-sales";
 import { FeatureGate } from "@/components/FeatureGate";
 import { InvoiceDialog } from "@/components/invoice/InvoiceDialog";
 import { Skeleton, StatsSkeleton, ListSkeleton } from "@/components/ui/loading-skeleton";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 type Period = "day" | "week" | "month" | "all";
 
-const SalesHistory = () => {
+const SalesHistoryContent = () => {
   const navigate = useNavigate();
   const { formatMoney, hideAmounts } = useHiddenAmount();
-  const { sales, loading, getPeriodStats } = useSales();
+  const { sales, loading, getPeriodStats, refetch } = useSales();
   const [period, setPeriod] = useState<Period>("day");
   const { trackFeature } = useFeatureTracking();
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [showInvoice, setShowInvoice] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
   // Track page view
   useEffect(() => {
@@ -76,20 +80,35 @@ const SalesHistory = () => {
     return { total, cash, credit, count };
   }, [filteredSales]);
 
-  // Group sales by date
+  // Group sales by date with error handling (P0 fix)
   const groupedSales = useMemo(() => {
     const groups: Record<string, typeof filteredSales> = {};
 
     filteredSales.forEach((sale) => {
-      const date = new Date(sale.created_at).toLocaleDateString("fr-FR", {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-      });
-      if (!groups[date]) {
-        groups[date] = [];
+      try {
+        const saleDate = new Date(sale.created_at);
+        // Validate date is valid
+        if (isNaN(saleDate.getTime())) {
+          if (import.meta.env.DEV) {
+            console.warn("[SalesHistory] Invalid date for sale:", sale.id, sale.created_at);
+          }
+          return; // Skip this sale instead of crashing
+        }
+        const date = saleDate.toLocaleDateString("fr-FR", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+        });
+        if (!groups[date]) {
+          groups[date] = [];
+        }
+        groups[date].push(sale);
+      } catch (e) {
+        if (import.meta.env.DEV) {
+          console.error("[SalesHistory] Error parsing date:", e, sale);
+        }
+        // Skip invalid sales instead of crashing
       }
-      groups[date].push(sale);
     });
 
     return groups;
@@ -108,6 +127,23 @@ const SalesHistory = () => {
     month: "Ce mois",
     all: "Tout",
   };
+
+  // P0 FIX: Show error state if something went wrong
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] p-6 text-center">
+        <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+          <AlertTriangle className="w-8 h-8 text-destructive" />
+        </div>
+        <h2 className="text-lg font-semibold mb-2">Erreur de chargement</h2>
+        <p className="text-sm text-muted-foreground mb-4">{error.message}</p>
+        <Button onClick={() => { setError(null); refetch(); }} variant="outline" className="gap-2">
+          <RefreshCw className="w-4 h-4" />
+          Réessayer
+        </Button>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -294,6 +330,15 @@ const SalesHistory = () => {
         sale={selectedSale}
       />
     </>
+  );
+};
+
+// P0 FIX: Wrap in ErrorBoundary to prevent white screen on errors
+const SalesHistory = () => {
+  return (
+    <ErrorBoundary fallbackTitle="Erreur dans l'historique des ventes">
+      <SalesHistoryContent />
+    </ErrorBoundary>
   );
 };
 

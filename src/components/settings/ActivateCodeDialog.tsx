@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { CreditCard, Loader2, Check, Gift } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useSubscriptionUpgrade } from "@/hooks/use-subscription-upgrade";
 import { toast } from "sonner";
 
 interface ActivateCodeDialogProps {
@@ -15,6 +16,7 @@ interface ActivateCodeDialogProps {
 
 export function ActivateCodeDialog({ onSuccess, variant = "default" }: ActivateCodeDialogProps) {
   const { user } = useAuth();
+  const { applyPlanToSubscription } = useSubscriptionUpgrade();
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
@@ -78,41 +80,22 @@ export function ActivateCodeDialog({ onSuccess, variant = "default" }: ActivateC
 
       if (updateCodeError) throw updateCodeError;
 
-      // 3. Update or create subscription
-      const newEndDate = new Date();
-      newEndDate.setDate(newEndDate.getDate() + durationDays);
+      // 3. Bug 1 FIX: Use centralized applyPlanToSubscription with ALL limits
+      const planData = {
+        id: plan?.id || "premium",
+        name: plan?.name || "Premium",
+        duration_days: durationDays,
+        max_clients: plan?.max_clients || null,
+        max_sales_per_day: plan?.max_sales_per_day || null,
+      };
 
-      const { data: existingSub } = await supabase
-        .from("subscriptions")
-        .select("*")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      const applySuccess = await applyPlanToSubscription(user.id, planData, {
+        extendFromCurrent: true,
+        markTrialUsed: true,
+      });
 
-      if (existingSub) {
-        // Extend existing subscription
-        const currentEnd = new Date(existingSub.trial_ends_at);
-        const extendedEnd = currentEnd > new Date() 
-          ? new Date(currentEnd.getTime() + durationDays * 24 * 60 * 60 * 1000)
-          : newEndDate;
-
-        await supabase
-          .from("subscriptions")
-          .update({
-            plan: plan?.name || "premium",
-            trial_ends_at: extendedEnd.toISOString(),
-            is_active: true,
-            max_clients: plan?.max_clients || null,
-          })
-          .eq("id", existingSub.id);
-      } else {
-        // Create new subscription
-        await supabase.from("subscriptions").insert({
-          user_id: user.id,
-          plan: plan?.name || "premium",
-          trial_ends_at: newEndDate.toISOString(),
-          is_active: true,
-          max_clients: plan?.max_clients || null,
-        });
+      if (!applySuccess) {
+        throw new Error("Failed to apply plan");
       }
 
       setPlanName(plan?.name || "Premium");

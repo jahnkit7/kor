@@ -263,24 +263,41 @@ export function useSales(): SalesState {
               // (deduct_stock_on_sale_item) which fires on sale_items insert
             }
 
-            // Create debt record for credit sales
+            // BUG 2 FIX: Create debt with idempotent UPSERT using sale_id
             if (saleData.type === "credit" && saleData.client_id) {
               const paidAmount = saleData.paid || 0;
+              const debtId = localDB.generateId();
               
-              const { data: debtData, error: debtError } = await supabase
+              // Create debt locally FIRST with sale_id for idempotency
+              await localDB.createDebtForSale({
+                id: debtId,
+                saleId: localSale.id,
+                clientId: saleData.client_id,
+                amount: saleData.amount,
+                paid: paidAmount,
+                userId: user.id,
+              });
+              
+              // UPSERT to cloud with onConflict on sale_id (idempotent)
+              const { error: debtError } = await supabase
                 .from("debts")
-                .insert({
+                .upsert({
+                  id: debtId,
+                  sale_id: localSale.id, // Links debt to sale for idempotency
                   client_id: saleData.client_id,
                   amount: saleData.amount,
                   paid: paidAmount,
                   user_id: user.id,
-                })
-                .select()
-                .single();
+                }, { onConflict: "sale_id" }); // Prevents duplicates on retry/sync
+              
+              if (debtError && import.meta.env.DEV) {
+                console.warn("[useSales] Debt upsert warning:", debtError);
+              }
 
-              if (!debtError && debtData && paidAmount > 0) {
+              // Create initial payment if paid amount > 0
+              if (paidAmount > 0) {
                 await supabase.from("payments").insert({
-                  debt_id: debtData.id,
+                  debt_id: debtId,
                   client_id: saleData.client_id,
                   amount: paidAmount,
                   user_id: user.id,
