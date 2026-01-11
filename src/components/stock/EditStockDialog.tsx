@@ -4,12 +4,12 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Trash2 } from "lucide-react";
+import { Trash2, Save, X } from "lucide-react";
+import { PrimaryActionButton } from "@/components/ui/primary-action-button";
 import type { StockItem, NewStockItem } from "@/hooks/use-stock";
 
 interface EditStockDialogProps {
@@ -90,6 +90,7 @@ export function EditStockDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Ex: Riz 5kg"
+              className="h-12 rounded-xl"
             />
           </div>
 
@@ -102,6 +103,7 @@ export function EditStockDialog({
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
                 placeholder="0"
+                className="h-12 rounded-xl text-center"
               />
             </div>
 
@@ -113,6 +115,7 @@ export function EditStockDialog({
                 value={unitPrice}
                 onChange={(e) => setUnitPrice(e.target.value)}
                 placeholder="0"
+                className="h-12 rounded-xl text-center"
               />
             </div>
           </div>
@@ -124,35 +127,45 @@ export function EditStockDialog({
               value={model}
               onChange={(e) => setModel(e.target.value)}
               placeholder="Ex: Marque, taille..."
+              className="h-12 rounded-xl"
             />
           </div>
         </div>
 
-        <DialogFooter className="flex-col gap-2 sm:flex-row">
-          <Button
-            variant="destructive"
-            onClick={handleDelete}
-            disabled={isDeleting || isLoading}
-            className="w-full sm:w-auto gap-2"
-          >
-            <Trash2 className="h-4 w-4" />
-            {isDeleting ? "Suppression..." : "Supprimer"}
-          </Button>
-          <div className="flex-1" />
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isLoading || isDeleting}
-          >
-            Annuler
-          </Button>
-          <Button
+        {/* Buttons reorganized: Enregistrer on top, Supprimer + Annuler on bottom */}
+        <div className="space-y-4 pt-2">
+          {/* Save button at top - Primary action */}
+          <PrimaryActionButton
             onClick={handleSave}
             disabled={isLoading || isDeleting || !name.trim()}
+            variant="blue"
           >
+            <Save className="w-5 h-5" />
             {isLoading ? "Enregistrement..." : "Enregistrer"}
-          </Button>
-        </DialogFooter>
+          </PrimaryActionButton>
+          
+          {/* Delete and Cancel buttons side by side at bottom */}
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              variant="outline"
+              onClick={handleDelete}
+              disabled={isDeleting || isLoading}
+              className="h-12 rounded-full border-2 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600 font-semibold"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              {isDeleting ? "..." : "Supprimer"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isLoading || isDeleting}
+              className="h-12 rounded-full font-semibold"
+            >
+              <X className="h-4 w-4 mr-2" />
+              Annuler
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
