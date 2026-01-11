@@ -332,72 +332,87 @@ const DebtDetail = () => {
         )}
       </div>
 
-      {/* Payment Modal */}
+      {/* Payment Modal - FIXED LAYOUT with proper safe-area */}
       {showPaymentModal && (
         <div className="fixed inset-0 bg-foreground/50 flex items-end z-50">
-          <div className="bg-card w-full rounded-t-3xl p-6 animate-slide-up safe-bottom">
-            <div className="w-12 h-1 bg-border rounded-full mx-auto mb-4" />
-            <h3 className="text-xl font-bold mb-2 text-center">Recevoir un paiement</h3>
-            
-            {selectedDebtId && (
-              <p className="text-sm text-muted-foreground text-center mb-4">
-                Dette: {formatMoney(clientDebts.find(d => d.id === selectedDebtId)?.remaining || 0)} CFA restant
-              </p>
-            )}
-            
-            {/* Boutons en HAUT */}
-            <div className="space-y-3 mb-6">
-              <PrimaryActionButton
-                variant="green"
-                onClick={handlePayment}
-                disabled={processingPayment || !paymentAmount || parseInt(paymentAmount) === 0}
-              >
-                {processingPayment ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <>
-                    <Check className="w-5 h-5" />
-                    Confirmer {paymentAmount && parseInt(paymentAmount) > 0 ? `${formatMoney(parseInt(paymentAmount))} CFA` : ''}
-                  </>
-                )}
-              </PrimaryActionButton>
+          <div 
+            className="bg-card w-full rounded-t-3xl animate-slide-up"
+            style={{
+              paddingBottom: 'calc(env(safe-area-inset-bottom) + 100px)', // Space for BottomNav
+              maxHeight: '90vh',
+            }}
+          >
+            <div className="p-6">
+              {/* Handle */}
+              <div className="w-12 h-1 bg-border rounded-full mx-auto mb-4" />
               
-              <Button
-                variant="outline"
-                className="w-full h-12 rounded-full"
-                onClick={() => {
-                  setShowPaymentModal(false);
-                  setSelectedDebtId(null);
-                }}
-                disabled={processingPayment}
-              >
-                Annuler
-              </Button>
-            </div>
-            
-            <p className="text-sm text-muted-foreground text-center mb-2">Montant reçu</p>
-            <div className="text-center mb-4">
-              <input
-                type="number"
-                value={paymentAmount}
-                onChange={(e) => setPaymentAmount(e.target.value)}
-                placeholder="0"
-                className="text-money-lg text-center w-full bg-transparent outline-none"
-              />
-              <span className="text-lg text-muted-foreground">CFA</span>
-            </div>
+              {/* Titre + montant EN HAUT - bien visible */}
+              <h3 className="text-xl font-bold mb-2 text-center">Recevoir un paiement</h3>
+              {selectedDebtId && (
+                <p className="text-sm text-muted-foreground text-center mb-4">
+                  Dette: {formatMoney(clientDebts.find(d => d.id === selectedDebtId)?.remaining || 0)} CFA restant
+                </p>
+              )}
+              
+              {/* MONTANT - Section principale bien visible */}
+              <div className="text-center mb-6 p-4 bg-secondary/30 rounded-2xl">
+                <p className="text-sm text-muted-foreground mb-2">Montant reçu</p>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={paymentAmount}
+                  onChange={(e) => setPaymentAmount(e.target.value)}
+                  placeholder="0"
+                  className="text-4xl font-bold text-center w-full bg-transparent outline-none"
+                  autoFocus
+                />
+                <span className="text-lg text-muted-foreground">CFA</span>
+              </div>
 
-            <div className="grid grid-cols-3 gap-2">
-              {[10000, 25000, 50000].map((amount) => (
-                <Button
-                  key={amount}
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setPaymentAmount(String(amount))}
+              {/* Quick amounts */}
+              <div className="grid grid-cols-3 gap-2 mb-6">
+                {[10000, 25000, 50000].map((amount) => (
+                  <Button 
+                    key={amount} 
+                    variant="secondary" 
+                    size="sm"
+                    className="h-11"
+                    onClick={() => setPaymentAmount(String(amount))}
+                  >
+                    {formatMoney(amount)}
+                  </Button>
+                ))}
+              </div>
+
+              {/* BOUTONS EN BAS - Bien espacés du reste */}
+              <div className="space-y-3">
+                <PrimaryActionButton 
+                  variant="green" 
+                  onClick={handlePayment}
+                  disabled={processingPayment || !paymentAmount || parseInt(paymentAmount) === 0}
                 >
-                  {formatMoney(amount)}
+                  {processingPayment ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>
+                      <Check className="w-5 h-5" />
+                      Confirmer {paymentAmount && parseInt(paymentAmount) > 0 ? `${formatMoney(parseInt(paymentAmount))} CFA` : ''}
+                    </>
+                  )}
+                </PrimaryActionButton>
+                
+                <Button
+                  variant="outline"
+                  className="w-full h-12 rounded-full"
+                  onClick={() => { 
+                    setShowPaymentModal(false); 
+                    setSelectedDebtId(null); 
+                  }}
+                  disabled={processingPayment}
+                >
+                  Annuler
                 </Button>
-              ))}
+              </div>
             </div>
           </div>
         </div>

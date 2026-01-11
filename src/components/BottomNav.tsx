@@ -108,6 +108,8 @@ const BottomNav = () => {
     return conversations.reduce((sum, c) => sum + c.unreadCount, 0);
   }, [conversations]);
 
+  // OFFLINE-FIRST: Always show nav items - use permissive defaults during loading
+  // The feature access hook now returns permissive values from cache during loading
   const navItems = [
     { 
       icon: Home01Icon, 
@@ -121,7 +123,8 @@ const BottomNav = () => {
       icon: Wallet02Icon, 
       label: "Dettes", 
       path: "/debts", 
-      show: !debtsDisabled && !debtsLoading, 
+      // CRITICAL: Show during loading to prevent nav from breaking offline
+      show: debtsLoading ? true : !debtsDisabled, 
       badge: 0, 
       isBeta: debtsBeta 
     },
@@ -129,7 +132,8 @@ const BottomNav = () => {
       icon: WifiConnected01Icon, 
       label: "Réseau", 
       path: "/network", 
-      show: !networkDisabled && !networkLoading, 
+      // CRITICAL: Show during loading to prevent nav from breaking offline
+      show: networkLoading ? true : !networkDisabled, 
       badge: unreadCount, 
       isBeta: networkBeta 
     },
@@ -137,7 +141,8 @@ const BottomNav = () => {
       icon: UserIcon, 
       label: "Clients", 
       path: "/clients", 
-      show: !clientsDisabled && !clientsLoading, 
+      // CRITICAL: Show during loading to prevent nav from breaking offline
+      show: clientsLoading ? true : !clientsDisabled, 
       badge: 0, 
       isBeta: clientsBeta 
     },
@@ -264,7 +269,7 @@ const BottomNav = () => {
                 <span className="absolute -top-0.5 right-0 w-2 h-2 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 border border-[#f8f9ff]" />
               )}
               
-              {/* Sync pending indicator */}
+              {/* Sync pending indicator - NO animate-pulse to avoid infinite animation */}
               {showSyncBadge && (
                 <span 
                   className={cn(
@@ -272,7 +277,7 @@ const BottomNav = () => {
                     !isOnline 
                       ? "bg-amber-500 text-white" 
                       : isSyncing 
-                        ? "bg-primary text-primary-foreground animate-pulse" 
+                        ? "bg-primary text-primary-foreground" 
                         : "bg-blue-500 text-white"
                   )}
                 >

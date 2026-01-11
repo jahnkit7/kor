@@ -3,6 +3,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { useUserSubscription } from "@/hooks/use-feature-access";
 import { useAuth } from "@/hooks/use-auth";
 import { useRole } from "@/hooks/use-role";
+import { useNetworkStatus } from "@/hooks/use-network-status";
 
 interface RequireSubscriptionProps {
   children: ReactNode;
@@ -16,11 +17,13 @@ const SUB_CACHE_KEY = "subscription_status_";
  * Renders children immediately if cached, checks in background.
  * Only redirects when we're CERTAIN user has no subscription.
  * ADMIN users are always allowed through (no subscription required).
+ * CRITICAL: NEVER redirect when offline!
  */
 export function RequireSubscription({ children }: RequireSubscriptionProps) {
   const { user, loading: authLoading } = useAuth();
   const { role, loading: roleLoading } = useRole();
   const { data: subscription, isLoading: subLoading } = useUserSubscription();
+  const { isOnline } = useNetworkStatus();
   const navigate = useNavigate();
   const isAdmin = role === "admin";
   const checkedRef = useRef(false);
@@ -46,6 +49,9 @@ export function RequireSubscription({ children }: RequireSubscriptionProps) {
 
   // Handle redirect in effect (non-blocking)
   useEffect(() => {
+    // CRITICAL: Never redirect when offline - let user continue using app
+    if (!isOnline) return;
+    
     // Wait for auth, role, and subscription to finish loading completely
     if (authLoading || roleLoading || subLoading) return;
     
@@ -63,7 +69,7 @@ export function RequireSubscription({ children }: RequireSubscriptionProps) {
       checkedRef.current = true;
       navigate("/subscriptions", { replace: true });
     }
-  }, [authLoading, roleLoading, subLoading, user, subscription, hasCachedSub, navigate, isAdmin]);
+  }, [isOnline, authLoading, roleLoading, subLoading, user, subscription, hasCachedSub, navigate, isAdmin]);
 
   // CRITICAL: Never redirect while role is still loading
   if (roleLoading) {
@@ -80,14 +86,19 @@ export function RequireSubscription({ children }: RequireSubscriptionProps) {
     return <>{children}</>;
   }
 
+  // CRITICAL: When offline, always render children to keep app functional
+  if (!isOnline) {
+    return <>{children}</>;
+  }
+
   // If still loading but we don't have cache, show minimal non-blocking indicator
   // But still render children to keep BottomNav visible
   if (authLoading || roleLoading || subLoading) {
     return <>{children}</>;
   }
 
-  // Not logged in - will be redirected by effect
-  if (!user) {
+  // Not logged in - will be redirected by effect (only when online)
+  if (!user && isOnline) {
     return <Navigate to="/auth" replace />;
   }
 

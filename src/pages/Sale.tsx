@@ -79,6 +79,26 @@ const Sale = () => {
     [clients, selectedClient]
   );
 
+  // Recent/frequent clients for quick selection
+  const recentAndFrequentClients = useMemo(() => {
+    if (!clients.length) return [];
+    
+    // Count client usage from sales
+    const clientUsage = new Map<string, number>();
+    sales.forEach(sale => {
+      if (sale.client_id) {
+        clientUsage.set(sale.client_id, (clientUsage.get(sale.client_id) || 0) + 1);
+      }
+    });
+    
+    // Sort by usage frequency and take top 5
+    return [...clients].sort((a, b) => {
+      const aUsage = clientUsage.get(a.id) || 0;
+      const bUsage = clientUsage.get(b.id) || 0;
+      return bUsage - aUsage;
+    }).slice(0, 5);
+  }, [clients, sales]);
+
   // Filter clients by search
   const filteredClients = useMemo(() => {
     if (!clientSearch.trim()) return clients;
@@ -149,7 +169,8 @@ const Sale = () => {
         type: isCash ? "cash" : "credit",
         amount: effectiveAmount,
         note: note || undefined,
-        client_id: isCash ? undefined : selectedClient || undefined,
+        // FIX: Allow client_id for both cash AND credit sales (for tracking/loyalty)
+        client_id: selectedClient || undefined,
         items: saleItems.length > 0 ? saleItems : undefined,
       });
 
@@ -537,38 +558,92 @@ const Sale = () => {
             <div className="space-y-2 pr-2">
               {clientsLoading ? (
                 <p className="text-center text-muted-foreground py-4">Chargement...</p>
-              ) : filteredClients.length === 0 ? (
+              ) : clients.length === 0 && !clientSearch ? (
+                // NOUVEAU: Écran vide avec CTA clair
+                <div className="text-center py-8">
+                  <User className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground mb-4">Aucun client enregistré</p>
+                  <PrimaryActionButton onClick={() => navigate("/clients/new")}>
+                    <User className="w-5 h-5" />
+                    Créer votre premier client
+                  </PrimaryActionButton>
+                </div>
+              ) : filteredClients.length === 0 && clientSearch ? (
                 <p className="text-center text-muted-foreground py-4">
-                  {clientSearch ? "Aucun client trouvé" : "Aucun client"}
+                  Aucun client trouvé
                 </p>
               ) : (
-                filteredClients.map((client) => (
-                  <Card
-                    key={client.id}
-                    className={cn(
-                      "cursor-pointer transition-all",
-                      selectedClient === client.id && "border-2 border-primary bg-primary/5"
-                    )}
-                    onClick={() => {
-                      setSelectedClient(client.id);
-                      setShowClientSheet(false);
-                      setClientSearch("");
-                    }}
-                  >
-                    <CardContent className="p-3 flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
-                        <User className="w-5 h-5 text-muted-foreground" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-semibold">{client.name}</p>
-                        <p className="text-xs text-muted-foreground">{client.phone}</p>
-                      </div>
-                      {selectedClient === client.id && (
-                        <Check className="w-5 h-5 text-primary" />
+                <>
+                  {/* Section clients fréquents - uniquement si pas de recherche */}
+                  {!clientSearch && recentAndFrequentClients.length > 0 && (
+                    <div className="mb-4">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase mb-2 px-1">
+                        Clients fréquents
+                      </p>
+                      {recentAndFrequentClients.map((client) => (
+                        <Card
+                          key={`frequent-${client.id}`}
+                          className={cn(
+                            "cursor-pointer transition-all mb-2",
+                            selectedClient === client.id && "border-2 border-primary bg-primary/5"
+                          )}
+                          onClick={() => {
+                            setSelectedClient(client.id);
+                            setShowClientSheet(false);
+                            setClientSearch("");
+                          }}
+                        >
+                          <CardContent className="p-3 flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                              <User className="w-5 h-5 text-primary" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-semibold">{client.name}</p>
+                              <p className="text-xs text-muted-foreground">{client.phone}</p>
+                            </div>
+                            {selectedClient === client.id && (
+                              <Check className="w-5 h-5 text-primary" />
+                            )}
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* Section tous les clients */}
+                  {clientSearch && (
+                    <p className="text-xs font-semibold text-muted-foreground uppercase mb-2 px-1">
+                      Résultats
+                    </p>
+                  )}
+                  {(!clientSearch ? clients : filteredClients).map((client) => (
+                    <Card
+                      key={client.id}
+                      className={cn(
+                        "cursor-pointer transition-all mb-2",
+                        selectedClient === client.id && "border-2 border-primary bg-primary/5"
                       )}
-                    </CardContent>
-                  </Card>
-                ))
+                      onClick={() => {
+                        setSelectedClient(client.id);
+                        setShowClientSheet(false);
+                        setClientSearch("");
+                      }}
+                    >
+                      <CardContent className="p-3 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+                          <User className="w-5 h-5 text-muted-foreground" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-semibold">{client.name}</p>
+                          <p className="text-xs text-muted-foreground">{client.phone}</p>
+                        </div>
+                        {selectedClient === client.id && (
+                          <Check className="w-5 h-5 text-primary" />
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </>
               )}
             </div>
           </FullScreenSheetContent>

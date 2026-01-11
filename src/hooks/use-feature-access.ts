@@ -1,6 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./use-auth";
+import { useEffect } from "react";
+
+// ============= OFFLINE-FIRST CACHE KEYS =============
+const FEATURE_FLAGS_CACHE_KEY = "offline_feature_flags";
+const SUBSCRIPTION_CACHE_KEY = "offline_subscription_";
+const PLAN_FEATURES_CACHE_KEY = "offline_plan_features";
 
 interface FeatureFlag {
   id: string;
@@ -35,9 +41,61 @@ const planHierarchy: Record<string, number> = {
   "annuel premium": 2,
 };
 
+// ============= OFFLINE CACHE HELPERS =============
+function getCachedFeatureFlags(): FeatureFlag[] | null {
+  try {
+    const cached = localStorage.getItem(FEATURE_FLAGS_CACHE_KEY);
+    return cached ? JSON.parse(cached) : null;
+  } catch {
+    return null;
+  }
+}
+
+function setCachedFeatureFlags(flags: FeatureFlag[]) {
+  try {
+    localStorage.setItem(FEATURE_FLAGS_CACHE_KEY, JSON.stringify(flags));
+  } catch {
+    // localStorage full or unavailable
+  }
+}
+
+function getCachedSubscription(userId: string): UserSubscription | null {
+  try {
+    const cached = localStorage.getItem(`${SUBSCRIPTION_CACHE_KEY}${userId}`);
+    return cached ? JSON.parse(cached) : null;
+  } catch {
+    return null;
+  }
+}
+
+function setCachedSubscription(userId: string, sub: UserSubscription) {
+  try {
+    localStorage.setItem(`${SUBSCRIPTION_CACHE_KEY}${userId}`, JSON.stringify(sub));
+  } catch {
+    // localStorage full or unavailable
+  }
+}
+
+function getCachedPlanFeatures(): Record<string, string[]> | null {
+  try {
+    const cached = localStorage.getItem(PLAN_FEATURES_CACHE_KEY);
+    return cached ? JSON.parse(cached) : null;
+  } catch {
+    return null;
+  }
+}
+
+function setCachedPlanFeatures(features: Record<string, string[]>) {
+  try {
+    localStorage.setItem(PLAN_FEATURES_CACHE_KEY, JSON.stringify(features));
+  } catch {
+    // localStorage full or unavailable
+  }
+}
+
 // Hook pour récupérer les features de chaque plan depuis la BDD
 export function useSubscriptionPlanFeatures() {
-  return useQuery({
+  const query = useQuery({
     queryKey: ["subscription-plan-features"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -45,7 +103,12 @@ export function useSubscriptionPlanFeatures() {
         .select("name, features")
         .eq("is_active", true);
 
-      if (error) throw error;
+      if (error) {
+        // Return cached on error
+        const cached = getCachedPlanFeatures();
+        if (cached) return cached;
+        throw error;
+      }
       
       // Créer un map dynamique des plans -> features
       const map: Record<string, string[]> = {};
@@ -55,10 +118,22 @@ export function useSubscriptionPlanFeatures() {
         const features = Array.isArray(plan.features) ? plan.features : [];
         map[planName] = features.map((f: unknown) => String(f));
       }
+      
+      // Cache for offline use
+      setCachedPlanFeatures(map);
       return map;
     },
     staleTime: 2 * 60 * 1000, // Cache 2 minutes pour réactivité
+    // OFFLINE-FIRST: Use cached data as placeholder
+    placeholderData: () => getCachedPlanFeatures() || undefined,
+    retry: (failureCount) => {
+      // Don't retry endlessly when offline
+      if (!navigator.onLine) return false;
+      return failureCount < 2;
+    },
   });
+
+  return query;
 }
 
 // Helper pour obtenir les features d'un plan - utilise les données de la query
@@ -69,7 +144,7 @@ export function getPlanFeatures(planName: string | undefined | null, planFeature
 }
 
 export function useFeatureFlags() {
-  return useQuery({
+  const query = useQuery({
     queryKey: ["feature-flags"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -77,11 +152,28 @@ export function useFeatureFlags() {
         .select("*")
         .order("feature_key");
 
-      if (error) throw error;
+      if (error) {
+        // Return cached on error
+        const cached = getCachedFeatureFlags();
+        if (cached) return cached;
+        throw error;
+      }
+      
+      // Cache for offline use
+      setCachedFeatureFlags(data as FeatureFlag[]);
       return data as FeatureFlag[];
     },
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    // OFFLINE-FIRST: Use cached data as placeholder
+    placeholderData: () => getCachedFeatureFlags() || undefined,
+    retry: (failureCount) => {
+      // Don't retry endlessly when offline
+      if (!navigator.onLine) return false;
+      return failureCount < 2;
+    },
   });
+
+  return query;
 }
 
 export function useUserSubscription() {
@@ -93,10 +185,12 @@ export function useUserSubscription() {
       if (!user?.id) return null;
 
       // Timeout pour éviter une requête qui pend indéfiniment (5s)
-      const timeoutPromise = new Promise<null>((resolve) => {
+      const timeoutPromise = new Promise<UserSubscription | null>((resolve) => {
         setTimeout(() => {
-          if (import.meta.env.DEV) console.warn("[useUserSubscription] Request timeout - returning null");
-          resolve(null);
+          if (import.meta.env.DEV) console.warn("[useUserSubscription] Request timeout - returning cached");
+          // Return cached instead of null
+          const cached = getCachedSubscription(user.id);
+          resolve(cached);
         }, 5000);
       });
 
@@ -107,7 +201,17 @@ export function useUserSubscription() {
           .eq("user_id", user.id)
           .single();
 
-        if (error && error.code !== "PGRST116") throw error;
+        if (error && error.code !== "PGRST116") {
+          // On error, try to return cached
+          const cached = getCachedSubscription(user.id);
+          if (cached) return cached;
+          throw error;
+        }
+        
+        // Cache the subscription for offline use
+        if (data) {
+          setCachedSubscription(user.id, data as UserSubscription);
+        }
         return data as UserSubscription | null;
       })();
 
@@ -115,7 +219,16 @@ export function useUserSubscription() {
       return Promise.race([queryPromise, timeoutPromise]);
     },
     enabled: !!user?.id,
-    retry: 2, // 2 retries pour meilleure résilience
+    // OFFLINE-FIRST: Use cached data as placeholder
+    placeholderData: () => {
+      if (user?.id) return getCachedSubscription(user.id) || undefined;
+      return undefined;
+    },
+    retry: (failureCount) => {
+      // Don't retry when offline
+      if (!navigator.onLine) return false;
+      return failureCount < 2;
+    },
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
     staleTime: 30 * 1000, // Cache 30s
     gcTime: 5 * 60 * 1000, // Keep in cache 5min
@@ -124,8 +237,9 @@ export function useUserSubscription() {
   // CRITICAL FIX: isLoading doit être true tant que:
   // 1. L'auth est en cours de chargement
   // 2. OU on a un user mais la requête subscription n'est pas encore terminée
-  // Cela évite la race condition où isLoading=false avant même que la requête ne démarre
-  const isLoading = authLoading || (!authLoading && !!user?.id && query.isLoading);
+  // MAIS: si on a des données cached, on n'est pas "loading"
+  const hasCachedData = user?.id ? !!getCachedSubscription(user.id) : false;
+  const isLoading = (authLoading || (!authLoading && !!user?.id && query.isLoading)) && !hasCachedData;
 
   return {
     ...query,
@@ -171,15 +285,22 @@ export function useFeatureAccess(featureKey: string): FeatureAccessResult {
 
   const loading = featuresLoading || subLoading || planFeaturesLoading;
 
-  // Default result while loading
+  // CRITICAL OFFLINE-FIRST FIX: Never block rendering during loading
+  // Use cached feature flags to determine access while loading
   if (loading || !features || !planFeaturesMap) {
+    // Try to get from cache for permissive behavior
+    const cachedFlags = getCachedFeatureFlags();
+    const cachedFeature = cachedFlags?.find(f => f.feature_key === featureKey);
+    
+    // PERMISSIVE DEFAULT: If feature is globally enabled in cache (or no cache), allow access
+    // This prevents BottomNav from breaking during loading
     return { 
-      hasAccess: false, 
-      loading: true, 
+      hasAccess: cachedFeature ? cachedFeature.is_globally_enabled : true, 
+      loading: false, // CRITICAL: Never report as loading to prevent UI blocking
       reason: null,
-      isGloballyDisabled: false,
+      isGloballyDisabled: cachedFeature ? !cachedFeature.is_globally_enabled : false,
       isNotInPlan: false,
-      isBeta: false,
+      isBeta: cachedFeature?.is_beta || false,
       requiredPlan: null,
       nextPlan: null,
     };
@@ -325,8 +446,18 @@ export function useAllFeatureAccess() {
 
   const loading = featuresLoading || subLoading || planFeaturesLoading;
 
+  // OFFLINE-FIRST: Use cached data when loading
   if (loading || !features || !planFeaturesMap) {
-    return { accessMap: {}, loading: true };
+    // Return permissive defaults from cache
+    const cachedFlags = getCachedFeatureFlags();
+    if (cachedFlags) {
+      const accessMap: Record<string, boolean> = {};
+      cachedFlags.forEach(f => {
+        accessMap[f.feature_key] = f.is_globally_enabled;
+      });
+      return { accessMap, loading: false };
+    }
+    return { accessMap: {}, loading: false };
   }
 
   const accessMap: Record<string, boolean> = {};
