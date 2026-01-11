@@ -135,7 +135,7 @@ const Sale = () => {
     }
 
     setIsLoading(true);
-    triggerHaptic(25);
+    triggerHaptic('medium');
     try {
       // Prepare sale items from selected products
       const saleItems: SaleItem[] = selectedProducts.map((p) => ({
@@ -163,7 +163,7 @@ const Sale = () => {
         refetchStock();
       }
 
-      triggerHaptic(25);
+      triggerHaptic('success');
       setShowSuccess(true);
       setTimeout(() => {
         navigate("/dashboard");
