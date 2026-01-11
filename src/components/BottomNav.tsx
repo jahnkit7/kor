@@ -11,12 +11,13 @@ import {
 } from "@hugeicons/core-free-icons";
 import { usePermissions } from "@/hooks/use-role";
 import { useMerchantMessages } from "@/hooks/use-merchant-messages";
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useFeatureAccess } from "@/hooks/use-feature-access";
 import { useOffline } from "@/contexts/OfflineContext";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { triggerHaptic } from "@/lib/haptics";
+import { useToast } from "@/hooks/use-toast";
 
 import type { Transition } from "framer-motion";
 
@@ -52,7 +53,50 @@ const BottomNav = () => {
   const location = useLocation();
   const { canViewReports } = usePermissions();
   const { conversations } = useMerchantMessages();
-  const { isOnline, pendingCount, isSyncing } = useOffline();
+  const { isOnline, pendingCount, isSyncing, performSync } = useOffline();
+  const { toast } = useToast();
+  
+  // Auto-sync countdown
+  const [nextAutoSync, setNextAutoSync] = useState(30);
+  
+  // Countdown to next auto-sync
+  useEffect(() => {
+    if (!isOnline || pendingCount === 0 || isSyncing) {
+      setNextAutoSync(30);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setNextAutoSync((prev) => {
+        if (prev <= 1) {
+          return 30; // Reset after sync triggers
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isOnline, pendingCount, isSyncing]);
+
+  // Reset countdown when sync starts
+  useEffect(() => {
+    if (isSyncing) {
+      setNextAutoSync(30);
+    }
+  }, [isSyncing]);
+  
+  // Handle sync click
+  const handleSyncClick = async () => {
+    if (isSyncing || !isOnline) return;
+    
+    triggerHaptic();
+    toast({
+      title: "Synchronisation lancée",
+      description: `${pendingCount} élément(s) en attente`,
+    });
+    
+    await performSync();
+  };
   
   // Check if features are globally disabled and beta status
   const { isGloballyDisabled: networkDisabled, loading: networkLoading, isBeta: networkBeta } = useFeatureAccess("network");
@@ -117,20 +161,23 @@ const BottomNav = () => {
       className="fixed bottom-4 left-0 right-0 z-50 flex justify-center pointer-events-none"
     >
       <div className="pointer-events-auto">
-      {/* Sync status bar - shown when pending items exist */}
+      {/* Unified Sync status bar - clickable for force sync */}
       <AnimatePresence>
         {pendingCount > 0 && (
-          <motion.div 
+          <motion.button 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleSyncClick}
+            disabled={isSyncing || !isOnline}
             className={cn(
               "absolute -top-10 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-1.5 rounded-full shadow-lg transition-all duration-300",
               !isOnline 
                 ? "bg-amber-500 text-white" 
                 : isSyncing 
                   ? "bg-primary text-primary-foreground" 
-                  : "bg-blue-500 text-white"
+                  : "bg-blue-500 text-white hover:bg-blue-600 active:bg-blue-700"
             )}
           >
             {isSyncing ? (
@@ -149,10 +196,13 @@ const BottomNav = () => {
             ) : (
               <>
                 <HugeiconsIcon icon={ArrowReloadHorizontalIcon} className="w-3.5 h-3.5" />
-                <span className="text-xs font-medium">{pendingCount} à synchroniser</span>
+                <span className="text-xs font-medium">{pendingCount} à sync</span>
+                <span className="bg-white/20 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                  {nextAutoSync}s
+                </span>
               </>
             )}
-          </motion.div>
+          </motion.button>
         )}
       </AnimatePresence>
       

@@ -965,29 +965,32 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
   // Record step
   if (step === "record") {
     return (
-      <div className="space-y-6 p-4">
-        <div className="text-center">
-          <h2 className="text-xl font-bold mb-2">Dicter une ou plusieurs ventes</h2>
-          <p className="text-muted-foreground text-sm">
+      <div className="min-h-[70vh] flex flex-col p-6 bg-gradient-to-b from-[#f8f9ff] via-white to-[#f8f9ff]">
+        {/* Header */}
+        <div className="text-center space-y-2 pt-4">
+          <h2 className="text-2xl font-bold text-foreground">
+            Dicter une ou plusieurs ventes
+          </h2>
+          <p className="text-muted-foreground">
             Décrivez vos ventes naturellement
           </p>
         </div>
 
         {/* Offline warning with text mode button */}
         {!isOnline && (
-          <Card className="p-4 bg-amber-500/10 border-amber-500/20">
+          <Card className="mt-6 p-4 bg-amber-50 border-amber-200 rounded-2xl">
             <div className="flex items-start gap-3">
               <WifiOff className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
               <div className="flex-1">
                 <p className="text-sm font-medium text-amber-700">Mode hors-ligne</p>
                 <p className="text-xs text-amber-600 mt-1">
-                  La reconnaissance vocale nécessite internet. Utilisez le mode texte pour saisir vos ventes.
+                  La reconnaissance vocale nécessite internet.
                 </p>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setStep("text-input")}
-                  className="mt-2 gap-2"
+                  className="mt-2 gap-2 rounded-full"
                 >
                   <Keyboard className="w-4 h-4" />
                   Mode texte
@@ -997,53 +1000,73 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
           </Card>
         )}
 
-        {/* Microphone button */}
-        <div className="flex justify-center">
-          <button
-            onClick={isRecording ? stopRecording : startRecording}
-            disabled={!isSupported}
-            className={cn(
-              "w-32 h-32 rounded-full flex items-center justify-center transition-all",
-              isRecording
-                ? "bg-debt animate-pulse shadow-lg shadow-debt/30"
-                : "bg-primary hover:bg-primary/90 shadow-lg shadow-primary/30",
-              !isSupported && "opacity-50 cursor-not-allowed"
-            )}
-          >
-            {isRecording ? (
-              <Square className="w-12 h-12 text-primary-foreground" />
-            ) : (
-              <Mic className="w-12 h-12 text-primary-foreground" />
-            )}
-          </button>
+        {/* Microphone button - Modern with pulse animation */}
+        <div className="flex-1 flex items-center justify-center py-8">
+          <div className="relative">
+            {/* Pulse animation ring */}
+            <div 
+              className={cn(
+                "absolute inset-0 rounded-full transition-all duration-300",
+                isRecording 
+                  ? "animate-ping bg-red-500/30" 
+                  : "bg-[#4f7df3]/10"
+              )} 
+            />
+            {/* Outer glow */}
+            <div 
+              className={cn(
+                "absolute -inset-3 rounded-full blur-xl transition-all duration-300",
+                isRecording 
+                  ? "bg-red-500/20" 
+                  : "bg-[#4f7df3]/20"
+              )} 
+            />
+            <button
+              onClick={isRecording ? stopRecording : startRecording}
+              disabled={!isSupported}
+              className={cn(
+                "relative w-28 h-28 rounded-full flex items-center justify-center transition-all shadow-xl",
+                isRecording
+                  ? "bg-red-500 shadow-red-500/30"
+                  : "bg-gradient-to-br from-[#4f7df3] to-[#3b6ce8] shadow-[#4f7df3]/30 hover:shadow-2xl",
+                !isSupported && "opacity-50 cursor-not-allowed"
+              )}
+            >
+              {isRecording ? (
+                <Square className="w-10 h-10 text-white" />
+              ) : (
+                <Mic className="w-10 h-10 text-white" />
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Recording info */}
         {isRecording && (
-          <div className="text-center space-y-2 animate-fade-in">
-            <p className="text-2xl font-mono text-debt">{formatDuration(recordingDuration)}</p>
+          <div className="text-center space-y-2 animate-fade-in -mt-4 mb-4">
+            <p className="text-3xl font-mono text-red-500 font-bold">{formatDuration(recordingDuration)}</p>
             <p className="text-sm text-muted-foreground">Parlez maintenant...</p>
           </div>
         )}
 
         {/* Transcript preview */}
         {transcript && (
-          <Card className="p-4 bg-secondary/50">
-            <p className="text-sm text-muted-foreground mb-1">Transcription:</p>
+          <Card className="p-4 bg-secondary/50 rounded-2xl border-0 mb-4">
+            <p className="text-xs text-muted-foreground mb-1 uppercase font-semibold tracking-wide">Transcription:</p>
             <p className="text-foreground">{transcript}</p>
           </Card>
         )}
 
         {/* Error message with retry */}
         {errorMessage && (
-          <Card className="p-4 bg-destructive/10 border-destructive/20 space-y-3">
-            <p className="text-sm text-destructive">{errorMessage}</p>
+          <Card className="p-4 bg-red-50 border-red-200 rounded-2xl space-y-3 mb-4">
+            <p className="text-sm text-red-600">{errorMessage}</p>
             {canRetry && lastTranscript && (
               <Button 
                 variant="outline" 
                 size="sm" 
                 onClick={() => analyzeTranscript(lastTranscript)}
-                className="w-full"
+                className="w-full rounded-full"
               >
                 Réessayer l'analyse
               </Button>
@@ -1051,13 +1074,21 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
           </Card>
         )}
 
-        {/* Examples */}
-        <div className="space-y-2">
-          <p className="text-xs font-semibold text-muted-foreground uppercase">Exemples:</p>
-          <div className="space-y-1 text-xs text-muted-foreground">
-            <p>• "J'ai vendu 5 chargeurs à 1500, Kofi a payé cash"</p>
-            <p>• "Mamadou a pris 3 écrans à 5000, il a payé 10000, et Fatou a pris 2 batteries"</p>
-            <p>• "Crédit de 25000 pour Awa, elle a payé 5000"</p>
+        {/* Examples - Modern cards */}
+        <div className="space-y-3 mb-6">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+            Exemples
+          </p>
+          <div className="space-y-2">
+            <div className="p-3 bg-secondary/50 rounded-xl text-sm text-muted-foreground">
+              "J'ai vendu 5 chargeurs à 1500, Kofi a payé cash"
+            </div>
+            <div className="p-3 bg-secondary/50 rounded-xl text-sm text-muted-foreground">
+              "Mamadou a pris 3 écrans à 5000, il a payé 10000"
+            </div>
+            <div className="p-3 bg-secondary/50 rounded-xl text-sm text-muted-foreground">
+              "Crédit de 25000 pour Awa, elle a payé 5000"
+            </div>
           </div>
         </div>
 
@@ -1066,15 +1097,19 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
           <Button 
             variant="outline" 
             onClick={() => setShowHistory(true)} 
-            className="w-full"
+            className="w-full rounded-full mb-3"
           >
             <History className="w-4 h-4 mr-2" />
             Historique ({voiceHistory.length})
           </Button>
         )}
 
-        {/* Cancel button */}
-        <Button variant="ghost" onClick={onCancel} className="w-full">
+        {/* Cancel button - Outline rounded */}
+        <Button 
+          variant="outline" 
+          onClick={onCancel} 
+          className="w-full rounded-full"
+        >
           Annuler
         </Button>
 
@@ -1143,21 +1178,23 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
   }
 
 
-  // Validate step - Multi-sale view
+  // Validate step - Multi-sale view - Modern Design
   if (step === "validate" && parsedSales.length > 0) {
     const currentSale = disambiguationSaleIndex !== null ? parsedSales[disambiguationSaleIndex] : null;
 
     return (
-      <div className="space-y-4 p-4">
-        <div className="text-center">
-          <h2 className="text-xl font-bold mb-1">
+      <div className="min-h-screen bg-gradient-to-b from-[#f8f9ff] via-white to-[#f8f9ff] p-4 space-y-6">
+        {/* Header with badge */}
+        <div className="text-center space-y-2 pt-4">
+          <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-1.5 rounded-full text-sm font-semibold">
+            <Check className="w-4 h-4" />
             {parsedSales.length} vente{parsedSales.length > 1 ? 's' : ''} détectée{parsedSales.length > 1 ? 's' : ''}
-          </h2>
-          <p className="text-sm text-muted-foreground">Vérifiez et confirmez</p>
+          </div>
+          <p className="text-muted-foreground">Vérifiez et confirmez</p>
         </div>
 
-        {/* Sales list */}
-        <div className="space-y-3">
+        {/* Sales list - Modern cards with colored borders */}
+        <div className="space-y-4">
           {parsedSales.map((sale, index) => {
             const status = getSaleStatus(sale);
             const clientName = sale.resolved_client_name 
@@ -1168,20 +1205,25 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
               <Card 
                 key={index} 
                 className={cn(
-                  "p-4 cursor-pointer transition-all",
-                  status === "needs_action" && "border-amber-500 bg-amber-500/5"
+                  "p-5 rounded-2xl border-2 transition-all cursor-pointer",
+                  sale.type === "cash" 
+                    ? "border-l-4 border-l-[#4f7df3] bg-[#4f7df3]/5 hover:bg-[#4f7df3]/10" 
+                    : "border-l-4 border-l-[#f97316] bg-[#f97316]/5 hover:bg-[#f97316]/10",
+                  status === "needs_action" && "ring-2 ring-amber-300"
                 )}
                 onClick={() => status === "needs_action" && openDisambiguation(index)}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     {/* Sale type and amount */}
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-3 mb-2">
                       <Badge 
                         variant="outline"
                         className={cn(
-                          "text-xs",
-                          sale.type === "cash" ? "border-cash text-cash" : "border-credit text-credit"
+                          "text-xs font-semibold rounded-full px-3",
+                          sale.type === "cash" 
+                            ? "border-[#4f7df3] text-[#4f7df3] bg-white" 
+                            : "border-[#f97316] text-[#f97316] bg-white"
                         )}
                       >
                         {sale.type === "cash" ? <Wallet className="w-3 h-3 mr-1" /> : <CreditCard className="w-3 h-3 mr-1" />}
@@ -1192,7 +1234,7 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
                           e.stopPropagation();
                           openEditSale(index);
                         }}
-                        className="flex items-center gap-1 font-bold hover:text-primary transition-colors group"
+                        className="flex items-center gap-1 text-lg font-bold hover:text-primary transition-colors group"
                       >
                         {formatMoney(sale.amount)} CFA
                         <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -1203,22 +1245,28 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
                     <div className="flex items-center gap-2 text-sm">
                       {status === "ready" ? (
                         <>
-                          <Check className="w-4 h-4 text-success" />
-                          <span className="text-muted-foreground">
+                          <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
+                            <Check className="w-3 h-3 text-green-600" />
+                          </div>
+                          <span className="text-muted-foreground font-medium">
                             {clientName || "Vente anonyme"}
                           </span>
                         </>
                       ) : sale.client_match.status === "ambiguous" ? (
                         <>
-                          <Users className="w-4 h-4 text-amber-500" />
-                          <span className="text-amber-600">
+                          <div className="w-5 h-5 rounded-full bg-amber-100 flex items-center justify-center">
+                            <Users className="w-3 h-3 text-amber-600" />
+                          </div>
+                          <span className="text-amber-600 font-medium">
                             {sale.client_match.candidates.length} "{sale.client_match.client_name}" trouvés
                           </span>
                         </>
                       ) : (
                         <>
-                          <AlertTriangle className="w-4 h-4 text-amber-500" />
-                          <span className="text-amber-600">
+                          <div className="w-5 h-5 rounded-full bg-amber-100 flex items-center justify-center">
+                            <AlertTriangle className="w-3 h-3 text-amber-600" />
+                          </div>
+                          <span className="text-amber-600 font-medium">
                             "{sale.client_match.client_name}" non trouvé
                           </span>
                         </>
@@ -1227,7 +1275,7 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
 
                     {/* Products preview */}
                     {sale.products && sale.products.length > 0 && (
-                      <p className="text-xs text-muted-foreground mt-1 truncate">
+                      <p className="text-xs text-muted-foreground mt-2 bg-white/50 px-2 py-1 rounded-lg inline-block">
                         {sale.products.map(p => `${p.quantity}x ${p.name}`).join(", ")}
                       </p>
                     )}
@@ -1237,13 +1285,12 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
                       const warnings = getStockWarnings(sale);
                       if (warnings.length === 0) return null;
                       return (
-                        <div className="mt-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                        <div className="mt-3 p-3 rounded-xl bg-amber-50 border border-amber-200">
                           {warnings.map((w, idx) => (
-                            <p key={idx} className="text-xs text-amber-600 flex items-center gap-1">
+                            <p key={idx} className="text-xs text-amber-700 flex items-center gap-1">
                               <AlertTriangle className="w-3 h-3" />
                               <span>
-                                <strong>{w.productName}</strong>: stock actuel {w.currentStock}, 
-                                sera <strong className="text-destructive">{w.stockAfter}</strong> après vente
+                                <strong>{w.productName}</strong>: stock {w.currentStock} → <strong className="text-red-600">{w.stockAfter}</strong>
                               </span>
                             </p>
                           ))}
@@ -1256,7 +1303,7 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
                     <Button 
                       size="icon" 
                       variant="ghost" 
-                      className="h-8 w-8"
+                      className="h-9 w-9 rounded-full hover:bg-white"
                       onClick={(e) => {
                         e.stopPropagation();
                         openEditSale(index);
@@ -1267,7 +1314,7 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
                     <Button 
                       size="icon" 
                       variant="ghost" 
-                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      className="h-9 w-9 rounded-full text-red-500 hover:bg-red-50 hover:text-red-600"
                       onClick={(e) => {
                         e.stopPropagation();
                         confirmDeleteSale(index);
@@ -1276,7 +1323,7 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
                       <Trash2 className="w-4 h-4" />
                     </Button>
                     {status === "needs_action" && (
-                      <Button size="sm" variant="outline">
+                      <Button size="sm" variant="outline" className="rounded-full text-xs">
                         Résoudre
                       </Button>
                     )}
@@ -1287,51 +1334,60 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
           })}
         </div>
 
-        {/* Suggestions */}
+        {/* Suggestions - Modern style */}
         {suggestions.length > 0 && (
-          <div className="space-y-1">
-            {suggestions.map((suggestion, idx) => (
-              <p key={idx} className="text-xs text-credit">💡 {suggestion}</p>
-            ))}
+          <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200">
+            <div className="flex items-start gap-3">
+              <span className="text-xl">💡</span>
+              <div className="space-y-1">
+                {suggestions.map((suggestion, idx) => (
+                  <p key={idx} className="text-sm text-amber-800">{suggestion}</p>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
-        {/* Summary */}
-        <Card className="p-4 bg-secondary/30">
-          <div className="space-y-2">
-            <div className="flex justify-between text-lg font-bold">
+        {/* Summary - Modern gradient card */}
+        <Card className="p-5 rounded-2xl bg-gradient-to-r from-secondary/50 to-secondary/30 border-0">
+          <div className="space-y-3">
+            <div className="flex justify-between text-xl font-bold">
               <span>Total</span>
               <span>{formatMoney(totals.total)} CFA</span>
             </div>
             
-            <Separator />
+            <Separator className="bg-border/50" />
             
             <div className="flex justify-between text-sm">
               <span className="flex items-center gap-2">
-                <Wallet className="w-4 h-4 text-cash" />
+                <div className="w-6 h-6 rounded-full bg-[#4f7df3]/20 flex items-center justify-center">
+                  <Wallet className="w-3 h-3 text-[#4f7df3]" />
+                </div>
                 Cash
               </span>
-              <span className="text-cash font-medium">{formatMoney(totals.cash)} CFA</span>
+              <span className="text-[#4f7df3] font-semibold">{formatMoney(totals.cash)} CFA</span>
             </div>
             
             <div className="flex justify-between text-sm">
               <span className="flex items-center gap-2">
-                <CreditCard className="w-4 h-4 text-credit" />
+                <div className="w-6 h-6 rounded-full bg-[#f97316]/20 flex items-center justify-center">
+                  <CreditCard className="w-3 h-3 text-[#f97316]" />
+                </div>
                 Crédit
               </span>
-              <span className="text-credit font-medium">{formatMoney(totals.credit)} CFA</span>
+              <span className="text-[#f97316] font-semibold">{formatMoney(totals.credit)} CFA</span>
             </div>
             
             {totals.remaining > 0 && (
               <>
-                <Separator />
+                <Separator className="bg-border/50" />
                 <div className="flex justify-between text-sm">
                   <span>Encaissé maintenant</span>
-                  <span className="font-medium text-success">{formatMoney(totals.paid)} CFA</span>
+                  <span className="font-semibold text-green-600">{formatMoney(totals.paid)} CFA</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Restant à payer</span>
-                  <span className="font-medium text-amber-600">{formatMoney(totals.remaining)} CFA</span>
+                  <span className="font-semibold text-amber-600">{formatMoney(totals.remaining)} CFA</span>
                 </div>
               </>
             )}
@@ -1340,43 +1396,64 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
 
         {/* Global stock warning */}
         {hasAnyStockWarnings && (
-          <Card className="p-3 bg-amber-500/10 border-amber-500/30">
-            <div className="flex items-start gap-2">
-              <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+          <Card className="p-4 bg-amber-50 border-amber-200 rounded-2xl">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-4 h-4 text-amber-600" />
+              </div>
               <div>
-                <p className="font-medium text-amber-600 text-sm">Stock insuffisant</p>
-                <p className="text-xs text-amber-600/80">
-                  Certains produits ont un stock inférieur à la quantité vendue. 
-                  Le stock deviendra négatif après cette vente.
+                <p className="font-semibold text-amber-700">Stock insuffisant</p>
+                <p className="text-sm text-amber-600">
+                  Certains produits passeront en stock négatif.
                 </p>
               </div>
             </div>
           </Card>
         )}
 
-        {/* Action buttons */}
-        <div className="grid grid-cols-2 gap-3 pt-2">
-          <Button variant="outline" onClick={() => setStep("record")} disabled={isSubmitting}>
-            <Edit2 className="w-4 h-4 mr-2" />
-            Modifier
-          </Button>
-          <Button 
+        {/* Action buttons - Modern with PrimaryActionButton style */}
+        <div className="space-y-3 pb-6">
+          <button 
             onClick={handleConfirmAll} 
             disabled={isSubmitting}
-            className={hasAnyStockWarnings ? "bg-amber-500 hover:bg-amber-600" : "bg-success hover:bg-success/90"}
+            className={cn(
+              "w-full h-14 rounded-full flex items-center justify-center gap-2",
+              "text-white font-bold text-base tracking-wide uppercase",
+              "shadow-lg hover:shadow-xl active:scale-[0.98] transition-all",
+              "disabled:opacity-50 disabled:cursor-not-allowed",
+              hasAnyStockWarnings 
+                ? "bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 shadow-amber-500/30" 
+                : "bg-gradient-to-r from-green-500 via-green-600 to-green-700 shadow-green-500/30"
+            )}
           >
             {isSubmitting ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              <Loader2 className="w-5 h-5 animate-spin" />
             ) : (
-              <Check className="w-4 h-4 mr-2" />
+              <Check className="w-5 h-5" />
             )}
-            {hasAnyStockWarnings ? "Confirmer quand même" : "Confirmer tout"}
-          </Button>
-        </div>
+            {hasAnyStockWarnings ? "Confirmer quand même" : `Confirmer ${parsedSales.length > 1 ? 'tout' : ''}`}
+          </button>
 
-        <Button variant="ghost" onClick={onCancel} className="w-full" disabled={isSubmitting}>
-          Annuler
-        </Button>
+          <div className="grid grid-cols-2 gap-3">
+            <Button 
+              variant="outline" 
+              onClick={() => setStep("record")} 
+              disabled={isSubmitting}
+              className="h-12 rounded-full font-semibold"
+            >
+              <Edit2 className="w-4 h-4 mr-2" />
+              Modifier
+            </Button>
+            <Button 
+              variant="ghost" 
+              onClick={onCancel} 
+              disabled={isSubmitting}
+              className="h-12 rounded-full font-semibold"
+            >
+              Annuler
+            </Button>
+          </div>
+        </div>
 
         {/* Disambiguation Dialog */}
         <Dialog open={disambiguationSaleIndex !== null} onOpenChange={(open) => !open && setDisambiguationSaleIndex(null)}>
