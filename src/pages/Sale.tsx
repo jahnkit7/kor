@@ -13,7 +13,9 @@ import {
   FullScreenSheetTitle, 
   FullScreenSheetContent 
 } from "@/components/ui/fullscreen-sheet";
-import { ArrowLeft, Check, User, MessageSquare, Mic, Wallet, CreditCard, Clock, Lock, Package, ChevronRight } from "lucide-react";
+import { ArrowLeft, Check, User, MessageSquare, Mic, Wallet, CreditCard, Clock, Lock, Package, ChevronRight, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { PrimaryActionButton } from "@/components/ui/primary-action-button";
 import { toast } from "sonner";
 import { useClients } from "@/hooks/use-clients";
 import { useSales, SaleItem } from "@/hooks/use-sales";
@@ -62,6 +64,7 @@ const Sale = () => {
   const [showHistorySheet, setShowHistorySheet] = useState(false);
   const [showNoteSheet, setShowNoteSheet] = useState(false);
   const [showClientSheet, setShowClientSheet] = useState(false);
+  const [clientSearch, setClientSearch] = useState("");
 
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
@@ -74,6 +77,16 @@ const Sale = () => {
     () => clients.find((c) => c.id === selectedClient)?.name,
     [clients, selectedClient]
   );
+
+  // Filter clients by search
+  const filteredClients = useMemo(() => {
+    if (!clientSearch.trim()) return clients;
+    const search = clientSearch.toLowerCase();
+    return clients.filter(c => 
+      c.name.toLowerCase().includes(search) ||
+      c.phone?.toLowerCase().includes(search)
+    );
+  }, [clients, clientSearch]);
 
   // Calculate total from products if any selected
   const productTotal = useMemo(() => {
@@ -290,25 +303,25 @@ const Sale = () => {
           )}
         </div>
 
-        {/* Amount Display - Compact */}
-        <div className="text-center py-4">
-          <p className="text-xs opacity-80 mb-1">
+        {/* Amount Display - More Compact */}
+        <div className="text-center py-2">
+          <p className="text-[10px] opacity-80 mb-0.5">
             {selectedProducts.length > 0 ? "Total produits" : "Montant"}
           </p>
-          <p className="text-3xl font-bold">
-            {formatMoney(effectiveAmount)} <span className="text-lg">CFA</span>
+          <p className="text-2xl font-bold">
+            {formatMoney(effectiveAmount)} <span className="text-base">CFA</span>
           </p>
         </div>
 
         {/* Note button - Bottom right of header */}
-        <div className="flex justify-end pb-2">
+        <div className="flex justify-end pb-1">
           <button 
             onClick={() => setShowNoteSheet(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-foreground/10 rounded-full text-primary-foreground/90 hover:bg-primary-foreground/20 transition-colors"
+            className="flex items-center gap-1 px-2 py-1 bg-primary-foreground/10 rounded-full text-primary-foreground/90 hover:bg-primary-foreground/20 transition-colors"
           >
-            <MessageSquare className="w-3.5 h-3.5" />
-            <span className="text-xs font-medium">Note</span>
-            {note && <span className="w-1.5 h-1.5 rounded-full bg-primary-foreground" />}
+            <MessageSquare className="w-3 h-3" />
+            <span className="text-[10px] font-medium">Note</span>
+            {note && <span className="w-1 h-1 rounded-full bg-primary-foreground" />}
           </button>
         </div>
       </div>
@@ -405,6 +418,20 @@ const Sale = () => {
           </button>
         </div>
 
+        {/* Client Selection - Available for both cash and credit */}
+        <button 
+          onClick={() => setShowClientSheet(true)}
+          className="w-full flex items-center justify-between px-3 py-2.5 bg-secondary/50 rounded-xl mb-2 shrink-0"
+        >
+          <span className="flex items-center gap-2">
+            <User className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm font-medium">
+              {selectedClientName || "Sélectionner un client (optionnel)"}
+            </span>
+          </span>
+          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+        </button>
+
         {/* FullScreen Sheet - Produits */}
         <FullScreenSheet open={showProductsSheet} onOpenChange={setShowProductsSheet}>
           <FullScreenSheetHeader>
@@ -474,80 +501,86 @@ const Sale = () => {
           </FullScreenSheetContent>
         </FullScreenSheet>
 
-        {/* Client Selection (Credit only) - Compact button */}
-        {!isCash && (
-          <>
-            <button 
-              onClick={() => setShowClientSheet(true)}
-              className="w-full flex items-center justify-between px-3 py-2.5 bg-secondary/50 rounded-lg mb-2 shrink-0"
+        {/* FullScreen Sheet - Clients (available for both) */}
+        <FullScreenSheet open={showClientSheet} onOpenChange={(open) => {
+          setShowClientSheet(open);
+          if (!open) setClientSearch("");
+        }}>
+          <FullScreenSheetHeader>
+            <FullScreenSheetTitle>Sélectionner un client</FullScreenSheetTitle>
+            
+            {/* Search bar with mic */}
+            <div className="relative mt-4">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Rechercher un client..."
+                value={clientSearch}
+                onChange={(e) => setClientSearch(e.target.value)}
+                className="pl-10 pr-12 h-12 rounded-xl"
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-10 w-10"
+                onClick={() => {
+                  toast.info("Recherche vocale bientôt disponible");
+                }}
+              >
+                <Mic className="w-5 h-5 text-muted-foreground" />
+              </Button>
+            </div>
+          </FullScreenSheetHeader>
+          <FullScreenSheetContent className="h-[calc(100%-12rem)]">
+            <div className="space-y-2 pr-2">
+              {clientsLoading ? (
+                <p className="text-center text-muted-foreground py-4">Chargement...</p>
+              ) : filteredClients.length === 0 ? (
+                <p className="text-center text-muted-foreground py-4">
+                  {clientSearch ? "Aucun client trouvé" : "Aucun client"}
+                </p>
+              ) : (
+                filteredClients.map((client) => (
+                  <Card
+                    key={client.id}
+                    className={cn(
+                      "cursor-pointer transition-all",
+                      selectedClient === client.id && "border-2 border-primary bg-primary/5"
+                    )}
+                    onClick={() => {
+                      setSelectedClient(client.id);
+                      setShowClientSheet(false);
+                      setClientSearch("");
+                    }}
+                  >
+                    <CardContent className="p-3 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+                        <User className="w-5 h-5 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold">{client.name}</p>
+                        <p className="text-xs text-muted-foreground">{client.phone}</p>
+                      </div>
+                      {selectedClient === client.id && (
+                        <Check className="w-5 h-5 text-primary" />
+                      )}
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          </FullScreenSheetContent>
+          <div className="absolute bottom-0 left-0 right-0 p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] bg-background">
+            <PrimaryActionButton 
+              onClick={() => navigate("/clients/new")}
             >
-              <span className="flex items-center gap-2">
-                <User className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm font-medium">
-                  {selectedClientName || "Sélectionner un client"}
-                </span>
-              </span>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            </button>
+              <User className="w-5 h-5" />
+              Nouveau client
+            </PrimaryActionButton>
+          </div>
+        </FullScreenSheet>
 
-            {/* FullScreen Sheet - Clients */}
-            <FullScreenSheet open={showClientSheet} onOpenChange={setShowClientSheet}>
-              <FullScreenSheetHeader>
-                <FullScreenSheetTitle>Sélectionner un client</FullScreenSheetTitle>
-              </FullScreenSheetHeader>
-              <FullScreenSheetContent className="h-[calc(100%-10rem)]">
-                <div className="space-y-2 pr-2">
-                  {clientsLoading ? (
-                    <p className="text-center text-muted-foreground py-4">Chargement...</p>
-                  ) : (
-                    clients.map((client) => (
-                      <Card
-                        key={client.id}
-                        className={cn(
-                          "cursor-pointer transition-all",
-                          selectedClient === client.id && "border-2 border-credit bg-credit/5"
-                        )}
-                        onClick={() => {
-                          setSelectedClient(client.id);
-                          setShowClientSheet(false);
-                        }}
-                      >
-                        <CardContent className="p-3 flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
-                            <User className="w-5 h-5 text-muted-foreground" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="font-semibold">{client.name}</p>
-                            <p className="text-xs text-muted-foreground">{client.phone}</p>
-                          </div>
-                          {selectedClient === client.id && (
-                            <Check className="w-5 h-5 text-credit" />
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))
-                  )}
-                </div>
-              </FullScreenSheetContent>
-              <div className="absolute bottom-0 left-0 right-0 p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] bg-background">
-                <button 
-                  onClick={() => navigate("/clients/new")}
-                  className="w-full h-14 rounded-full flex items-center justify-center gap-2
-                    bg-gradient-to-r from-[#4f7df3] via-[#5b8af5] to-[#3b6ce8]
-                    text-white font-bold text-base tracking-wide uppercase
-                    shadow-lg shadow-blue-500/30 hover:shadow-xl
-                    active:scale-[0.98] transition-all"
-                >
-                  <User className="w-5 h-5" />
-                  Nouveau client
-                </button>
-              </div>
-            </FullScreenSheet>
-          </>
-        )}
-
-        {/* Spacer to push numpad down */}
-        <div className="flex-1 min-h-0" />
+        {/* Spacer to push numpad down - smaller */}
+        <div className="flex-1 min-h-2 max-h-8" />
 
         {/* Numpad - Taller keys */}
         <div className="shrink-0">
@@ -572,16 +605,15 @@ const Sale = () => {
             </div>
           )}
 
-          {/* Submit button - Auth style with more margin */}
-          <Button
-            size="lg"
-            className="w-full h-14 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg"
+          {/* Submit button - PrimaryActionButton style */}
+          <PrimaryActionButton
+            variant={isCash ? "blue" : "orange"}
             onClick={handleSubmit}
             disabled={effectiveAmount === 0 || (!isCash && !selectedClient) || isLoading}
           >
-            <Check className="w-5 h-5 mr-2" />
+            <Check className="w-5 h-5" />
             Enregistrer {formatMoney(effectiveAmount)} CFA
-          </Button>
+          </PrimaryActionButton>
         </div>
       </div>
     </FullScreenLayout>
