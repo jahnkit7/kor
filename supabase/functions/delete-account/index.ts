@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(
-        JSON.stringify({ error: "Missing authorization header" }),
+        JSON.stringify({ error: "En-tête d'autorisation manquant" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
     const { data: { user }, error: userError } = await userClient.auth.getUser();
     if (userError || !user) {
       return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
+        JSON.stringify({ error: "Non autorisé" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -88,21 +88,21 @@ Deno.serve(async (req) => {
     const { error: deleteError } = await adminClient.auth.admin.deleteUser(userId);
     
     if (deleteError) {
-      console.error("Error deleting auth user:", deleteError);
+      console.error("Erreur suppression utilisateur auth:", deleteError);
       return new Response(
-        JSON.stringify({ error: "Failed to delete user account" }),
+        JSON.stringify({ error: "Échec de la suppression du compte" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     return new Response(
-      JSON.stringify({ success: true, message: "Account deleted successfully" }),
+      JSON.stringify({ success: true, message: "Compte supprimé avec succès" }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("Error in delete-account:", error);
+    console.error("Erreur dans delete-account:", error);
     return new Response(
-      JSON.stringify({ error: "Internal server error" }),
+      JSON.stringify({ error: "Erreur interne du serveur" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

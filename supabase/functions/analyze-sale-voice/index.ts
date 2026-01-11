@@ -84,7 +84,7 @@ serve(async (req) => {
     if (!transcript || typeof transcript !== "string") {
       console.error("analyze-sale-voice: Invalid transcript");
       return new Response(
-        JSON.stringify({ error: "Transcript is required" }),
+        JSON.stringify({ error: "Transcription vocale requise" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
