@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useFeatureTracking } from "@/hooks/use-feature-tracking";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { AnimatedCard } from "@/components/ui/animated-card";
 import { 
   ArrowLeft, 
   Search, 
@@ -151,10 +152,10 @@ const Debts = () => {
               </CardContent>
             </Card>
           ) : (
-            filteredDebts.map((debt) => (
-              <Card
+            filteredDebts.map((debt, index) => (
+              <AnimatedCard
                 key={debt.client_id}
-                className="cursor-pointer hover:shadow-lg transition-shadow animate-fade-in"
+                delay={index}
                 onClick={() => navigate(`/debts/${debt.client_id}`)}
               >
                 <CardContent className="p-3">
@@ -185,17 +186,19 @@ const Debts = () => {
                     </p>
                     
                     <div className="flex items-center gap-2">
-                      <WhatsAppShare
-                        type="debt"
-                        data={{
-                          clientName: debt.name,
-                          clientPhone: debt.phone,
-                          amount: debt.totalAmount,
-                        }}
-                        variant="outline"
-                        size="sm"
-                        className="h-7 text-xs px-2"
-                      />
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <WhatsAppShare
+                          type="debt"
+                          data={{
+                            clientName: debt.name,
+                            clientPhone: debt.phone,
+                            amount: debt.totalAmount,
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs px-2"
+                        />
+                      </div>
                       {debt.daysOverdue > 0 ? (
                         <span className={`text-xs font-semibold px-2 py-1 rounded-full flex items-center gap-1 whitespace-nowrap ${getOverdueColor(debt.daysOverdue)}`}>
                           <AlertCircle className="w-3 h-3 shrink-0" />
@@ -210,7 +213,7 @@ const Debts = () => {
                     </div>
                   </div>
                 </CardContent>
-              </Card>
+              </AnimatedCard>
             ))
           )}
         </div>

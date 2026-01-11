@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useFeatureTracking } from "@/hooks/use-feature-tracking";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PrimaryActionButton } from "@/components/ui/primary-action-button";
+import { HoverCard } from "@/components/ui/animated-card";
 import { 
   ArrowLeft, 
   Calendar,
@@ -158,7 +160,7 @@ const Reports = () => {
 
         {/* Cash vs Credit */}
         <div className="grid grid-cols-2 gap-3">
-          <Card>
+          <HoverCard>
             <CardContent className="p-4">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 rounded-xl bg-cash/10 flex items-center justify-center">
@@ -173,9 +175,9 @@ const Reports = () => {
                 {currentData.total > 0 ? Math.round((currentData.cash / currentData.total) * 100) : 0}% du total
               </p>
             </CardContent>
-          </Card>
+          </HoverCard>
 
-          <Card>
+          <HoverCard>
             <CardContent className="p-4">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 rounded-xl bg-credit/10 flex items-center justify-center">
@@ -190,7 +192,7 @@ const Reports = () => {
                 {currentData.total > 0 ? Math.round((currentData.credit / currentData.total) * 100) : 0}% du total
               </p>
             </CardContent>
-          </Card>
+          </HoverCard>
         </div>
 
         {/* Outstanding Debts */}
@@ -218,15 +220,12 @@ const Reports = () => {
         </Card>
 
         {/* Export Button */}
-        <Button
-          variant="secondary"
-          size="lg"
-          className="w-full"
+        <PrimaryActionButton
           onClick={handleDownload}
         >
-          <Download className="w-5 h-5 mr-2" />
+          <Download className="w-5 h-5" />
           Télécharger
-        </Button>
+        </PrimaryActionButton>
       </div>
     </AppLayout>
     </FeatureGate>

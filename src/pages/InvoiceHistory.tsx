@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { AnimatedCard } from "@/components/ui/animated-card";
 import {
   Dialog,
   DialogContent,
@@ -188,10 +189,10 @@ export default function InvoiceHistory() {
             </CardContent>
           </Card>
         ) : (
-          filteredInvoices.map((invoice) => (
-            <Card
+          filteredInvoices.map((invoice, index) => (
+            <AnimatedCard
               key={invoice.id}
-              className="animate-fade-in cursor-pointer hover:shadow-md transition-shadow"
+              delay={index}
               onClick={() => handleView(invoice)}
             >
               <CardContent className="p-4">
@@ -299,10 +300,10 @@ export default function InvoiceHistory() {
                       </AlertDialogContent>
                     </AlertDialog>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+                  </div>
+                </CardContent>
+              </AnimatedCard>
+            ))
         )}
       </div>
 
