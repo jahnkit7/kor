@@ -239,7 +239,7 @@ const Auth = () => {
 
     setIsLoading(true);
 
-    const fakeEmail = `${selectedCountry.prefix.replace("+", "")}${phone}@dekon.local`;
+    const fakeEmail = `${selectedCountry.prefix.replace("+", "")}${phone}@kor.local`;
     const password = generateSecurePassword(pin, phone, selectedCountry.prefix);
 
     try {

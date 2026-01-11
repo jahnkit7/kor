@@ -31,7 +31,6 @@ const modules = [
   { to: "/admin/financials", icon: TrendingUp, label: "Finances" },
   { to: "/admin/users", icon: Users, label: "Utilisateurs" },
   { to: "/admin/subscriptions", icon: CreditCard, label: "Abonnements" },
-  { to: "/admin/codes", icon: QrCode, label: "Codes Prépayés" },
   { to: "/admin/geography", icon: Globe, label: "Géographie" },
 ];
 
@@ -109,7 +108,7 @@ export function AdminFloatingSidebar() {
             <Sparkles className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="font-bold text-lg text-[#2d3748] tracking-tight">DÉKON</h1>
+            <h1 className="font-bold text-lg text-[#2d3748] tracking-tight">KÒR</h1>
             <p className="text-[11px] text-[#718096] font-medium">Control Center</p>
           </div>
         </div>

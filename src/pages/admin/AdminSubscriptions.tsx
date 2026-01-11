@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -35,8 +36,10 @@ import {
   Globe,
   Mic,
   Brain,
-  UserCog
+  UserCog,
+  QrCode
 } from "lucide-react";
+import { PrepaidCodesTab } from "@/components/admin/PrepaidCodesTab";
 
 const featureIcons: Record<string, React.ReactNode> = {
   sales: <ShoppingCart className="w-4 h-4" />,
@@ -231,19 +234,32 @@ export default function AdminSubscriptions() {
 
   return (
     <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Abonnements</h1>
-            <p className="text-muted-foreground">
-              Gérez les plans d'abonnement et leurs fonctionnalités
-            </p>
+      <Tabs defaultValue="plans" className="w-full">
+        <TabsList className="w-full max-w-md">
+          <TabsTrigger value="plans" className="flex-1">
+            <CreditCard className="w-4 h-4 mr-2" />
+            Plans
+          </TabsTrigger>
+          <TabsTrigger value="codes" className="flex-1">
+            <QrCode className="w-4 h-4 mr-2" />
+            Codes Prépayés
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="plans" className="space-y-6 mt-6">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Plans d'abonnement</h1>
+              <p className="text-muted-foreground">
+                Gérez les plans et leurs fonctionnalités
+              </p>
+            </div>
+            <Button onClick={openNewPlanDialog}>
+              <Plus className="w-4 h-4 mr-2" />
+              Nouveau plan
+            </Button>
           </div>
-          <Button onClick={openNewPlanDialog}>
-            <Plus className="w-4 h-4 mr-2" />
-            Nouveau plan
-          </Button>
-        </div>
 
         {/* Dialog Create/Edit */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -486,6 +502,12 @@ export default function AdminSubscriptions() {
             ))}
           </div>
         )}
-      </div>
+        </TabsContent>
+
+        <TabsContent value="codes" className="mt-6">
+          <PrepaidCodesTab />
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }

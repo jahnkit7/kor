@@ -47,7 +47,7 @@ export async function exportUserData(): Promise<BackupData> {
     version: "1.0",
     exportedAt: now.toISOString(),
     exportedAtFormatted: format(now, "d MMMM yyyy 'à' HH:mm", { locale: fr }),
-    appVersion: "DÉKON 1.0",
+    appVersion: "KÒR 1.0",
     data: {
       sales,
       clients,
@@ -77,7 +77,7 @@ export async function downloadBackup(): Promise<void> {
   const url = URL.createObjectURL(blob);
   
   const dateStr = format(new Date(), "yyyy-MM-dd_HH-mm");
-  const filename = `dekon-backup-${dateStr}.json`;
+  const filename = `kor-backup-${dateStr}.json`;
   
   const a = document.createElement("a");
   a.href = url;
