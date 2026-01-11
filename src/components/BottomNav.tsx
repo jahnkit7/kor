@@ -18,6 +18,35 @@ import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { triggerHaptic } from "@/lib/haptics";
 
+import type { Transition } from "framer-motion";
+
+// Animation variants pour le style ExpandableTabs
+const buttonVariants = {
+  initial: {
+    gap: 0,
+    paddingLeft: "0.75rem",
+    paddingRight: "0.75rem",
+  },
+  animate: {
+    gap: "0.5rem",
+    paddingLeft: "1rem",
+    paddingRight: "1rem",
+  },
+};
+
+const spanVariants = {
+  initial: { width: 0, opacity: 0 },
+  animate: { width: "auto", opacity: 1 },
+  exit: { width: 0, opacity: 0 },
+};
+
+const transition: Transition = { 
+  delay: 0.05, 
+  type: "spring", 
+  bounce: 0, 
+  duration: 0.5 
+};
+
 const BottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -124,8 +153,8 @@ const BottomNav = () => {
         )}
       </AnimatePresence>
       
-      {/* Container avec hauteur responsive */}
-      <div className="flex items-center justify-around h-[clamp(3.5rem,10vw,4.5rem)] pb-1">
+      {/* Navigation items with expandable tabs style */}
+      <div className="flex items-center justify-center gap-1 h-16 px-2">
         {visibleItems.map(({ icon, label, path, badge, isBeta }) => {
           const isActive = location.pathname === path || 
             (path !== "/dashboard" && location.pathname.startsWith(path));
@@ -140,72 +169,68 @@ const BottomNav = () => {
                 triggerHaptic();
                 navigate(path);
               }}
-              whileTap={{ scale: 0.92 }}
-              className="group relative flex flex-col items-center justify-center min-w-[clamp(3rem,12vw,4.5rem)] h-full outline-none"
+              whileTap={{ scale: 0.95 }}
+              variants={buttonVariants}
+              initial="initial"
+              animate={isActive ? "animate" : "initial"}
+              transition={transition}
+              className={cn(
+                "relative flex items-center rounded-full py-2.5 transition-colors duration-200",
+                isActive 
+                  ? "bg-[#4f7df3]/15 text-[#4f7df3]" 
+                  : "text-[#6F7A95] hover:bg-muted/50"
+              )}
             >
-              {/* Pill sans fond bleu - juste transparent */}
-              <motion.div 
-                className="relative flex flex-col items-center gap-0.5 px-3 py-2 rounded-2xl bg-transparent"
-                animate={{ scale: isActive ? 1.02 : 1 }}
-                transition={{ type: "spring", stiffness: 400, damping: 20 }}
-              >
-                {/* Icône avec taille responsive */}
-                <HugeiconsIcon 
-                  icon={icon}
+              {/* Icon */}
+              <HugeiconsIcon 
+                icon={icon}
+                className="w-5 h-5 flex-shrink-0"
+                strokeWidth={isActive ? 2 : 1.5}
+              />
+              
+              {/* Badge for unread messages */}
+              {badge > 0 && (
+                <span className="absolute -top-1 left-1/2 -translate-x-1/2 min-w-[16px] h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] flex items-center justify-center font-bold">
+                  {badge > 9 ? "9+" : badge}
+                </span>
+              )}
+              
+              {/* Beta indicator dot */}
+              {isBeta && badge === 0 && !showSyncBadge && (
+                <span className="absolute -top-0.5 right-0 w-2 h-2 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 border border-[#f8f9ff]" />
+              )}
+              
+              {/* Sync pending indicator */}
+              {showSyncBadge && (
+                <span 
                   className={cn(
-                    "w-[clamp(1.25rem,5vw,1.75rem)] h-[clamp(1.25rem,5vw,1.75rem)] transition-colors duration-150",
-                    isActive 
-                      ? "text-[#4f7df3]" 
-                      : "text-[#6F7A95] group-active:text-[#4f7df3]"
+                    "absolute -top-1 left-1/2 -translate-x-1/2 min-w-[16px] h-4 px-1 rounded-full text-[9px] font-bold flex items-center justify-center",
+                    !isOnline 
+                      ? "bg-amber-500 text-white" 
+                      : isSyncing 
+                        ? "bg-primary text-primary-foreground animate-pulse" 
+                        : "bg-blue-500 text-white"
                   )}
-                  strokeWidth={isActive ? 2 : 1.5}
-                />
-                
-                {/* Badge for unread messages */}
-                {badge > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] flex items-center justify-center font-bold">
-                    {badge > 9 ? "9+" : badge}
-                  </span>
-                )}
-                
-                {/* Beta indicator dot */}
-                {isBeta && badge === 0 && !showSyncBadge && (
-                  <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 border-2 border-[#f8f9ff]" />
-                )}
-                
-                {/* Sync pending indicator */}
-                {showSyncBadge && (
-                  <span 
-                    className={cn(
-                      "absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full text-[9px] font-bold flex items-center justify-center",
-                      !isOnline 
-                        ? "bg-amber-500 text-white" 
-                        : isSyncing 
-                          ? "bg-primary text-primary-foreground animate-pulse" 
-                          : "bg-blue-500 text-white"
-                    )}
-                  >
-                    {pendingCount > 99 ? "99+" : pendingCount}
-                  </span>
-                )}
+                >
+                  {pendingCount > 99 ? "99+" : pendingCount}
+                </span>
+              )}
 
-                {/* Label and dot - only shown for active item */}
-                <AnimatePresence>
-                  {isActive && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -2 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -2 }}
-                      className="flex flex-col items-center gap-0.5"
-                    >
-                      <span className="text-[clamp(9px,2.5vw,11px)] font-semibold text-[#4f7df3]">
-                        {label}
-                      </span>
-                      <div className="w-1 h-1 rounded-full bg-[#4f7df3]" />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
+              {/* Animated label */}
+              <AnimatePresence>
+                {isActive && (
+                  <motion.span
+                    variants={spanVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    transition={transition}
+                    className="text-xs font-semibold whitespace-nowrap overflow-hidden"
+                  >
+                    {label}
+                  </motion.span>
+                )}
+              </AnimatePresence>
             </motion.button>
           );
         })}
