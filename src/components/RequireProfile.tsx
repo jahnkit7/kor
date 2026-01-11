@@ -2,6 +2,7 @@ import { useEffect, ReactNode, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
 import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase";
+import { useNetworkStatus } from "@/hooks/use-network-status";
 
 interface RequireProfileProps {
   children: ReactNode;
@@ -14,9 +15,11 @@ const PROFILE_CACHE_KEY = "profile_status_";
  * NON-BLOCKING profile guard.
  * Renders children immediately (optimistic) and redirects in background if profile incomplete.
  * This prevents the BottomNav from disappearing during navigation.
+ * CRITICAL: NEVER redirect when offline!
  */
 export function RequireProfile({ children }: RequireProfileProps) {
   const { user, loading: authLoading } = useAuth();
+  const { isOnline } = useNetworkStatus();
   const location = useLocation();
   const navigate = useNavigate();
   const checkedRef = useRef(false);
@@ -25,6 +28,9 @@ export function RequireProfile({ children }: RequireProfileProps) {
     let cancelled = false;
 
     const checkProfile = async () => {
+      // CRITICAL: Skip profile check when offline - let user continue using app
+      if (!isOnline) return;
+      
       // Still loading auth - wait
       if (authLoading) return;
 
@@ -83,7 +89,7 @@ export function RequireProfile({ children }: RequireProfileProps) {
     return () => {
       cancelled = true;
     };
-  }, [user, authLoading, location.pathname, navigate]);
+  }, [user, authLoading, location.pathname, navigate, isOnline]);
 
   // Always render children immediately - non-blocking
   return <>{children}</>;

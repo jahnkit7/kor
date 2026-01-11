@@ -57,7 +57,10 @@ const Dashboard = () => {
   // Only block on auth/profile - data loading uses skeletons
   const isAuthLoading = authLoading || profileLoading;
   
-  // Timeout guard: never show auth loading for more than 3 seconds
+  // OFFLINE-FIRST: Check if we have local data to show immediately
+  const hasLocalData = sales.length > 0 || stockItems.length > 0;
+  
+  // Timeout guard: reduced from 3s to 1s for faster rendering
   const [forceReady, setForceReady] = useState(false);
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -65,11 +68,12 @@ const Dashboard = () => {
         console.warn("[Dashboard] Auth loading timeout - forcing render");
         setForceReady(true);
       }
-    }, 3000);
+    }, 1000); // Reduced from 3000ms to 1000ms
     return () => clearTimeout(timer);
   }, [isAuthLoading]);
 
-  const shouldShowContent = !isAuthLoading || forceReady;
+  // CRITICAL: Show content immediately if we have local data (offline-first)
+  const shouldShowContent = !isAuthLoading || forceReady || hasLocalData;
 
   if (!shouldShowContent) {
     return (
