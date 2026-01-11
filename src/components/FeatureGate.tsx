@@ -3,7 +3,7 @@ import { useFeatureAccess } from "@/hooks/use-feature-access";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Lock, Zap, FlaskConical, MessageSquare } from "lucide-react";
+import { Lock, Zap, FlaskConical, MessageSquare, WifiOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { BetaFeedbackDialog } from "@/components/BetaFeedbackDialog";
 
@@ -124,6 +124,26 @@ export function FeatureGate({
             <Zap className="w-4 h-4" />
             Passer au plan {nextPlan}
           </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Offline revalidation required - specific message
+  if (reason === "offline_revalidation_required") {
+    return (
+      <Card className="border-dashed border-2 bg-muted/20">
+        <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+          <div className="w-14 h-14 rounded-full bg-amber-500/10 flex items-center justify-center mb-4">
+            <WifiOff className="w-6 h-6 text-amber-600" />
+          </div>
+          <h3 className="font-semibold text-foreground mb-2">
+            Revalidation requise
+          </h3>
+          <p className="text-sm text-muted-foreground max-w-xs">
+            Connectez-vous à Internet pour revalider votre abonnement.
+            Votre période de grâce hors ligne a expiré.
+          </p>
         </CardContent>
       </Card>
     );

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./use-auth";
-import { useEffect } from "react";
+import { isCacheValidForOffline } from "@/lib/plan-cache";
 
 // ============= OFFLINE-FIRST CACHE KEYS =============
 const FEATURE_FLAGS_CACHE_KEY = "offline_feature_flags";
@@ -346,16 +346,40 @@ export function useFeatureAccess(featureKey: string): FeatureAccessResult {
 
   // 2. Check if user has NO active subscription
   if (!subscription || !subscription.is_active) {
-    return { 
-      hasAccess: false, 
-      loading: false, 
-      reason: "no_subscription",
-      isGloballyDisabled: false,
-      isNotInPlan: false,
-      isBeta,
-      requiredPlan: null,
-      nextPlan,
-    };
+    // OFFLINE-FIRST: Check cache validity before blocking
+    if (!navigator.onLine && user?.id) {
+      const { valid, inGracePeriod } = isCacheValidForOffline(user.id);
+      if (valid) {
+        // Permissive offline - continue with cached data
+        if (inGracePeriod && import.meta.env.DEV) {
+          console.warn("[FeatureAccess] Using grace period for offline access");
+        }
+        // Don't block - let the rest of the checks run with cached subscription
+      } else {
+        // Cache expired beyond grace period - require revalidation
+        return { 
+          hasAccess: false, 
+          loading: false, 
+          reason: "offline_revalidation_required",
+          isGloballyDisabled: false,
+          isNotInPlan: false,
+          isBeta,
+          requiredPlan: null,
+          nextPlan,
+        };
+      }
+    } else {
+      return { 
+        hasAccess: false, 
+        loading: false, 
+        reason: "no_subscription",
+        isGloballyDisabled: false,
+        isNotInPlan: false,
+        isBeta,
+        requiredPlan: null,
+        nextPlan,
+      };
+    }
   }
 
   // 3. Check if feature is included in user's plan
