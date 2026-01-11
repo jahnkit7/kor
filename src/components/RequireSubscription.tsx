@@ -46,7 +46,7 @@ export function RequireSubscription({ children }: RequireSubscriptionProps) {
 
   // Handle redirect in effect (non-blocking)
   useEffect(() => {
-    // Wait for auth, role, and subscription to finish loading
+    // Wait for auth, role, and subscription to finish loading completely
     if (authLoading || roleLoading || subLoading) return;
     
     // Admins bypass subscription check entirely
@@ -65,8 +65,13 @@ export function RequireSubscription({ children }: RequireSubscriptionProps) {
     }
   }, [authLoading, roleLoading, subLoading, user, subscription, hasCachedSub, navigate, isAdmin]);
 
+  // CRITICAL: Never redirect while role is still loading
+  if (roleLoading) {
+    return <>{children}</>;
+  }
+
   // Admins bypass all subscription checks
-  if (isAdmin && !roleLoading) {
+  if (isAdmin) {
     return <>{children}</>;
   }
 

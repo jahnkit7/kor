@@ -1,23 +1,37 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "./use-auth";
 import { isSupabaseConfigured, getSupabaseClient } from "@/lib/supabase";
 
-type AppRole = "owner" | "employee" | "admin";
+type AppRole = "owner" | "employee" | "admin" | null;
 
 interface RoleState {
   role: AppRole;
   loading: boolean;
   isOwner: boolean;
   isEmployee: boolean;
+  isAdmin: boolean;
 }
 
 export function useRole(): RoleState {
-  const { user } = useAuth();
-  const [role, setRole] = useState<AppRole>("owner");
+  const { user, loading: authLoading } = useAuth();
+  const [role, setRole] = useState<AppRole>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user || !isSupabaseConfigured()) {
+    // Wait for auth to finish loading first
+    if (authLoading) {
+      return;
+    }
+
+    // No user = no role to fetch
+    if (!user) {
+      setRole(null);
+      setLoading(false);
+      return;
+    }
+
+    if (!isSupabaseConfigured()) {
+      setRole("owner");
       setLoading(false);
       return;
     }
@@ -39,19 +53,21 @@ export function useRole(): RoleState {
         }
       } catch (error) {
         console.error("Error fetching role:", error);
+        setRole("owner");
       } finally {
         setLoading(false);
       }
     };
 
     fetchRole();
-  }, [user]);
+  }, [user, authLoading]);
 
   return {
-    role,
-    loading,
-    isOwner: role === "owner",
+    role: role ?? "owner", // Return "owner" if null for compatibility
+    loading: loading || role === null, // Still loading if role is null
+    isOwner: role === "owner" || role === null,
     isEmployee: role === "employee",
+    isAdmin: role === "admin",
   };
 }
 
