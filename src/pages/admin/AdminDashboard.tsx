@@ -1,4 +1,5 @@
 // AdminLayout is now provided by AdminProtectedLayout
+import { useEffect, useState } from "react";
 import { BentoCard, BentoCardHeader, BentoCardValue } from "@/components/admin/BentoCard";
 import { BentoGrid } from "@/components/admin/BentoGrid";
 import { useAdminStats } from "@/hooks/use-admin-stats";
@@ -17,13 +18,16 @@ import {
   ArrowUpRight,
   ShoppingCart,
   UserPlus,
-  Receipt
+  Receipt,
+  RefreshCw
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Skeleton, CardSkeleton } from "@/components/ui/loading-skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 
 const getActivityIcon = (actionType: string) => {
   switch (actionType) {
@@ -77,10 +81,35 @@ const getActivityDetail = (actionType: string, data: Record<string, unknown>) =>
 };
 
 export default function AdminDashboard() {
-  const { data: stats, isLoading: statsLoading } = useAdminStats();
-  const { data: activityLogs, isLoading: logsLoading } = useActivityLogs(10);
+  const queryClient = useQueryClient();
+  const { data: stats, isLoading: statsLoading, dataUpdatedAt: statsUpdatedAt } = useAdminStats();
+  const { data: activityLogs, isLoading: logsLoading, dataUpdatedAt: logsUpdatedAt } = useActivityLogs(10);
   const { data: commissionStats } = useCommissionStats();
   const navigate = useNavigate();
+  
+  // Track last update time
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Update last update timestamp when data changes
+  useEffect(() => {
+    const latestUpdate = Math.max(statsUpdatedAt || 0, logsUpdatedAt || 0);
+    if (latestUpdate > 0) {
+      setLastUpdate(new Date(latestUpdate));
+    }
+  }, [statsUpdatedAt, logsUpdatedAt]);
+  
+  // Manual refresh function
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["admin-stats"] }),
+      queryClient.invalidateQueries({ queryKey: ["activity-logs"] }),
+      queryClient.invalidateQueries({ queryKey: ["admin-commission-stats"] }),
+    ]);
+    setLastUpdate(new Date());
+    setTimeout(() => setIsRefreshing(false), 500);
+  };
 
   const formatCFA = (amount: number) => {
     return new Intl.NumberFormat("fr-FR").format(amount) + " FCFA";
@@ -94,7 +123,24 @@ export default function AdminDashboard() {
             <h1 className="text-3xl font-bold text-foreground tracking-tight">Dashboard</h1>
             <p className="text-muted-foreground">Vue d'ensemble de DÉKON</p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4">
+            {/* Last update indicator */}
+            <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
+              <span>Mis à jour {formatDistanceToNow(lastUpdate, { addSuffix: true, locale: fr })}</span>
+            </div>
+            
+            {/* Manual refresh button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="gap-2"
+            >
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Actualiser</span>
+            </Button>
+            
             <NotificationBell />
             <div className="hidden lg:flex items-center gap-2 px-4 py-2 rounded-full bg-success/10 text-success text-sm font-medium">
               <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
