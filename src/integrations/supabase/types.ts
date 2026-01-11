@@ -1115,6 +1115,8 @@ export type Database = {
           is_active: boolean
           is_used: boolean
           plan_id: string
+          reseller_id: string | null
+          sold_at: string | null
           used_at: string | null
           used_by: string | null
         }
@@ -1128,6 +1130,8 @@ export type Database = {
           is_active?: boolean
           is_used?: boolean
           plan_id: string
+          reseller_id?: string | null
+          sold_at?: string | null
           used_at?: string | null
           used_by?: string | null
         }
@@ -1141,6 +1145,8 @@ export type Database = {
           is_active?: boolean
           is_used?: boolean
           plan_id?: string
+          reseller_id?: string | null
+          sold_at?: string | null
           used_at?: string | null
           used_by?: string | null
         }
@@ -1150,6 +1156,13 @@ export type Database = {
             columns: ["plan_id"]
             isOneToOne: false
             referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recharge_codes_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: false
+            referencedRelation: "resellers"
             referencedColumns: ["id"]
           },
         ]
@@ -1230,6 +1243,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      resellers: {
+        Row: {
+          city: string | null
+          commission_rate: number | null
+          created_at: string | null
+          email: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          phone: string | null
+          total_codes_sold: number | null
+          total_earnings: number | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          city?: string | null
+          commission_rate?: number | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          phone?: string | null
+          total_codes_sold?: number | null
+          total_earnings?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          city?: string | null
+          commission_rate?: number | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          phone?: string | null
+          total_codes_sold?: number | null
+          total_earnings?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       roadmap_items: {
         Row: {

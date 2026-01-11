@@ -49,6 +49,7 @@ import AdminNotifications from "@/pages/admin/AdminNotifications";
 import AdminRoadmap from "@/pages/admin/AdminRoadmap";
 import AdminSetup from "@/pages/admin/AdminSetup";
 import AdminSyncDiagnostic from "@/pages/admin/AdminSyncDiagnostic";
+import AdminResellers from "@/pages/admin/AdminResellers";
 
 // Wrapper for public routes with transition
 const PublicPage = ({ children }: { children: React.ReactNode }) => (
@@ -103,6 +104,7 @@ export const AnimatedRoutes = () => {
             <Route path="/admin/geography" element={<AdminGeography />} />
             <Route path="/admin/features" element={<AdminFeatures />} />
             <Route path="/admin/commissions" element={<AdminCommissions />} />
+            <Route path="/admin/resellers" element={<AdminResellers />} />
             <Route path="/admin/referrals" element={<AdminReferrals />} />
             <Route path="/admin/feature-analytics" element={<AdminFeatureAnalytics />} />
             <Route path="/admin/beta-analytics" element={<AdminBetaAnalytics />} />

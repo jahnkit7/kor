@@ -9,7 +9,6 @@ import {
   Percent, 
   MessageSquare, 
   FileText,
-  Sparkles,
   ArrowLeft,
   Zap,
   BarChart2,
@@ -19,18 +18,21 @@ import {
   Map,
   Database,
   User,
-  LogOut
+  LogOut,
+  Store
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useProfile } from "@/hooks/use-profile";
+import KorLogo from "@/assets/logo-kor.svg";
 
 const modules = [
   { to: "/admin", icon: LayoutDashboard, label: "Dashboard", exact: true },
   { to: "/admin/financials", icon: TrendingUp, label: "Finances" },
   { to: "/admin/users", icon: Users, label: "Utilisateurs" },
   { to: "/admin/subscriptions", icon: CreditCard, label: "Abonnements" },
+  { to: "/admin/resellers", icon: Store, label: "Revendeurs" },
   { to: "/admin/geography", icon: Globe, label: "Géographie" },
 ];
 
@@ -104,8 +106,8 @@ export function AdminFloatingSidebar() {
       {/* Header - Branding + Admin Info */}
       <div className="p-6 border-b border-[#e2e8f0]/50">
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#4f7df3] to-[#3b6ce8] flex items-center justify-center shadow-lg shadow-[#4f7df3]/30">
-            <Sparkles className="w-5 h-5 text-white" />
+          <div className="w-10 h-10 rounded-2xl overflow-hidden shadow-lg shadow-[#4f7df3]/30">
+            <img src={KorLogo} alt="KÒR" className="w-full h-full object-cover" />
           </div>
           <div>
             <h1 className="font-bold text-lg text-[#2d3748] tracking-tight">KÒR</h1>
