@@ -117,13 +117,8 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
   const { trackFeature } = useFeatureTracking();
   const { saveCorrection, applyCorrections, corrections } = useTranscriptionLearning();
   
-  // Plan guard for multi-sale limit check
-  let planGuard: ReturnType<typeof usePlanGuard> | null = null;
-  try {
-    planGuard = usePlanGuard();
-  } catch {
-    // PlanGuardProvider not available
-  }
+  // Plan guard for multi-sale limit check (called normally - this is a UI component inside PlanGuardProvider)
+  const planGuard = usePlanGuard();
 
   // Track voice input usage
   useEffect(() => {
@@ -819,18 +814,16 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
 
   const handleConfirmAll = async () => {
     // ========== STRICT ENFORCEMENT FOR MULTI-SALES ==========
-    if (planGuard) {
-      const salesCount = parsedSales.length;
-      const check = await planGuard.checkCanAddSale(salesCount);
-      if (!check.allowed) {
-        const dialogType = check.reason === "no_data" ? "no_data" : "sales_multi";
-        planGuard.showLimitDialog(dialogType, {
-          currentCount: check.currentCount,
-          maxAllowed: check.maxAllowed,
-          attemptedCount: salesCount,
-        });
-        return; // BLOCKED
-      }
+    const salesCount = parsedSales.length;
+    const check = await planGuard.checkCanAddSale(salesCount);
+    if (!check.allowed) {
+      const dialogType = check.reason === "no_data" ? "no_data" : "sales_multi";
+      planGuard.showLimitDialog(dialogType, {
+        currentCount: check.currentCount,
+        maxAllowed: check.maxAllowed,
+        attemptedCount: salesCount,
+      });
+      return; // BLOCKED
     }
     // =========================================================
     

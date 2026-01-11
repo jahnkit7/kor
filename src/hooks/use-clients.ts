@@ -4,7 +4,7 @@ import { useNetworkStatus } from "./use-network-status";
 import { isSupabaseConfigured, getSupabaseClient } from "@/lib/supabase";
 import * as localDB from "@/lib/db";
 import { toast } from "sonner";
-import { usePlanGuard } from "@/contexts/PlanGuardContext";
+import { usePlanLimits } from "./use-plan-limits";
 
 export interface Client {
   id: string;
@@ -38,13 +38,8 @@ export function useClients(): ClientsState {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Plan guard for enforcement
-  let planGuard: ReturnType<typeof usePlanGuard> | null = null;
-  try {
-    planGuard = usePlanGuard();
-  } catch {
-    // PlanGuardProvider not available yet (during initial render)
-  }
+  // STRICT ENFORCEMENT: usePlanLimits directly (always called, no try/catch)
+  const planLimits = usePlanLimits();
 
   const fetchClients = useCallback(async () => {
     try {
@@ -138,23 +133,20 @@ export function useClients(): ClientsState {
   const addClient = useCallback(async (clientData: { name: string; phone: string }): Promise<Client | null> => {
     if (!user) return null;
 
-    // ========== STRICT ENFORCEMENT ==========
-    if (planGuard) {
-      const check = await planGuard.checkCanAddClient();
-      if (!check.allowed) {
-        // Show appropriate dialog based on reason
-        const dialogType = check.reason === "expired" ? "expired" 
-          : check.reason === "no_data" ? "no_data" 
-          : "clients";
-        planGuard.showLimitDialog(dialogType, {
-          currentCount: check.currentCount,
-          maxAllowed: check.maxAllowed,
-        });
-        // BLOCKED - no local write
-        return null;
-      }
+    // ========== STRICT ENFORCEMENT (via usePlanLimits - always executed) ==========
+    const check = await planLimits.checkCanAddClient();
+    if (!check.allowed) {
+      // Toast feedback (UI component can show dialog separately)
+      const message = check.reason === "no_data" 
+        ? "Connexion requise pour vérifier votre plan"
+        : check.reason === "expired"
+        ? "Votre période d'essai est terminée. Passez à un plan supérieur."
+        : `Limite de clients atteinte (${check.currentCount}/${check.maxAllowed})`;
+      toast.error(message);
+      // BLOCKED - no local write
+      return null;
     }
-    // =========================================
+    // ===============================================================================
 
     try {
       // 1. Save locally first
@@ -181,7 +173,7 @@ export function useClients(): ClientsState {
       toast.success("Client ajouté");
       
       // Invalidate counts cache after successful creation
-      planGuard?.invalidateCountsCache();
+      planLimits.invalidateCountsCache();
 
       // 3. If online, sync immediately
       if (isOnline && isSupabaseConfigured()) {
@@ -211,7 +203,7 @@ export function useClients(): ClientsState {
       toast.error("Erreur lors de l'ajout du client");
       return null;
     }
-  }, [user, isOnline, planGuard]);
+  }, [user, isOnline, planLimits]);
 
   const quickCreateClient = useCallback(async (name: string): Promise<Client | null> => {
     return addClient({ name: name.trim(), phone: "" });

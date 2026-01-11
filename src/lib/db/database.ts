@@ -237,8 +237,10 @@ export async function getTodaySales(): Promise<Sale[]> {
     if (s.createdAtLocalDay) {
       return s.createdAtLocalDay === todayLocal;
     }
-    // Fallback for old records without createdAtLocalDay
-    return s.createdAt.startsWith(todayLocal);
+    // CORRECT FALLBACK: Recalculate local day from UTC createdAt
+    const saleDate = new Date(s.createdAt);
+    const saleLocalDay = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, "0")}-${String(saleDate.getDate()).padStart(2, "0")}`;
+    return saleLocalDay === todayLocal;
   });
 }
 
