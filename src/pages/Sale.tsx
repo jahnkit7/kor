@@ -176,8 +176,8 @@ const Sale = () => {
   // Voice input mode
   if (showVoiceInput) {
     return (
-      <FullScreenLayout>
-        <div className={`${isCash ? "gradient-cash" : "gradient-credit"} px-4 py-3 text-primary-foreground`}>
+      <FullScreenLayout transparentStatusBar>
+        <div className={`${isCash ? "gradient-cash" : "gradient-credit"} px-4 py-3 pt-[env(safe-area-inset-top)] text-primary-foreground`}>
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
@@ -226,10 +226,10 @@ const Sale = () => {
   }
 
   return (
-    <FullScreenLayout>
-      {/* Header - Compact */}
-      <div className={`${isCash ? "gradient-cash" : "gradient-credit"} px-4 py-3 text-primary-foreground shrink-0`}>
-        <div className="flex items-center justify-between">
+    <FullScreenLayout transparentStatusBar>
+      {/* Header - Compact with safe area */}
+      <div className={`${isCash ? "gradient-cash" : "gradient-credit"} px-4 pt-[env(safe-area-inset-top)] text-primary-foreground shrink-0`}>
+        <div className="flex items-center justify-between py-3">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
@@ -293,45 +293,77 @@ const Sale = () => {
             {formatMoney(effectiveAmount)} <span className="text-lg">CFA</span>
           </p>
         </div>
+
+        {/* Note button - Bottom right of header */}
+        <div className="flex justify-end pb-2">
+          <Sheet open={showNoteSheet} onOpenChange={setShowNoteSheet}>
+            <SheetTrigger asChild>
+              <button className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-foreground/10 rounded-full text-primary-foreground/90 hover:bg-primary-foreground/20 transition-colors">
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span className="text-xs font-medium">Note</span>
+                {note && <span className="w-1.5 h-1.5 rounded-full bg-primary-foreground" />}
+              </button>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="h-[40vh]">
+              <SheetHeader>
+                <SheetTitle>Note de vente</SheetTitle>
+              </SheetHeader>
+              <div className="mt-4">
+                <textarea
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="Ajouter une note (optionnel)..."
+                  className="w-full h-32 p-3 border rounded-lg resize-none bg-secondary/30 text-sm"
+                />
+                <Button 
+                  className="w-full mt-3" 
+                  onClick={() => setShowNoteSheet(false)}
+                >
+                  Enregistrer
+                </Button>
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
 
       {/* Content - Flex grow with controlled overflow */}
       <div className="flex-1 flex flex-col min-h-0 px-3 py-2">
-        {/* Quick Amounts - Single row, 6 columns */}
-        <div className="grid grid-cols-6 gap-1.5 mb-2 shrink-0">
+        {/* Quick Amounts - 2 rows, 3 columns */}
+        <div className="grid grid-cols-3 gap-2 mb-3 shrink-0">
           {quickAmounts.map((quickAmount) => (
             <Button
               key={quickAmount}
               variant="secondary"
               size="sm"
               onClick={() => setAmount(String(quickAmount))}
-              className="text-[10px] font-semibold h-8 px-1"
+              className="text-sm font-bold h-10 px-2"
             >
               {quickAmount >= 1000 ? `${quickAmount / 1000}k` : quickAmount}
             </Button>
           ))}
         </div>
 
-        {/* Produits / Récentes / Note - Same line */}
-        <div className="grid grid-cols-3 gap-1.5 mb-2 shrink-0">
+        {/* Produits / Récentes - 50/50 */}
+        <div className="grid grid-cols-2 gap-2 mb-3 shrink-0">
           {/* Produits */}
           <Sheet open={showProductsSheet} onOpenChange={setShowProductsSheet}>
             <SheetTrigger asChild>
-              <button className="flex items-center justify-between px-2.5 py-2 bg-secondary/50 rounded-lg">
-                <span className="flex items-center gap-1.5 text-[11px] font-medium">
-                  <Package className="w-3.5 h-3.5 text-muted-foreground" />
+              <button className="flex items-center justify-between px-3 py-3 bg-secondary/50 rounded-xl">
+                <span className="flex items-center gap-2 text-sm font-medium">
+                  <Package className="w-4 h-4 text-muted-foreground" />
                   Produits
                 </span>
                 {selectedProducts.length > 0 && (
-                  <Badge variant="secondary" className="text-[9px] h-4 px-1.5">{selectedProducts.length}</Badge>
+                  <Badge variant="secondary" className="text-xs h-5 px-2">{selectedProducts.length}</Badge>
                 )}
               </button>
             </SheetTrigger>
-            <SheetContent side="bottom" className="h-[70vh]">
-              <SheetHeader>
+            <SheetContent side="bottom" className="h-[100dvh] rounded-t-none pb-[env(safe-area-inset-bottom)]">
+              <SheetHeader className="pt-2">
                 <SheetTitle>Sélectionner des produits</SheetTitle>
               </SheetHeader>
-              <div className="mt-4">
+              <div className="mt-4 h-[calc(100%-4rem)] overflow-auto">
                 <ProductSelector
                   stockItems={stockItems}
                   selectedProducts={selectedProducts}
@@ -356,21 +388,21 @@ const Sale = () => {
           {/* Ventes récentes */}
           <Sheet open={showHistorySheet} onOpenChange={setShowHistorySheet}>
             <SheetTrigger asChild>
-              <button className="flex items-center justify-between px-2.5 py-2 bg-secondary/50 rounded-lg">
-                <span className="flex items-center gap-1.5 text-[11px] font-medium">
-                  <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+              <button className="flex items-center justify-between px-3 py-3 bg-secondary/50 rounded-xl">
+                <span className="flex items-center gap-2 text-sm font-medium">
+                  <Clock className="w-4 h-4 text-muted-foreground" />
                   Récentes
                 </span>
                 {sales.length > 0 && (
-                  <Badge variant="secondary" className="text-[9px] h-4 px-1.5">{sales.length}</Badge>
+                  <Badge variant="secondary" className="text-xs h-5 px-2">{sales.length}</Badge>
                 )}
               </button>
             </SheetTrigger>
-            <SheetContent side="bottom" className="h-[60vh]">
-              <SheetHeader>
+            <SheetContent side="bottom" className="h-[100dvh] rounded-t-none pb-[env(safe-area-inset-bottom)]">
+              <SheetHeader className="pt-2">
                 <SheetTitle>Ventes récentes</SheetTitle>
               </SheetHeader>
-              <ScrollArea className="mt-4 h-[calc(100%-3rem)]">
+              <ScrollArea className="mt-4 h-[calc(100%-4rem)]">
                 <div className="space-y-2 pr-2">
                   {sales.slice(0, 20).map((sale) => (
                     <Card key={sale.id} className="bg-card/50">
@@ -406,36 +438,6 @@ const Sale = () => {
                   ))}
                 </div>
               </ScrollArea>
-            </SheetContent>
-          </Sheet>
-
-          {/* Note */}
-          <Sheet open={showNoteSheet} onOpenChange={setShowNoteSheet}>
-            <SheetTrigger asChild>
-              <button className="flex items-center justify-center gap-1.5 px-2.5 py-2 bg-secondary/50 rounded-lg">
-                <MessageSquare className="w-3.5 h-3.5 text-muted-foreground" />
-                <span className="text-[11px] font-medium">Note</span>
-                {note && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
-              </button>
-            </SheetTrigger>
-            <SheetContent side="bottom" className="h-[40vh]">
-              <SheetHeader>
-                <SheetTitle>Note de vente</SheetTitle>
-              </SheetHeader>
-              <div className="mt-4">
-                <textarea
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="Ajouter une note (optionnel)..."
-                  className="w-full h-32 p-3 border rounded-lg resize-none bg-secondary/30 text-sm"
-                />
-                <Button 
-                  className="w-full mt-3" 
-                  onClick={() => setShowNoteSheet(false)}
-                >
-                  Enregistrer
-                </Button>
-              </div>
             </SheetContent>
           </Sheet>
         </div>
@@ -555,7 +557,7 @@ const NumpadButton = ({
 }) => (
   <button
     onClick={onClick}
-    className={`h-11 rounded-xl text-lg font-bold transition-all duration-150 active:scale-95 ${
+    className={`h-[clamp(3.25rem,14vw,4rem)] rounded-xl text-xl font-bold transition-all duration-150 active:scale-95 ${
       variant === "secondary"
         ? "bg-secondary text-secondary-foreground"
         : "bg-card text-foreground border border-border hover:bg-secondary"
