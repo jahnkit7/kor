@@ -21,6 +21,7 @@ import { useHiddenAmount } from "@/components/HideAmountsToggle";
 import { useSales, Sale } from "@/hooks/use-sales";
 import { FeatureGate } from "@/components/FeatureGate";
 import { InvoiceDialog } from "@/components/invoice/InvoiceDialog";
+import { Skeleton, StatsSkeleton, ListSkeleton } from "@/components/ui/loading-skeleton";
 
 type Period = "day" | "week" | "month" | "all";
 
@@ -110,9 +111,19 @@ const SalesHistory = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
-      </div>
+      <AppLayout>
+        <div className="bg-gradient-to-b from-[#f8f9ff] to-white px-4 pt-4 pb-6 border-b border-border">
+          <div className="flex items-center gap-4 mb-4">
+            <Skeleton className="h-10 w-10 rounded-lg" />
+            <Skeleton className="h-6 w-48" />
+          </div>
+          <Skeleton className="h-10 w-full rounded-lg" />
+        </div>
+        <div className="p-4 space-y-4">
+          <StatsSkeleton />
+          <ListSkeleton count={5} variant="transaction" />
+        </div>
+      </AppLayout>
     );
   }
 

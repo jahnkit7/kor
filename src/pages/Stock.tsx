@@ -29,6 +29,7 @@ import { VoiceStockInput } from "@/components/stock/VoiceStockInput";
 import { VoiceEntriesHistory } from "@/components/stock/VoiceEntriesHistory";
 import { EditStockDialog } from "@/components/stock/EditStockDialog";
 import { FeatureGate } from "@/components/FeatureGate";
+import { ListSkeleton } from "@/components/ui/loading-skeleton";
 
 export default function Stock() {
   useRequireAuth();
@@ -260,9 +261,7 @@ export default function Stock() {
         <TabsContent value="stock" className="flex-1 m-0">
           <main className="p-4 space-y-3">
             {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
+              <ListSkeleton count={5} variant="stock" />
             ) : filteredItems.length === 0 ? (
               <div className="text-center py-12 space-y-4">
                 <div className="h-16 w-16 mx-auto rounded-full bg-muted flex items-center justify-center">

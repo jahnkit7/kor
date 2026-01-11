@@ -2,7 +2,7 @@ import { AdminLayout } from "@/components/admin/AdminLayout";
 import { useAdminTickets } from "@/hooks/use-admin-stats";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { CardSkeleton } from "@/components/ui/loading-skeleton";
 import { MessageSquare } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -29,7 +29,7 @@ export default function AdminSupport() {
 
         {isLoading ? (
           <div className="space-y-4">
-            {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
+            {[...Array(5)].map((_, i) => <CardSkeleton key={i} className="h-24 rounded-xl" />)}
           </div>
         ) : tickets && tickets.length > 0 ? (
           <div className="space-y-4">

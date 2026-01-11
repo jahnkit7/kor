@@ -2,7 +2,7 @@ import { AdminLayout } from "@/components/admin/AdminLayout";
 import { useAdminLogs } from "@/hooks/use-admin-stats";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { CardSkeleton } from "@/components/ui/loading-skeleton";
 import { FileText } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -28,7 +28,7 @@ export default function AdminLogs() {
           <CardContent>
             {isLoading ? (
               <div className="space-y-3">
-                {[...Array(10)].map((_, i) => <Skeleton key={i} className="h-12 rounded-lg" />)}
+                {[...Array(10)].map((_, i) => <CardSkeleton key={i} className="h-12 rounded-lg" />)}
               </div>
             ) : logs && logs.length > 0 ? (
               <div className="space-y-3">
