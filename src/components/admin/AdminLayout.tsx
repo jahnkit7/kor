@@ -14,7 +14,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Wait until everything is loaded
+    // CRITICAL: Wait until loading is complete before any redirection
     if (loading) return;
 
     // Not logged in -> auth page
@@ -30,8 +30,32 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     }
   }, [isAdmin, loading, user, navigate]);
 
-  // Don't render anything if definitely not admin (after check)
-  if (!loading && (!user || !isAdmin)) {
+  // ALWAYS show loading skeleton while role is being determined
+  // This prevents any flickering or premature redirections
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-[#f8f9ff] via-white to-[#f8f9ff]">
+        <AdminFloatingSidebar />
+        <AdminMobileNav />
+        <main className="lg:pl-80 min-h-screen">
+          <div className="p-4 lg:p-8 pb-20 lg:pb-8">
+            <div className="space-y-6">
+              <Skeleton className="h-8 w-48" />
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                {[...Array(4)].map((_, i) => (
+                  <Skeleton key={i} className="h-32 rounded-xl" />
+                ))}
+              </div>
+              <Skeleton className="h-64 rounded-xl" />
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // After loading, if not admin, don't render (redirect will happen)
+  if (!user || !isAdmin) {
     return null;
   }
 
