@@ -23,7 +23,7 @@ import NewClient from "@/pages/NewClient";
 import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
 import Stock from "@/pages/Stock";
-import SalesHistory from "@/pages/SalesHistory";
+import SalesHistory from "@/pages/SalesHistoryV2";
 import InvoiceHistory from "@/pages/InvoiceHistory";
 import EmployeeManagement from "@/pages/EmployeeManagement";
 import Network from "@/pages/Network";
