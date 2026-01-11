@@ -6,8 +6,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Badge } from "@/components/ui/badge";
-import { Calendar as CalendarIcon, Filter, X, Wallet, CreditCard } from "lucide-react";
+import { Calendar as CalendarIcon, X, Wallet, CreditCard, Sparkles } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -40,67 +39,112 @@ export const SalesFilters = ({
 
   const formatDateRange = () => {
     if (dateRange.from && dateRange.to) {
-      return `${format(dateRange.from, "dd/MM", { locale: fr })} - ${format(dateRange.to, "dd/MM", { locale: fr })}`;
+      return `${format(dateRange.from, "d MMM", { locale: fr })} → ${format(dateRange.to, "d MMM", { locale: fr })}`;
     }
     if (dateRange.from) {
-      return `À partir du ${format(dateRange.from, "dd/MM", { locale: fr })}`;
+      return `Depuis ${format(dateRange.from, "d MMM", { locale: fr })}`;
     }
-    return "Sélectionner dates";
+    return "Dates";
   };
 
   const hasDateFilter = dateRange.from || dateRange.to;
 
   return (
-    <div className="space-y-3">
-      {/* Type filters */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <Button
-          variant={typeFilter === "all" ? "default" : "outline"}
-          size="sm"
-          onClick={() => onTypeFilterChange("all")}
-          className="h-8"
-        >
-          <Filter className="w-3.5 h-3.5 mr-1.5" />
-          Tous
-        </Button>
-        <Button
-          variant={typeFilter === "cash" ? "default" : "outline"}
-          size="sm"
-          onClick={() => onTypeFilterChange("cash")}
-          className={cn(
-            "h-8",
-            typeFilter === "cash" && "bg-cash hover:bg-cash/90 text-white"
-          )}
-        >
-          <Wallet className="w-3.5 h-3.5 mr-1.5" />
-          Cash
-        </Button>
-        <Button
-          variant={typeFilter === "credit" ? "default" : "outline"}
-          size="sm"
-          onClick={() => onTypeFilterChange("credit")}
-          className={cn(
-            "h-8",
-            typeFilter === "credit" && "bg-credit hover:bg-credit/90 text-white"
-          )}
-        >
-          <CreditCard className="w-3.5 h-3.5 mr-1.5" />
-          Crédit
-        </Button>
+    <div className="space-y-4">
+      {/* Section label */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-medium text-foreground">Filtrer par</p>
+        {activeFiltersCount > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClearFilters}
+            className="h-7 text-xs text-muted-foreground hover:text-foreground px-2"
+          >
+            <X className="w-3 h-3 mr-1" />
+            Tout effacer
+          </Button>
+        )}
+      </div>
 
-        {/* Date range picker */}
+      {/* Type filter chips */}
+      <div className="space-y-2">
+        <p className="text-xs text-muted-foreground font-medium">Type de vente</p>
+        <div className="flex gap-2">
+          <button
+            onClick={() => onTypeFilterChange("all")}
+            className={cn(
+              "flex-1 py-3 px-4 rounded-xl text-sm font-medium transition-all",
+              "border-2 flex items-center justify-center gap-2",
+              typeFilter === "all"
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border bg-background text-muted-foreground hover:border-primary/50"
+            )}
+          >
+            <Sparkles className="w-4 h-4" />
+            Tous
+          </button>
+          <button
+            onClick={() => onTypeFilterChange("cash")}
+            className={cn(
+              "flex-1 py-3 px-4 rounded-xl text-sm font-medium transition-all",
+              "border-2 flex items-center justify-center gap-2",
+              typeFilter === "cash"
+                ? "border-cash bg-cash/10 text-cash"
+                : "border-border bg-background text-muted-foreground hover:border-cash/50"
+            )}
+          >
+            <Wallet className="w-4 h-4" />
+            Cash
+          </button>
+          <button
+            onClick={() => onTypeFilterChange("credit")}
+            className={cn(
+              "flex-1 py-3 px-4 rounded-xl text-sm font-medium transition-all",
+              "border-2 flex items-center justify-center gap-2",
+              typeFilter === "credit"
+                ? "border-credit bg-credit/10 text-credit"
+                : "border-border bg-background text-muted-foreground hover:border-credit/50"
+            )}
+          >
+            <CreditCard className="w-4 h-4" />
+            Crédit
+          </button>
+        </div>
+      </div>
+
+      {/* Date range picker */}
+      <div className="space-y-2">
+        <p className="text-xs text-muted-foreground font-medium">Période</p>
         <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
           <PopoverTrigger asChild>
-            <Button
-              variant={hasDateFilter ? "default" : "outline"}
-              size="sm"
-              className="h-8"
+            <button
+              className={cn(
+                "w-full py-3 px-4 rounded-xl text-sm font-medium transition-all",
+                "border-2 flex items-center justify-between",
+                hasDateFilter
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border bg-background text-muted-foreground hover:border-primary/50"
+              )}
             >
-              <CalendarIcon className="w-3.5 h-3.5 mr-1.5" />
-              {formatDateRange()}
-            </Button>
+              <div className="flex items-center gap-2">
+                <CalendarIcon className="w-4 h-4" />
+                <span>{hasDateFilter ? formatDateRange() : "Sélectionner une période"}</span>
+              </div>
+              {hasDateFilter && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDateRangeChange({ from: undefined, to: undefined });
+                  }}
+                  className="p-1 hover:bg-primary/20 rounded-full transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0 bg-popover" align="start">
+          <PopoverContent className="w-auto p-0 bg-card border-border shadow-lg rounded-2xl overflow-hidden" align="center">
             <Calendar
               mode="range"
               selected={{ from: dateRange.from, to: dateRange.to }}
@@ -116,9 +160,10 @@ export const SalesFilters = ({
               locale={fr}
               numberOfMonths={1}
               disabled={(date) => date > new Date()}
+              className="p-3"
             />
             {hasDateFilter && (
-              <div className="p-3 border-t border-border">
+              <div className="p-3 border-t border-border bg-muted/50">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -126,68 +171,16 @@ export const SalesFilters = ({
                     onDateRangeChange({ from: undefined, to: undefined });
                     setCalendarOpen(false);
                   }}
-                  className="w-full"
+                  className="w-full rounded-xl"
                 >
-                  <X className="w-3.5 h-3.5 mr-1.5" />
-                  Effacer les dates
+                  <X className="w-4 h-4 mr-2" />
+                  Effacer la période
                 </Button>
               </div>
             )}
           </PopoverContent>
         </Popover>
-
-        {/* Clear all filters */}
-        {activeFiltersCount > 0 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClearFilters}
-            className="h-8 text-muted-foreground"
-          >
-            <X className="w-3.5 h-3.5 mr-1" />
-            Effacer ({activeFiltersCount})
-          </Button>
-        )}
       </div>
-
-      {/* Active filters badges */}
-      {activeFiltersCount > 0 && (
-        <div className="flex items-center gap-2 flex-wrap">
-          {typeFilter !== "all" && (
-            <Badge variant="secondary" className="gap-1">
-              {typeFilter === "cash" ? (
-                <>
-                  <Wallet className="w-3 h-3" />
-                  Cash uniquement
-                </>
-              ) : (
-                <>
-                  <CreditCard className="w-3 h-3" />
-                  Crédit uniquement
-                </>
-              )}
-              <button
-                onClick={() => onTypeFilterChange("all")}
-                className="ml-1 hover:bg-muted rounded-full p-0.5"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </Badge>
-          )}
-          {hasDateFilter && (
-            <Badge variant="secondary" className="gap-1">
-              <CalendarIcon className="w-3 h-3" />
-              {formatDateRange()}
-              <button
-                onClick={() => onDateRangeChange({ from: undefined, to: undefined })}
-                className="ml-1 hover:bg-muted rounded-full p-0.5"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </Badge>
-          )}
-        </div>
-      )}
     </div>
   );
 };
