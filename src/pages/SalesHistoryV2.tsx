@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   RefreshCw,
   WifiOff,
+  SlidersHorizontal,
 } from "lucide-react";
 
 import { useHiddenAmount } from "@/components/HideAmountsToggle";
@@ -26,6 +27,12 @@ import { InvoiceDialog } from "@/components/invoice/InvoiceDialog";
 import { Skeleton, StatsSkeleton, ListSkeleton } from "@/components/ui/loading-skeleton";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useNetworkStatus } from "@/hooks/use-network-status";
+import { SalesFilters, SaleTypeFilter, DateRange } from "@/components/sales/SalesFilters";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 type Period = "day" | "week" | "month" | "all";
 
@@ -99,6 +106,11 @@ const SalesHistoryContent = () => {
   const { trackFeature } = useFeatureTracking();
   const [selectedSale, setSelectedSale] = useState<SaleReadonly | null>(null);
   const [showInvoice, setShowInvoice] = useState(false);
+  
+  // New filter states
+  const [showFilters, setShowFilters] = useState(false);
+  const [typeFilter, setTypeFilter] = useState<SaleTypeFilter>("all");
+  const [dateRange, setDateRange] = useState<DateRange>({ from: undefined, to: undefined });
 
   // Track page view
   useEffect(() => {
@@ -109,31 +121,73 @@ const SalesHistoryContent = () => {
     }
   }, [trackFeature]);
 
-  // Filter sales by period with safe date parsing
-  const filteredSales = useMemo(() => {
-    const now = new Date();
-    let startDate: Date;
+  // Count active filters
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (typeFilter !== "all") count++;
+    if (dateRange.from || dateRange.to) count++;
+    return count;
+  }, [typeFilter, dateRange]);
 
-    switch (period) {
-      case "day":
-        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        break;
-      case "week":
-        const dayOfWeek = now.getDay();
-        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek);
-        break;
-      case "month":
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-        break;
-      case "all":
-        return sales;
+  const clearFilters = () => {
+    setTypeFilter("all");
+    setDateRange({ from: undefined, to: undefined });
+  };
+
+  // Filter sales by period, type, and date range
+  const filteredSales = useMemo(() => {
+    let filtered = [...sales];
+
+    // Apply period filter (if no custom date range)
+    if (!dateRange.from && !dateRange.to) {
+      const now = new Date();
+      let startDate: Date | null = null;
+
+      switch (period) {
+        case "day":
+          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          break;
+        case "week":
+          const dayOfWeek = now.getDay();
+          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek);
+          break;
+        case "month":
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          break;
+        case "all":
+          startDate = null;
+          break;
+      }
+
+      if (startDate) {
+        filtered = filtered.filter((s) => {
+          const saleDate = safeParseDate(s.created_at);
+          return saleDate && saleDate >= startDate;
+        });
+      }
+    } else {
+      // Apply custom date range
+      filtered = filtered.filter((s) => {
+        const saleDate = safeParseDate(s.created_at);
+        if (!saleDate) return false;
+        
+        if (dateRange.from && saleDate < dateRange.from) return false;
+        if (dateRange.to) {
+          const endOfDay = new Date(dateRange.to);
+          endOfDay.setHours(23, 59, 59, 999);
+          if (saleDate > endOfDay) return false;
+        }
+        return true;
+      });
     }
 
-    return sales.filter((s) => {
-      const saleDate = safeParseDate(s.created_at);
-      return saleDate && saleDate >= startDate;
-    });
-  }, [sales, period]);
+    // Apply type filter
+    if (typeFilter !== "all") {
+      filtered = filtered.filter((s) => s.type === typeFilter);
+    }
+
+    return filtered;
+  }, [sales, period, typeFilter, dateRange]);
 
   // Calculate stats for filtered sales
   const stats = useMemo(() => {
@@ -213,7 +267,7 @@ const SalesHistoryContent = () => {
   return (
     <>
       {/* Header */}
-      <div className="bg-gradient-to-b from-muted/50 to-background px-4 pb-6 border-b border-border" style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)' }}>
+      <div className="bg-gradient-to-b from-muted/50 to-background px-4 pb-4 border-b border-border" style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)' }}>
         <div className="flex items-center gap-4 mb-4">
           <Button
             variant="ghost"
@@ -222,18 +276,50 @@ const SalesHistoryContent = () => {
           >
             <ArrowLeft className="w-6 h-6 text-foreground" />
           </Button>
-          <h1 className="text-xl font-bold text-foreground">Historique des ventes</h1>
+          <h1 className="text-xl font-bold text-foreground flex-1">Historique des ventes</h1>
+          <Button
+            variant={showFilters || activeFiltersCount > 0 ? "default" : "outline"}
+            size="icon"
+            onClick={() => setShowFilters(!showFilters)}
+            className="relative"
+          >
+            <SlidersHorizontal className="w-5 h-5" />
+            {activeFiltersCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center">
+                {activeFiltersCount}
+              </span>
+            )}
+          </Button>
         </div>
 
         {/* Period Tabs */}
-        <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>
+        <Tabs value={dateRange.from || dateRange.to ? "custom" : period} onValueChange={(v) => {
+          if (v !== "custom") {
+            setPeriod(v as Period);
+            setDateRange({ from: undefined, to: undefined });
+          }
+        }}>
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="day">Jour</TabsTrigger>
-            <TabsTrigger value="week">Semaine</TabsTrigger>
-            <TabsTrigger value="month">Mois</TabsTrigger>
-            <TabsTrigger value="all">Tout</TabsTrigger>
+            <TabsTrigger value="day" disabled={!!(dateRange.from || dateRange.to)}>Jour</TabsTrigger>
+            <TabsTrigger value="week" disabled={!!(dateRange.from || dateRange.to)}>Semaine</TabsTrigger>
+            <TabsTrigger value="month" disabled={!!(dateRange.from || dateRange.to)}>Mois</TabsTrigger>
+            <TabsTrigger value="all" disabled={!!(dateRange.from || dateRange.to)}>Tout</TabsTrigger>
           </TabsList>
         </Tabs>
+
+        {/* Collapsible Filters */}
+        <Collapsible open={showFilters} onOpenChange={setShowFilters}>
+          <CollapsibleContent className="pt-4">
+            <SalesFilters
+              typeFilter={typeFilter}
+              onTypeFilterChange={setTypeFilter}
+              dateRange={dateRange}
+              onDateRangeChange={setDateRange}
+              activeFiltersCount={activeFiltersCount}
+              onClearFilters={clearFilters}
+            />
+          </CollapsibleContent>
+        </Collapsible>
       </div>
 
       {/* Offline Banner */}
@@ -245,7 +331,10 @@ const SalesHistoryContent = () => {
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <Calendar className="w-4 h-4 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">{periodLabels[period]}</p>
+              <p className="text-sm text-muted-foreground">
+                {dateRange.from || dateRange.to ? "Période personnalisée" : periodLabels[period]}
+                {typeFilter !== "all" && ` • ${typeFilter === "cash" ? "Cash" : "Crédit"}`}
+              </p>
             </div>
             <p className="text-2xl font-bold mb-3">
               {formatMoney(stats.total)} {!hideAmounts && "CFA"}
