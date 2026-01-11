@@ -30,7 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, User, Phone, MapPin, Calendar, MoreVertical, Loader2, CreditCard, Briefcase } from "lucide-react";
+import { Search, User, Phone, MapPin, Calendar, MoreVertical, Loader2, CreditCard, Briefcase, RefreshCw } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -60,6 +60,7 @@ export default function AdminUsers() {
   const [selectedPlanId, setSelectedPlanId] = useState<string>("");
   const [customDays, setCustomDays] = useState<string>("");
   const [isActivating, setIsActivating] = useState(false);
+  const [isMigrating, setIsMigrating] = useState(false);
 
   const filteredUsers = users?.filter(
     (user) =>
@@ -97,6 +98,43 @@ export default function AdminUsers() {
     } catch (error) {
       console.error("Error suspending user:", error);
       toast.error("Erreur lors de la suspension");
+    }
+  };
+
+  const handleMigrateEmails = async () => {
+    if (!confirm("Migrer tous les emails @dekon.local vers @kor.local ?\n\nCette action est irréversible.")) {
+      return;
+    }
+
+    setIsMigrating(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Session expirée");
+        return;
+      }
+
+      const response = await supabase.functions.invoke("migrate-emails", {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.error) {
+        throw response.error;
+      }
+
+      const result = response.data;
+      toast.success(`Migration terminée: ${result.migrated}/${result.total} emails migrés`);
+      
+      if (result.failed > 0) {
+        toast.warning(`${result.failed} emails n'ont pas pu être migrés`);
+      }
+    } catch (error) {
+      console.error("Migration error:", error);
+      toast.error("Erreur lors de la migration");
+    } finally {
+      setIsMigrating(false);
     }
   };
 
@@ -169,14 +207,29 @@ export default function AdminUsers() {
               {users?.length || 0} utilisateurs inscrits
             </p>
           </div>
-          <div className="relative w-full lg:w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Rechercher par nom, téléphone..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
-            />
+          <div className="flex gap-2 w-full lg:w-auto">
+            <div className="relative flex-1 lg:w-80">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Rechercher par nom, téléphone..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Button 
+              variant="outline" 
+              onClick={handleMigrateEmails}
+              disabled={isMigrating}
+              title="Migrer emails @dekon.local vers @kor.local"
+            >
+              {isMigrating ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4" />
+              )}
+              <span className="hidden sm:inline ml-2">Migrer emails</span>
+            </Button>
           </div>
         </div>
 
