@@ -1260,7 +1260,10 @@ CREATE TABLE public.recharge_codes (
     created_by uuid NOT NULL,
     expires_at timestamp with time zone,
     batch_name text,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    is_active boolean DEFAULT true NOT NULL,
+    reseller_id uuid,
+    sold_at timestamp with time zone
 );
 
 
@@ -1295,6 +1298,26 @@ CREATE TABLE public.regions (
     launch_date timestamp with time zone,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: resellers; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.resellers (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid,
+    name text NOT NULL,
+    phone text,
+    email text,
+    city text,
+    commission_rate numeric DEFAULT 10,
+    is_active boolean DEFAULT true,
+    total_codes_sold integer DEFAULT 0,
+    total_earnings numeric DEFAULT 0,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
 );
 
 
@@ -1465,7 +1488,8 @@ CREATE TABLE public.subscriptions (
     max_clients integer DEFAULT 10,
     is_active boolean DEFAULT true,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    max_sales_per_day integer
 );
 
 
@@ -1878,6 +1902,14 @@ ALTER TABLE ONLY public.regions
 
 
 --
+-- Name: resellers resellers_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.resellers
+    ADD CONSTRAINT resellers_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: roadmap_items roadmap_items_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1955,6 +1987,14 @@ ALTER TABLE ONLY public.subscriptions
 
 ALTER TABLE ONLY public.subscriptions
     ADD CONSTRAINT subscriptions_user_id_key UNIQUE (user_id);
+
+
+--
+-- Name: subscriptions subscriptions_user_id_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscriptions
+    ADD CONSTRAINT subscriptions_user_id_unique UNIQUE (user_id);
 
 
 --
@@ -2375,6 +2415,13 @@ CREATE TRIGGER update_regions_updated_at BEFORE UPDATE ON public.regions FOR EAC
 
 
 --
+-- Name: resellers update_resellers_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER update_resellers_updated_at BEFORE UPDATE ON public.resellers FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+
+--
 -- Name: roadmap_items update_roadmap_items_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -2585,6 +2632,14 @@ ALTER TABLE ONLY public.recharge_codes
 
 
 --
+-- Name: recharge_codes recharge_codes_reseller_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.recharge_codes
+    ADD CONSTRAINT recharge_codes_reseller_id_fkey FOREIGN KEY (reseller_id) REFERENCES public.resellers(id) ON DELETE SET NULL;
+
+
+--
 -- Name: recharge_codes recharge_codes_used_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2598,6 +2653,14 @@ ALTER TABLE ONLY public.recharge_codes
 
 ALTER TABLE ONLY public.regions
     ADD CONSTRAINT regions_country_id_fkey FOREIGN KEY (country_id) REFERENCES public.countries(id) ON DELETE CASCADE;
+
+
+--
+-- Name: resellers resellers_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.resellers
+    ADD CONSTRAINT resellers_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE SET NULL;
 
 
 --
@@ -2965,6 +3028,13 @@ CREATE POLICY "Admins can view logs" ON public.admin_logs FOR SELECT TO authenti
 
 
 --
+-- Name: resellers Admins full access on resellers; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Admins full access on resellers" ON public.resellers TO authenticated USING (public.has_role(auth.uid(), 'admin'::public.app_role));
+
+
+--
 -- Name: countries Anyone can view active countries; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -3062,6 +3132,13 @@ CREATE POLICY "Owners can manage their invites" ON public.employee_invites USING
 --
 
 CREATE POLICY "Owners can update roles" ON public.user_roles FOR UPDATE USING ((auth.uid() = user_id));
+
+
+--
+-- Name: resellers Resellers can view own profile; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Resellers can view own profile" ON public.resellers FOR SELECT TO authenticated USING ((user_id = auth.uid()));
 
 
 --
@@ -3492,6 +3569,20 @@ CREATE POLICY "Users can update their subscription" ON public.subscriptions FOR 
 
 
 --
+-- Name: recharge_codes Users can use available codes; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can use available codes" ON public.recharge_codes FOR UPDATE TO authenticated USING (((is_used = false) AND ((expires_at IS NULL) OR (expires_at > now())) AND (is_active = true))) WITH CHECK (((used_by = auth.uid()) AND (is_used = true)));
+
+
+--
+-- Name: recharge_codes Users can validate available codes; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can validate available codes" ON public.recharge_codes FOR SELECT TO authenticated USING (((is_used = false) AND ((expires_at IS NULL) OR (expires_at > now())) AND (is_active = true)));
+
+
+--
 -- Name: product_requests Users can view open or own requests; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -3845,6 +3936,12 @@ ALTER TABLE public.referrals ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.regions ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: resellers; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.resellers ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: roadmap_items; Type: ROW SECURITY; Schema: public; Owner: -
