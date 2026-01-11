@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useAuth } from "./use-auth";
 import { isSupabaseConfigured, getSupabaseClient } from "@/lib/supabase";
 
@@ -12,6 +12,7 @@ interface RoleState {
   isOwner: boolean;
   isEmployee: boolean;
   isAdmin: boolean;
+  isStable: boolean; // New: indicates auth+role are fully settled
 }
 
 function getCachedRole(userId: string): AppRole | null {
@@ -43,6 +44,10 @@ export function useRole(): RoleState {
   const [fetchedRole, setFetchedRole] = useState<AppRole>(null);
   const [isFetching, setIsFetching] = useState(false);
   const [hasFetched, setHasFetched] = useState(false);
+  
+  // Stabilization: prevents premature redirects during initial load
+  const [isStable, setIsStable] = useState(false);
+  const stabilizationTimer = useRef<NodeJS.Timeout | null>(null);
 
   // CRITICAL: Read cache SYNCHRONOUSLY via useMemo when user.id is available
   // This ensures we have the role immediately without waiting for useEffect
@@ -55,6 +60,49 @@ export function useRole(): RoleState {
 
   // Effective role: cache takes priority over fetched
   const effectiveRole = cachedRole || fetchedRole;
+
+  // Stabilization effect: wait for auth to settle before allowing redirects
+  useEffect(() => {
+    // Clear any existing timer
+    if (stabilizationTimer.current) {
+      clearTimeout(stabilizationTimer.current);
+    }
+
+    // If auth is loading, not stable yet
+    if (authLoading) {
+      setIsStable(false);
+      return;
+    }
+
+    // If we have a cached role, stabilize immediately
+    if (cachedRole) {
+      setIsStable(true);
+      return;
+    }
+
+    // If no user (logged out), stabilize immediately
+    if (!user) {
+      setIsStable(true);
+      return;
+    }
+
+    // If fetch completed, stabilize
+    if (hasFetched) {
+      setIsStable(true);
+      return;
+    }
+
+    // Otherwise, wait a bit before declaring stable (prevents flash redirects)
+    stabilizationTimer.current = setTimeout(() => {
+      setIsStable(true);
+    }, 100);
+
+    return () => {
+      if (stabilizationTimer.current) {
+        clearTimeout(stabilizationTimer.current);
+      }
+    };
+  }, [authLoading, cachedRole, user, hasFetched]);
 
   // Fetch role from DB only when needed
   useEffect(() => {
@@ -132,6 +180,7 @@ export function useRole(): RoleState {
     isOwner: effectiveRole === "owner" || effectiveRole === null,
     isEmployee: effectiveRole === "employee",
     isAdmin: effectiveRole === "admin",
+    isStable, // New: consumers can use this to delay redirects
   };
 }
 

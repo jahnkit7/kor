@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
  */
 export function AdminProtectedLayout() {
   const navigate = useNavigate();
-  const { isAdmin, loading, user } = useAdmin();
+  const { isAdmin, loading, user, isStable } = useAdmin();
   
   // Track if we've already handled the redirect to prevent loops
   const hasHandledRedirect = useRef(false);
@@ -23,10 +23,10 @@ export function AdminProtectedLayout() {
   // Track if initial auth check is complete
   const [authChecked, setAuthChecked] = useState(false);
 
-  // Handle redirects - only once when auth is settled
+  // Handle redirects - only once when auth is STABLE (not just done loading)
   useEffect(() => {
-    // Still loading - wait
-    if (loading) return;
+    // Wait for stability - prevents flash redirects during initial load
+    if (loading || !isStable) return;
     
     // Already redirected - do nothing
     if (hasHandledRedirect.current) return;
@@ -47,7 +47,7 @@ export function AdminProtectedLayout() {
       navigate("/dashboard", { replace: true });
       return;
     }
-  }, [loading, user, isAdmin, navigate]);
+  }, [loading, isStable, user, isAdmin, navigate]);
 
   // Reset redirect flag if user changes (logout/login as different user)
   useEffect(() => {
