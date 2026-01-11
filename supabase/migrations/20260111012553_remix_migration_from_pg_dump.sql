@@ -1216,7 +1216,9 @@ CREATE TABLE public.profiles (
     referred_by uuid,
     notification_settings jsonb DEFAULT '{"debt_threshold": 50000, "notify_high_debt": true, "notify_low_stock": true, "low_stock_threshold": 5}'::jsonb,
     auto_deduct_stock boolean DEFAULT true,
-    invoice_settings jsonb DEFAULT '{"logo_url": null, "show_logo": true, "footer_text": null, "primary_color": "#8B5CF6", "secondary_color": "#0EA5E9"}'::jsonb
+    invoice_settings jsonb DEFAULT '{"logo_url": null, "show_logo": true, "footer_text": null, "primary_color": "#8B5CF6", "secondary_color": "#0EA5E9"}'::jsonb,
+    city text,
+    specialty text
 );
 
 
