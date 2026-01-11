@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Onboarding } from "@/components/Onboarding";
 import { usePWA } from "@/hooks/use-pwa";
 
-const ONBOARDING_KEY = "dekon_onboarding_completed";
+const ONBOARDING_KEY = "kor_onboarding_completed";
 
 // Browser detection
 type BrowserType = "safari" | "chrome" | "firefox" | "edge" | "samsung" | "other";
@@ -297,7 +297,7 @@ const Landing = () => {
             <div className="w-1.5 h-6 bg-[#4f7df3] rounded-full" />
             <div className="w-1.5 h-4 bg-[#4f7df3] rounded-full" />
           </div>
-          <span className="text-xl font-bold text-[#2d3748] tracking-tight">DÉKON</span>
+          <span className="text-xl font-bold text-[#2d3748] tracking-tight">KÒR</span>
         </div>
       </motion.div>
 
@@ -347,7 +347,7 @@ const Landing = () => {
           <span className="text-[#4f7df3]">votre poche!</span>
         </h1>
         <p className="text-[#718096] text-base leading-relaxed">
-          Gérez ventes et dettes facilement avec DÉKON.
+          Gérez ventes et dettes facilement avec KÒR.
           <br />
           Même sans connexion internet.
         </p>
@@ -426,7 +426,7 @@ const Landing = () => {
                 Instructions pour <span className="text-[#4f7df3] font-medium">{browserName}</span>
               </p>
               <p className="text-white/40 text-xs mb-8 text-center">
-                Ajoutez DÉKON à votre écran d'accueil
+                Ajoutez KÒR à votre écran d'accueil
               </p>
             </motion.div>
             

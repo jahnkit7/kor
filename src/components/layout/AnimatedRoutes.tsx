@@ -34,7 +34,6 @@ import NotFound from "@/pages/NotFound";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminSubscriptions from "@/pages/admin/AdminSubscriptions";
-import AdminCodes from "@/pages/admin/AdminCodes";
 import AdminGeography from "@/pages/admin/AdminGeography";
 import AdminFeatures from "@/pages/admin/AdminFeatures";
 import AdminSupport from "@/pages/admin/AdminSupport";
@@ -101,7 +100,6 @@ export const AnimatedRoutes = () => {
             <Route path="/admin/financials" element={<AdminFinancials />} />
             <Route path="/admin/users" element={<AdminUsers />} />
             <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
-            <Route path="/admin/codes" element={<AdminCodes />} />
             <Route path="/admin/geography" element={<AdminGeography />} />
             <Route path="/admin/features" element={<AdminFeatures />} />
             <Route path="/admin/commissions" element={<AdminCommissions />} />

@@ -20,7 +20,7 @@ const mainItems = [
   { to: "/admin", icon: LayoutDashboard, label: "Dashboard", exact: true },
   { to: "/admin/financials", icon: TrendingUp, label: "Finances" },
   { to: "/admin/users", icon: Users, label: "Users" },
-  { to: "/admin/codes", icon: QrCode, label: "Codes" },
+  { to: "/admin/subscriptions", icon: CreditCard, label: "Abo" },
 ];
 
 const moreItems = [

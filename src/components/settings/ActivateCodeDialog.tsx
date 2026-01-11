@@ -34,11 +34,12 @@ export function ActivateCodeDialog({ onSuccess, variant = "default" }: ActivateC
 
     setLoading(true);
     try {
-      // 1. Find the code
+      // 1. Find the code - now RLS allows reading available codes
       const { data: codeData, error: codeError } = await supabase
         .from("recharge_codes")
         .select("*, subscription_plans:plan_id(*)")
         .eq("code", code.trim().toUpperCase())
+        .eq("is_used", false)
         .maybeSingle();
 
       if (codeError) throw codeError;
@@ -49,8 +50,9 @@ export function ActivateCodeDialog({ onSuccess, variant = "default" }: ActivateC
         return;
       }
 
-      if (codeData.is_used) {
-        toast.error("Ce code a déjà été utilisé");
+      // Check if code is active
+      if ((codeData as any).is_active === false) {
+        toast.error("Ce code a été désactivé");
         setLoading(false);
         return;
       }

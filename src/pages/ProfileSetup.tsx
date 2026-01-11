@@ -62,7 +62,7 @@ const ProfileSetup = () => {
   // Extract phone number from fake email (format: 228XXXXXXXX@dekon.local)
   const extractedPhone = useMemo(() => {
     if (!user?.email) return "";
-    const match = user.email.match(/^(\d+)@dekon\.local$/);
+    const match = user.email.match(/^(\d+)@(?:dekon|kor)\.local$/);
     if (match) {
       const fullNumber = match[1];
       // Format: +228 XX XXX XX XX
