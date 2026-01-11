@@ -1,8 +1,7 @@
 import { Routes, Route, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
-import { RequireProfile } from "@/components/RequireProfile";
-import { RequireSubscription } from "@/components/RequireSubscription";
 import { PageTransition } from "./PageTransition";
+import { ProtectedLayout } from "./ProtectedLayout";
 
 // Public pages
 import Landing from "@/pages/Landing";
@@ -50,16 +49,7 @@ import AdminRoadmap from "@/pages/admin/AdminRoadmap";
 import AdminSetup from "@/pages/admin/AdminSetup";
 import AdminSyncDiagnostic from "@/pages/admin/AdminSyncDiagnostic";
 
-// Wrapper for protected routes with transition
-const ProtectedPage = ({ children }: { children: React.ReactNode }) => (
-  <RequireProfile>
-    <RequireSubscription>
-      <PageTransition>{children}</PageTransition>
-    </RequireSubscription>
-  </RequireProfile>
-);
-
-// Wrapper for public routes with transition
+// Wrapper for public routes with transition (includes AnimatePresence for each)
 const PublicPage = ({ children }: { children: React.ReactNode }) => (
   <PageTransition>{children}</PageTransition>
 );
@@ -67,56 +57,81 @@ const PublicPage = ({ children }: { children: React.ReactNode }) => (
 export const AnimatedRoutes = () => {
   const location = useLocation();
 
+  // Determine if we're on a protected route (not public, not admin)
+  const isProtectedRoute = location.pathname.startsWith('/dashboard') ||
+    location.pathname.startsWith('/sale') ||
+    location.pathname.startsWith('/debts') ||
+    location.pathname.startsWith('/clients') ||
+    location.pathname.startsWith('/reports') ||
+    location.pathname.startsWith('/settings') ||
+    location.pathname.startsWith('/stock') ||
+    location.pathname.startsWith('/sales') ||
+    location.pathname.startsWith('/invoices') ||
+    location.pathname.startsWith('/employees') ||
+    location.pathname.startsWith('/network') ||
+    location.pathname.startsWith('/referrals');
+
   return (
-    <AnimatePresence mode="popLayout" initial={false}>
-      <Routes location={location} key={location.pathname}>
-        {/* Public routes */}
-        <Route path="/" element={<PublicPage><Landing /></PublicPage>} />
-        <Route path="/auth" element={<PublicPage><Auth /></PublicPage>} />
-        <Route path="/invite" element={<PublicPage><AcceptInvite /></PublicPage>} />
-        <Route path="/profile-setup" element={<PublicPage><ProfileSetup /></PublicPage>} />
-        <Route path="/subscriptions" element={<PublicPage><Subscriptions /></PublicPage>} />
+    <>
+      {/* Public and Admin routes - with AnimatePresence wrapper */}
+      {!isProtectedRoute && (
+        <AnimatePresence mode="popLayout" initial={false}>
+          <Routes location={location} key={location.pathname}>
+            {/* Public routes */}
+            <Route path="/" element={<PublicPage><Landing /></PublicPage>} />
+            <Route path="/auth" element={<PublicPage><Auth /></PublicPage>} />
+            <Route path="/invite" element={<PublicPage><AcceptInvite /></PublicPage>} />
+            <Route path="/profile-setup" element={<PublicPage><ProfileSetup /></PublicPage>} />
+            <Route path="/subscriptions" element={<PublicPage><Subscriptions /></PublicPage>} />
 
-        {/* Protected routes */}
-        <Route path="/dashboard" element={<ProtectedPage><Dashboard /></ProtectedPage>} />
-        <Route path="/sale/:type" element={<ProtectedPage><Sale /></ProtectedPage>} />
-        <Route path="/debts" element={<ProtectedPage><Debts /></ProtectedPage>} />
-        <Route path="/debts/:id" element={<ProtectedPage><DebtDetail /></ProtectedPage>} />
-        <Route path="/clients" element={<ProtectedPage><Clients /></ProtectedPage>} />
-        <Route path="/clients/new" element={<ProtectedPage><NewClient /></ProtectedPage>} />
-        <Route path="/clients/:id" element={<ProtectedPage><ClientDetail /></ProtectedPage>} />
-        <Route path="/reports" element={<ProtectedPage><Reports /></ProtectedPage>} />
-        <Route path="/settings" element={<ProtectedPage><Settings /></ProtectedPage>} />
-        <Route path="/stock" element={<ProtectedPage><Stock /></ProtectedPage>} />
-        <Route path="/sales/history" element={<ProtectedPage><SalesHistory /></ProtectedPage>} />
-        <Route path="/invoices" element={<ProtectedPage><InvoiceHistory /></ProtectedPage>} />
-        <Route path="/employees" element={<ProtectedPage><EmployeeManagement /></ProtectedPage>} />
-        <Route path="/network" element={<ProtectedPage><Network /></ProtectedPage>} />
-        <Route path="/referrals" element={<ProtectedPage><Referrals /></ProtectedPage>} />
+            {/* Admin routes */}
+            <Route path="/admin" element={<PublicPage><AdminDashboard /></PublicPage>} />
+            <Route path="/admin/financials" element={<PublicPage><AdminFinancials /></PublicPage>} />
+            <Route path="/admin/users" element={<PublicPage><AdminUsers /></PublicPage>} />
+            <Route path="/admin/subscriptions" element={<PublicPage><AdminSubscriptions /></PublicPage>} />
+            <Route path="/admin/codes" element={<PublicPage><AdminCodes /></PublicPage>} />
+            <Route path="/admin/geography" element={<PublicPage><AdminGeography /></PublicPage>} />
+            <Route path="/admin/features" element={<PublicPage><AdminFeatures /></PublicPage>} />
+            <Route path="/admin/commissions" element={<PublicPage><AdminCommissions /></PublicPage>} />
+            <Route path="/admin/referrals" element={<PublicPage><AdminReferrals /></PublicPage>} />
+            <Route path="/admin/feature-analytics" element={<PublicPage><AdminFeatureAnalytics /></PublicPage>} />
+            <Route path="/admin/beta-analytics" element={<PublicPage><AdminBetaAnalytics /></PublicPage>} />
+            <Route path="/admin/ab-testing" element={<PublicPage><AdminABTesting /></PublicPage>} />
+            <Route path="/admin/promo-codes" element={<PublicPage><AdminPromoCodes /></PublicPage>} />
+            <Route path="/admin/notifications" element={<PublicPage><AdminNotifications /></PublicPage>} />
+            <Route path="/admin/roadmap" element={<PublicPage><AdminRoadmap /></PublicPage>} />
+            <Route path="/admin/support" element={<PublicPage><AdminSupport /></PublicPage>} />
+            <Route path="/admin/logs" element={<PublicPage><AdminLogs /></PublicPage>} />
+            <Route path="/admin/setup" element={<PublicPage><AdminSetup /></PublicPage>} />
+            <Route path="/admin/sync-diagnostic" element={<PublicPage><AdminSyncDiagnostic /></PublicPage>} />
 
-        {/* Admin routes */}
-        <Route path="/admin" element={<PublicPage><AdminDashboard /></PublicPage>} />
-        <Route path="/admin/financials" element={<PublicPage><AdminFinancials /></PublicPage>} />
-        <Route path="/admin/users" element={<PublicPage><AdminUsers /></PublicPage>} />
-        <Route path="/admin/subscriptions" element={<PublicPage><AdminSubscriptions /></PublicPage>} />
-        <Route path="/admin/codes" element={<PublicPage><AdminCodes /></PublicPage>} />
-        <Route path="/admin/geography" element={<PublicPage><AdminGeography /></PublicPage>} />
-        <Route path="/admin/features" element={<PublicPage><AdminFeatures /></PublicPage>} />
-        <Route path="/admin/commissions" element={<PublicPage><AdminCommissions /></PublicPage>} />
-        <Route path="/admin/referrals" element={<PublicPage><AdminReferrals /></PublicPage>} />
-        <Route path="/admin/feature-analytics" element={<PublicPage><AdminFeatureAnalytics /></PublicPage>} />
-        <Route path="/admin/beta-analytics" element={<PublicPage><AdminBetaAnalytics /></PublicPage>} />
-        <Route path="/admin/ab-testing" element={<PublicPage><AdminABTesting /></PublicPage>} />
-        <Route path="/admin/promo-codes" element={<PublicPage><AdminPromoCodes /></PublicPage>} />
-        <Route path="/admin/notifications" element={<PublicPage><AdminNotifications /></PublicPage>} />
-        <Route path="/admin/roadmap" element={<PublicPage><AdminRoadmap /></PublicPage>} />
-        <Route path="/admin/support" element={<PublicPage><AdminSupport /></PublicPage>} />
-        <Route path="/admin/logs" element={<PublicPage><AdminLogs /></PublicPage>} />
-        <Route path="/admin/setup" element={<PublicPage><AdminSetup /></PublicPage>} />
-        <Route path="/admin/sync-diagnostic" element={<PublicPage><AdminSyncDiagnostic /></PublicPage>} />
+            <Route path="*" element={<PublicPage><NotFound /></PublicPage>} />
+          </Routes>
+        </AnimatePresence>
+      )}
 
-        <Route path="*" element={<PublicPage><NotFound /></PublicPage>} />
-      </Routes>
-    </AnimatePresence>
+      {/* Protected routes - ProtectedLayout stays mounted, only content animates */}
+      {isProtectedRoute && (
+        <Routes location={location}>
+          <Route element={<ProtectedLayout />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/sale/:type" element={<Sale />} />
+            <Route path="/debts" element={<Debts />} />
+            <Route path="/debts/:id" element={<DebtDetail />} />
+            <Route path="/clients" element={<Clients />} />
+            <Route path="/clients/new" element={<NewClient />} />
+            <Route path="/clients/:id" element={<ClientDetail />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/stock" element={<Stock />} />
+            <Route path="/sales/history" element={<SalesHistory />} />
+            <Route path="/invoices" element={<InvoiceHistory />} />
+            <Route path="/employees" element={<EmployeeManagement />} />
+            <Route path="/network" element={<Network />} />
+            <Route path="/referrals" element={<Referrals />} />
+          </Route>
+        </Routes>
+      )}
+    </>
   );
 };
