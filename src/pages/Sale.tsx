@@ -24,6 +24,7 @@ import { VoiceSaleInput } from "@/components/sale/VoiceSaleInput";
 import { ProductSelector } from "@/components/sale/ProductSelector";
 import { cn } from "@/lib/utils";
 import FullScreenLayout from "@/components/layout/FullScreenLayout";
+import { triggerHaptic } from "@/lib/haptics";
 
 interface SaleProduct {
   stock_item_id?: string | null;
@@ -134,6 +135,7 @@ const Sale = () => {
     }
 
     setIsLoading(true);
+    triggerHaptic(25);
     try {
       // Prepare sale items from selected products
       const saleItems: SaleItem[] = selectedProducts.map((p) => ({
@@ -161,6 +163,7 @@ const Sale = () => {
         refetchStock();
       }
 
+      triggerHaptic(25);
       setShowSuccess(true);
       setTimeout(() => {
         navigate("/dashboard");

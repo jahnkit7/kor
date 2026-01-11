@@ -113,11 +113,11 @@ export function useClients(): ClientsState {
             }]);
           }
         } catch (error) {
-          console.warn("Could not sync clients with cloud:", error);
+          if (import.meta.env.DEV) console.warn("Could not sync clients with cloud:", error);
         }
       }
     } catch (error) {
-      console.error("Error fetching clients:", error);
+      if (import.meta.env.DEV) console.error("Error fetching clients:", error);
       setLoading(false);
     }
   }, [user, isOnline]);
@@ -171,13 +171,13 @@ export function useClients(): ClientsState {
             c.id === localClient.id ? { ...c, synced: true } : c
           ));
         } catch (error) {
-          console.log("Client queued for sync:", error);
+          if (import.meta.env.DEV) console.log("Client queued for sync:", error);
         }
       }
 
       return newClient;
     } catch (error) {
-      console.error("Error adding client:", error);
+      if (import.meta.env.DEV) console.error("Error adding client:", error);
       toast.error("Erreur lors de l'ajout du client");
       return null;
     }
@@ -215,11 +215,11 @@ export function useClients(): ClientsState {
           await localDB.markAsSynced("clients", id);
           setClients(prev => prev.map(c => c.id === id ? { ...c, synced: true } : c));
         } catch (error) {
-          console.warn("Could not sync update:", error);
+          if (import.meta.env.DEV) console.warn("Could not sync update:", error);
         }
       }
     } catch (error) {
-      console.error("Error updating client:", error);
+      if (import.meta.env.DEV) console.error("Error updating client:", error);
       toast.error("Erreur lors de la mise à jour");
     }
   }, [user, isOnline]);
@@ -241,13 +241,13 @@ export function useClients(): ClientsState {
             .eq("id", id)
             .eq("user_id", user.id);
         } catch (error) {
-          console.warn("Could not delete from cloud:", error);
+          if (import.meta.env.DEV) console.warn("Could not delete from cloud:", error);
         }
       }
 
       toast.success("Client supprimé");
     } catch (error) {
-      console.error("Error deleting client:", error);
+      if (import.meta.env.DEV) console.error("Error deleting client:", error);
       toast.error("Erreur lors de la suppression");
     }
   }, [user, isOnline]);

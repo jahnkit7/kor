@@ -13,15 +13,15 @@ export function useValidateReferralCode() {
   return useMutation({
     mutationFn: async (code: string): Promise<ReferrerInfo> => {
       const cleanCode = code.trim().toUpperCase();
-      console.log("[Referral] Validating code:", cleanCode);
+      if (import.meta.env.DEV) console.log("[Referral] Validating code:", cleanCode);
 
       const { data, error } = await supabase
         .rpc('validate_referral_code', { code: cleanCode });
 
-      console.log("[Referral] RPC result:", { data, error });
+      if (import.meta.env.DEV) console.log("[Referral] RPC result:", { data, error });
 
       if (error) {
-        console.error("[Referral] RPC error:", error);
+        if (import.meta.env.DEV) console.error("[Referral] RPC error:", error);
         throw new Error("Erreur de validation du code");
       }
 
@@ -93,16 +93,16 @@ export async function recordReferral(
 ): Promise<boolean> {
   try {
     const cleanCode = referralCode.trim().toUpperCase();
-    console.log("[Referral] Recording referral for user:", userId, "with code:", cleanCode);
+    if (import.meta.env.DEV) console.log("[Referral] Recording referral for user:", userId, "with code:", cleanCode);
 
     // Find the referrer using RPC function (bypasses RLS)
     const { data: rpcResult, error: rpcError } = await supabase
       .rpc('validate_referral_code', { code: cleanCode });
 
-    console.log("[Referral] RPC result:", { rpcResult, rpcError });
+    if (import.meta.env.DEV) console.log("[Referral] RPC result:", { rpcResult, rpcError });
 
     if (rpcError || !rpcResult || rpcResult.length === 0) {
-      console.warn("[Referral] Invalid referral code:", cleanCode, rpcError);
+      if (import.meta.env.DEV) console.warn("[Referral] Invalid referral code:", cleanCode, rpcError);
       return false;
     }
 
@@ -110,7 +110,7 @@ export async function recordReferral(
 
     // Don't allow self-referral
     if (referrer.referrer_id === userId) {
-      console.warn("[Referral] Self-referral attempted");
+      if (import.meta.env.DEV) console.warn("[Referral] Self-referral attempted");
       return false;
     }
 
@@ -121,11 +121,11 @@ export async function recordReferral(
       .eq("user_id", userId);
 
     if (updateError) {
-      console.error("[Referral] Error updating referred_by:", updateError);
+      if (import.meta.env.DEV) console.error("[Referral] Error updating referred_by:", updateError);
       return false;
     }
 
-    console.log("[Referral] Profile updated with referred_by:", referrer.referrer_id);
+    if (import.meta.env.DEV) console.log("[Referral] Profile updated with referred_by:", referrer.referrer_id);
 
     // Create the referral record
     const { error: insertError } = await supabase
@@ -140,14 +140,14 @@ export async function recordReferral(
       });
 
     if (insertError) {
-      console.error("[Referral] Error creating referral:", insertError);
+      if (import.meta.env.DEV) console.error("[Referral] Error creating referral:", insertError);
       return false;
     }
 
-    console.log("[Referral] Referral record created successfully");
+    if (import.meta.env.DEV) console.log("[Referral] Referral record created successfully");
     return true;
   } catch (error) {
-    console.error("[Referral] Error recording referral:", error);
+    if (import.meta.env.DEV) console.error("[Referral] Error recording referral:", error);
     return false;
   }
 }
@@ -165,13 +165,13 @@ export async function convertReferral(userId: string): Promise<boolean> {
       .eq("status", "pending");
 
     if (error) {
-      console.error("Error converting referral:", error);
+      if (import.meta.env.DEV) console.error("Error converting referral:", error);
       return false;
     }
 
     return true;
   } catch (error) {
-    console.error("Error converting referral:", error);
+    if (import.meta.env.DEV) console.error("Error converting referral:", error);
     return false;
   }
 }

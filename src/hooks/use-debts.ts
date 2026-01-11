@@ -126,11 +126,11 @@ export function useDebts(): DebtsState {
             }
           }
         } catch (error) {
-          console.warn("Could not sync debts with cloud:", error);
+          if (import.meta.env.DEV) console.warn("Could not sync debts with cloud:", error);
         }
       }
     } catch (error) {
-      console.error("Error fetching debts:", error);
+      if (import.meta.env.DEV) console.error("Error fetching debts:", error);
       setLoading(false);
     }
   }, [user, isOnline]);
@@ -194,13 +194,13 @@ export function useDebts(): DebtsState {
             d.id === localDebt.id ? { ...d, synced: true } : d
           ));
         } catch (error) {
-          console.log("Debt queued for sync:", error);
+          if (import.meta.env.DEV) console.log("Debt queued for sync:", error);
         }
       }
 
       return newDebt;
     } catch (error) {
-      console.error("Error adding debt:", error);
+      if (import.meta.env.DEV) console.error("Error adding debt:", error);
       toast.error("Erreur lors de l'ajout de la dette");
       return null;
     }
@@ -258,11 +258,11 @@ export function useDebts(): DebtsState {
             d.id === debtId ? { ...d, synced: true } : d
           ));
         } catch (error) {
-          console.warn("Payment queued for sync:", error);
+          if (import.meta.env.DEV) console.warn("Payment queued for sync:", error);
         }
       }
     } catch (error) {
-      console.error("Error adding payment:", error);
+      if (import.meta.env.DEV) console.error("Error adding payment:", error);
       toast.error("Erreur lors de l'ajout du paiement");
     }
   }, [user, debts, isOnline]);
@@ -286,7 +286,7 @@ export function useDebts(): DebtsState {
           return data;
         }
       } catch (error) {
-        console.warn("Could not fetch payments from cloud:", error);
+        if (import.meta.env.DEV) console.warn("Could not fetch payments from cloud:", error);
       }
     }
 

@@ -20,6 +20,7 @@ import { useDebts, type Payment } from "@/hooks/use-debts";
 import { useClients } from "@/hooks/use-clients";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { triggerHaptic } from "@/lib/haptics";
 
 interface HistoryItem {
   id: string;
@@ -135,6 +136,7 @@ const DebtDetail = () => {
     }
     
     setProcessingPayment(true);
+    triggerHaptic(25);
     try {
       await addPayment(debt.id, amount);
       
@@ -149,6 +151,8 @@ const DebtDetail = () => {
       setShowPaymentModal(false);
       setPaymentAmount("");
       setSelectedDebtId(null);
+      
+      triggerHaptic(25);
       
       // Refetch debts to update totals
       await refetchDebts();
