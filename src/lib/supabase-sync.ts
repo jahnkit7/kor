@@ -22,7 +22,7 @@ async function syncItemToCloud(
 
       const { error } = await supabase.from(table).insert(cloudData as never);
       if (error) {
-        console.error(`Sync error for ${table}:`, error);
+        if (import.meta.env.DEV) console.error(`Sync error for ${table}:`, error);
         return false;
       }
     } else if (type === "update") {
@@ -32,21 +32,21 @@ async function syncItemToCloud(
 
       const { error } = await supabase.from(table).update(cloudData as never).eq("id", id);
       if (error) {
-        console.error(`Update sync error for ${table}:`, error);
+        if (import.meta.env.DEV) console.error(`Update sync error for ${table}:`, error);
         return false;
       }
     } else if (type === "delete") {
       const id = record.id as string;
       const { error } = await supabase.from(table).delete().eq("id", id);
       if (error) {
-        console.error(`Delete sync error for ${table}:`, error);
+        if (import.meta.env.DEV) console.error(`Delete sync error for ${table}:`, error);
         return false;
       }
     }
 
     return true;
   } catch (error) {
-    console.error("Sync item error:", error);
+    if (import.meta.env.DEV) console.error("Sync item error:", error);
     return false;
   }
 }
@@ -162,7 +162,7 @@ export async function pullFromCloud(userId: string): Promise<void> {
     }
   }
 
-  console.log("Data pulled from cloud successfully");
+  if (import.meta.env.DEV) console.log("Data pulled from cloud successfully");
 }
 
 // Full sync: push pending changes then pull updates
@@ -208,12 +208,12 @@ export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: num
   let failed = 0;
   const details = { sales: 0, clients: 0, debts: 0, payments: 0, stock: 0 };
 
-  console.log("[SYNC] Starting pushUnsyncedToCloud for user:", userId);
+  if (import.meta.env.DEV) console.log("[SYNC] Starting pushUnsyncedToCloud for user:", userId);
 
   // 1. Push unsynced sales
   const allSales = await db.getAll("sales");
   const unsyncedSales = allSales.filter(s => !s.synced);
-  console.log(`[SYNC] Found ${unsyncedSales.length} unsynced sales`);
+  if (import.meta.env.DEV) console.log(`[SYNC] Found ${unsyncedSales.length} unsynced sales`);
   
   for (const sale of unsyncedSales) {
     try {
@@ -223,10 +223,10 @@ export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: num
       
       if (!isValidUUID(sale.id)) {
         cloudId = generateValidUUID();
-        console.log(`[SYNC] Migrating invalid ID ${oldId} -> ${cloudId}`);
+        if (import.meta.env.DEV) console.log(`[SYNC] Migrating invalid ID ${oldId} -> ${cloudId}`);
       }
       
-      console.log(`[SYNC] Pushing sale: ${cloudId}, amount: ${sale.amount}`);
+      if (import.meta.env.DEV) console.log(`[SYNC] Pushing sale: ${cloudId}, amount: ${sale.amount}`);
       const { error } = await supabase
         .from("sales")
         .upsert({
@@ -249,13 +249,13 @@ export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: num
         }
         pushed++;
         details.sales++;
-        console.log(`[SYNC] ✓ Sale ${cloudId} synced successfully`);
+        if (import.meta.env.DEV) console.log(`[SYNC] ✓ Sale ${cloudId} synced successfully`);
       } else {
-        console.error(`[SYNC] ✗ Error syncing sale ${cloudId}:`, error);
+        if (import.meta.env.DEV) console.error(`[SYNC] ✗ Error syncing sale ${cloudId}:`, error);
         failed++;
       }
     } catch (err) {
-      console.error(`[SYNC] ✗ Exception syncing sale ${sale.id}:`, err);
+      if (import.meta.env.DEV) console.error(`[SYNC] ✗ Exception syncing sale ${sale.id}:`, err);
       failed++;
     }
   }
@@ -263,7 +263,7 @@ export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: num
   // 2. Push unsynced clients
   const allClients = await db.getAll("clients");
   const unsyncedClients = allClients.filter(c => !c.synced);
-  console.log(`[SYNC] Found ${unsyncedClients.length} unsynced clients`);
+  if (import.meta.env.DEV) console.log(`[SYNC] Found ${unsyncedClients.length} unsynced clients`);
   
   for (const client of unsyncedClients) {
     try {
@@ -272,7 +272,7 @@ export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: num
       
       if (!isValidUUID(client.id)) {
         cloudId = generateValidUUID();
-        console.log(`[SYNC] Migrating client ID ${oldId} -> ${cloudId}`);
+        if (import.meta.env.DEV) console.log(`[SYNC] Migrating client ID ${oldId} -> ${cloudId}`);
       }
       
       const { error } = await supabase
@@ -298,11 +298,11 @@ export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: num
         pushed++;
         details.clients++;
       } else {
-        console.error(`[SYNC] ✗ Error syncing client ${cloudId}:`, error);
+        if (import.meta.env.DEV) console.error(`[SYNC] ✗ Error syncing client ${cloudId}:`, error);
         failed++;
       }
     } catch (err) {
-      console.error(`[SYNC] ✗ Exception syncing client ${client.id}:`, err);
+      if (import.meta.env.DEV) console.error(`[SYNC] ✗ Exception syncing client ${client.id}:`, err);
       failed++;
     }
   }
@@ -310,7 +310,7 @@ export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: num
   // 3. Push unsynced debts
   const allDebts = await db.getAll("debts");
   const unsyncedDebts = allDebts.filter(d => !d.synced);
-  console.log(`[SYNC] Found ${unsyncedDebts.length} unsynced debts`);
+  if (import.meta.env.DEV) console.log(`[SYNC] Found ${unsyncedDebts.length} unsynced debts`);
   
   for (const debt of unsyncedDebts) {
     try {
@@ -319,7 +319,7 @@ export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: num
       
       if (!isValidUUID(debt.id)) {
         cloudId = generateValidUUID();
-        console.log(`[SYNC] Migrating debt ID ${oldId} -> ${cloudId}`);
+        if (import.meta.env.DEV) console.log(`[SYNC] Migrating debt ID ${oldId} -> ${cloudId}`);
       }
       
       // Also check if clientId is valid UUID - if not, try to find migrated client
@@ -355,11 +355,11 @@ export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: num
         pushed++;
         details.debts++;
       } else {
-        console.error(`[SYNC] ✗ Error syncing debt ${cloudId}:`, error);
+        if (import.meta.env.DEV) console.error(`[SYNC] ✗ Error syncing debt ${cloudId}:`, error);
         failed++;
       }
     } catch (err) {
-      console.error(`[SYNC] ✗ Exception syncing debt ${debt.id}:`, err);
+      if (import.meta.env.DEV) console.error(`[SYNC] ✗ Exception syncing debt ${debt.id}:`, err);
       failed++;
     }
   }
@@ -367,7 +367,7 @@ export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: num
   // 4. Push unsynced payments
   const allPayments = await db.getAll("payments");
   const unsyncedPayments = allPayments.filter(p => !p.synced);
-  console.log(`[SYNC] Found ${unsyncedPayments.length} unsynced payments`);
+  if (import.meta.env.DEV) console.log(`[SYNC] Found ${unsyncedPayments.length} unsynced payments`);
   
   for (const payment of unsyncedPayments) {
     try {
@@ -376,7 +376,7 @@ export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: num
       
       if (!isValidUUID(payment.id)) {
         cloudId = generateValidUUID();
-        console.log(`[SYNC] Migrating payment ID ${oldId} -> ${cloudId}`);
+        if (import.meta.env.DEV) console.log(`[SYNC] Migrating payment ID ${oldId} -> ${cloudId}`);
       }
       
       const { error } = await supabase
@@ -400,11 +400,11 @@ export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: num
         pushed++;
         details.payments++;
       } else {
-        console.error(`[SYNC] ✗ Error syncing payment ${cloudId}:`, error);
+        if (import.meta.env.DEV) console.error(`[SYNC] ✗ Error syncing payment ${cloudId}:`, error);
         failed++;
       }
     } catch (err) {
-      console.error(`[SYNC] ✗ Exception syncing payment ${payment.id}:`, err);
+      if (import.meta.env.DEV) console.error(`[SYNC] ✗ Exception syncing payment ${payment.id}:`, err);
       failed++;
     }
   }
@@ -412,7 +412,7 @@ export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: num
   // 5. Push unsynced stock items
   const allStock = await db.getAll("stock_items");
   const unsyncedStock = allStock.filter(s => !s.synced);
-  console.log(`[SYNC] Found ${unsyncedStock.length} unsynced stock items`);
+  if (import.meta.env.DEV) console.log(`[SYNC] Found ${unsyncedStock.length} unsynced stock items`);
   
   for (const stock of unsyncedStock) {
     try {
@@ -421,7 +421,7 @@ export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: num
       
       if (!isValidUUID(stock.id)) {
         cloudId = generateValidUUID();
-        console.log(`[SYNC] Migrating stock ID ${oldId} -> ${cloudId}`);
+        if (import.meta.env.DEV) console.log(`[SYNC] Migrating stock ID ${oldId} -> ${cloudId}`);
       }
       
       const { error } = await supabase
@@ -448,16 +448,16 @@ export async function pushUnsyncedToCloud(userId: string): Promise<{ pushed: num
         pushed++;
         details.stock++;
       } else {
-        console.error(`[SYNC] ✗ Error syncing stock ${cloudId}:`, error);
+        if (import.meta.env.DEV) console.error(`[SYNC] ✗ Error syncing stock ${cloudId}:`, error);
         failed++;
       }
     } catch (err) {
-      console.error(`[SYNC] ✗ Exception syncing stock ${stock.id}:`, err);
+      if (import.meta.env.DEV) console.error(`[SYNC] ✗ Exception syncing stock ${stock.id}:`, err);
       failed++;
     }
   }
 
-  console.log(`[SYNC] Complete: ${pushed} pushed, ${failed} failed`, details);
+  if (import.meta.env.DEV) console.log(`[SYNC] Complete: ${pushed} pushed, ${failed} failed`, details);
   return { pushed, failed, details };
 }
 
@@ -467,7 +467,7 @@ export async function retryFailedItems(userId: string): Promise<{ retried: numbe
   let retried = 0;
   let stillFailed = 0;
 
-  console.log("[SYNC-RETRY] Starting retry for failed items...");
+  if (import.meta.env.DEV) console.log("[SYNC-RETRY] Starting retry for failed items...");
 
   // Get all unsynced items
   const [sales, clients, debts, payments, stockItems] = await Promise.all([
@@ -488,11 +488,11 @@ export async function retryFailedItems(userId: string): Promise<{ retried: numbe
                         unsyncedDebts.length + unsyncedPayments.length + unsyncedStock.length;
 
   if (totalUnsynced === 0) {
-    console.log("[SYNC-RETRY] No items to retry");
+    if (import.meta.env.DEV) console.log("[SYNC-RETRY] No items to retry");
     return { retried: 0, stillFailed: 0 };
   }
 
-  console.log(`[SYNC-RETRY] Found ${totalUnsynced} unsynced items to retry`);
+  if (import.meta.env.DEV) console.log(`[SYNC-RETRY] Found ${totalUnsynced} unsynced items to retry`);
 
   // Use pushUnsyncedToCloud which handles all the logic
   const result = await pushUnsyncedToCloud(userId);

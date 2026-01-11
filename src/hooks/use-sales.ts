@@ -114,11 +114,11 @@ export function useSales(): SalesState {
             }
           }
         } catch (error) {
-          console.warn("Could not sync sales with cloud:", error);
+          if (import.meta.env.DEV) console.warn("Could not sync sales with cloud:", error);
         }
       }
     } catch (error) {
-      console.error("Error fetching sales:", error);
+      if (import.meta.env.DEV) console.error("Error fetching sales:", error);
       setLoading(false);
     }
   }, [user, isOnline]);
@@ -252,7 +252,7 @@ export function useSales(): SalesState {
             ));
           }
         } catch (error) {
-          console.log("Sale queued for sync:", error);
+          if (import.meta.env.DEV) console.log("Sale queued for sync:", error);
           toast.info("Vente enregistrée hors-ligne", {
             description: "Sera synchronisée à la reconnexion"
           });
@@ -265,7 +265,7 @@ export function useSales(): SalesState {
 
       return newSale;
     } catch (error) {
-      console.error("Error adding sale:", error);
+      if (import.meta.env.DEV) console.error("Error adding sale:", error);
       toast.error("Erreur lors de l'ajout de la vente");
       return null;
     }
@@ -288,13 +288,13 @@ export function useSales(): SalesState {
             .eq("id", id)
             .eq("user_id", user.id);
         } catch (error) {
-          console.warn("Could not delete from cloud:", error);
+          if (import.meta.env.DEV) console.warn("Could not delete from cloud:", error);
         }
       }
 
       toast.success("Vente supprimée");
     } catch (error) {
-      console.error("Error deleting sale:", error);
+      if (import.meta.env.DEV) console.error("Error deleting sale:", error);
       toast.error("Erreur lors de la suppression");
     }
   }, [user, isOnline]);

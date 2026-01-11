@@ -92,12 +92,12 @@ export function useUserSubscription() {
     queryFn: async () => {
       if (!user?.id) return null;
 
-      // Timeout pour éviter une requête qui pend indéfiniment (3s)
+      // Timeout pour éviter une requête qui pend indéfiniment (5s)
       const timeoutPromise = new Promise<null>((resolve) => {
         setTimeout(() => {
-          console.warn("[useUserSubscription] Request timeout - returning null");
+          if (import.meta.env.DEV) console.warn("[useUserSubscription] Request timeout - returning null");
           resolve(null);
-        }, 3000);
+        }, 5000);
       });
 
       const queryPromise = (async () => {
@@ -115,7 +115,8 @@ export function useUserSubscription() {
       return Promise.race([queryPromise, timeoutPromise]);
     },
     enabled: !!user?.id,
-    retry: 1, // Maximum 1 retry pour éviter les boucles
+    retry: 2, // 2 retries pour meilleure résilience
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
     staleTime: 30 * 1000, // Cache 30s
     gcTime: 5 * 60 * 1000, // Keep in cache 5min
   });

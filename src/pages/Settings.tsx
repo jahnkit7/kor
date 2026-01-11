@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useFeatureTracking } from "@/hooks/use-feature-tracking";
 import { motion } from "framer-motion";
@@ -26,7 +26,9 @@ import {
   Database,
   FileText,
   Sparkles,
-  Ticket
+  Ticket,
+  Download,
+  Loader2
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { OwnerBadge, RoleBadge } from "@/components/RoleBadge";
@@ -45,6 +47,7 @@ import { CommissionPayment } from "@/components/settings/CommissionPayment";
 import { CacheManagement } from "@/components/settings/CacheManagement";
 import { InvoiceCustomization } from "@/components/settings/InvoiceCustomization";
 import { toast } from "sonner";
+import { downloadBackup } from "@/lib/backup-utils";
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -54,6 +57,7 @@ const Settings = () => {
   const { profile, loading: profileLoading, updateProfile } = useProfile();
   const { signOut } = useAuth();
   const { trackFeature } = useFeatureTracking();
+  const [isExporting, setIsExporting] = useState(false);
 
   // Track page view
   useEffect(() => {
@@ -85,6 +89,19 @@ const Settings = () => {
       toast.success(profile?.auto_deduct_stock ? "Déduction automatique désactivée" : "Déduction automatique activée");
     } catch {
       toast.error("Erreur");
+    }
+  };
+
+  const handleExportData = async () => {
+    setIsExporting(true);
+    try {
+      await downloadBackup();
+      toast.success("Données exportées avec succès");
+    } catch (error) {
+      if (import.meta.env.DEV) console.error("Export error:", error);
+      toast.error("Erreur lors de l'export");
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -376,6 +393,30 @@ const Settings = () => {
             Données & Synchronisation
           </p>
           <CacheManagement />
+          
+          {/* Backup Button */}
+          <Card className="mt-3">
+            <CardContent className="p-0">
+              <button
+                className="w-full flex items-center gap-4 p-4 text-left hover:bg-secondary/50 transition-colors disabled:opacity-50"
+                onClick={handleExportData}
+                disabled={isExporting}
+              >
+                <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center">
+                  {isExporting ? (
+                    <Loader2 className="w-5 h-5 text-green-600 animate-spin" />
+                  ) : (
+                    <Download className="w-5 h-5 text-green-600" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-[#051425]">Télécharger mes données</p>
+                  <p className="text-sm text-muted-foreground">Exporter en fichier JSON</p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              </button>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Theme / Appearance */}
