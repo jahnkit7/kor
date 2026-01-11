@@ -136,7 +136,7 @@ const DebtDetail = () => {
     }
     
     setProcessingPayment(true);
-    triggerHaptic(25);
+    triggerHaptic('medium');
     try {
       await addPayment(debt.id, amount);
       
@@ -152,7 +152,7 @@ const DebtDetail = () => {
       setPaymentAmount("");
       setSelectedDebtId(null);
       
-      triggerHaptic(25);
+      triggerHaptic('success');
       
       // Refetch debts to update totals
       await refetchDebts();
