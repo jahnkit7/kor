@@ -259,11 +259,14 @@ const Sale = () => {
               onCancel={() => setShowVoiceInput(false)}
               onCreateClient={quickCreateClient}
               onCreateStockItem={async (item) => {
+                const itemWithExtras = item as { name: string; quantity: number; unit_price: number; is_menu_item?: boolean; category?: string };
                 const result = await addItem({
-                  name: item.name,
-                  quantity: item.quantity,
-                  unit_price: item.unit_price,
+                  name: itemWithExtras.name,
+                  quantity: itemWithExtras.quantity,
+                  unit_price: itemWithExtras.unit_price,
                   source: "voice",
+                  is_menu_item: itemWithExtras.is_menu_item,
+                  category: itemWithExtras.category,
                 });
                 if (result) {
                   return { id: result.id };
@@ -520,11 +523,14 @@ const Sale = () => {
               frequentProductNames={frequentProductNames}
               frequentProductsMap={frequentProductsMap}
               onCreateStockItem={async (item) => {
+                const itemWithExtras = item as { name: string; quantity: number; unit_price: number; is_menu_item?: boolean; category?: string };
                 const result = await addItem({
-                  name: item.name,
-                  quantity: item.quantity,
-                  unit_price: item.unit_price,
+                  name: itemWithExtras.name,
+                  quantity: itemWithExtras.quantity,
+                  unit_price: itemWithExtras.unit_price,
                   source: "manual",
+                  is_menu_item: itemWithExtras.is_menu_item,
+                  category: itemWithExtras.category,
                 });
                 if (result) {
                   return { id: result.id };
