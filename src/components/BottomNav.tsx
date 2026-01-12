@@ -168,7 +168,7 @@ const BottomNav = () => {
       <div className="pointer-events-auto">
       {/* Unified Sync status bar - clickable for force sync */}
       <AnimatePresence>
-        {(pendingCount > 0 || !isOnline) && (
+      {(pendingCount > 0 || !isOnline) && (
           <motion.button 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -177,7 +177,7 @@ const BottomNav = () => {
             onClick={handleSyncClick}
             disabled={isSyncing || !isOnline}
             className={cn(
-              "absolute -top-10 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 rounded-full shadow-lg transition-all duration-300",
+              "absolute -top-14 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 rounded-full shadow-lg transition-all duration-300",
               !isOnline 
                 ? "bg-gradient-to-r from-[#4f7df3] via-[#a78bfa] to-[#f97316] text-white shadow-xl" 
                 : isSyncing 
