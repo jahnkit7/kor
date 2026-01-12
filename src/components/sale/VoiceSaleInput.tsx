@@ -84,6 +84,7 @@ interface ParsedSale {
     unit_price: number; 
     stock_item_id?: string | null;
     product_type?: "retail" | "restaurant" | "service"; // NEW: intelligent product type detection
+    suggested_category?: string; // NEW: AI-suggested category for restaurant/service
   }>;
   note: string | null;
   // Resolved client info (set after disambiguation)
@@ -616,6 +617,16 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
     return warnings;
   };
 
+  // Check for new products that will be created (not in database)
+  const getNewProductWarnings = (sale: ParsedSale): Array<{ name: string; productType: string }> => {
+    return (sale.products || [])
+      .filter(p => !p.stock_item_id)
+      .map(p => ({ 
+        name: p.name, 
+        productType: p.product_type || "retail" 
+      }));
+  };
+
   // Check if there are any stock warnings across all sales
   const hasAnyStockWarnings = useMemo(() => {
     return parsedSales.some(sale => getStockWarnings(sale).length > 0);
@@ -993,11 +1004,15 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
                   continue;
                 }
                 
+                // Use AI-suggested category or fallback to "autres"
+                const suggestedCategory = product.suggested_category || "autres";
+                
                 console.debug(`[VoiceSaleInput] ✨ Creating stock item for "${product.name}":`, {
                   productType,
                   isMenuOrService,
                   is_menu_item: isMenuOrService,
-                  category: isMenuOrService ? "Autre" : undefined,
+                  category: isMenuOrService ? suggestedCategory : undefined,
+                  suggested_category: product.suggested_category,
                   unit_price: product.unit_price,
                 });
                 
@@ -1007,7 +1022,7 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
                     quantity: 0, // Initial stock quantity
                     unit_price: product.unit_price,
                     is_menu_item: isMenuOrService, // Menu items for restaurant/service products
-                    category: isMenuOrService ? "Autre" : undefined, // Default category for menu items
+                    category: isMenuOrService ? suggestedCategory : undefined, // Use AI-suggested category
                   } as any); // Type assertion needed as base interface may not include these fields
                   
                   if (created) {
@@ -1571,6 +1586,32 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
                               </span>
                             </p>
                           ))}
+                        </div>
+                      );
+                    })()}
+
+                    {/* New product warnings - will be auto-created */}
+                    {(() => {
+                      const newProducts = getNewProductWarnings(sale);
+                      if (newProducts.length === 0) return null;
+                      return (
+                        <div className="mt-3 p-3 rounded-xl bg-blue-50 border border-blue-200">
+                          {newProducts.map((p, idx) => {
+                            const typeLabels = {
+                              retail: "📦 Stock",
+                              restaurant: "🍽️ Menu",
+                              service: "🛠️ Service",
+                            };
+                            const label = typeLabels[p.productType as keyof typeof typeLabels] || "📦 Stock";
+                            return (
+                              <p key={idx} className="text-xs text-blue-700 flex items-center gap-1">
+                                <Plus className="w-3 h-3" />
+                                <span>
+                                  <strong>"{p.name}"</strong> ({label}) sera créé. Vérifiez l'orthographe et le prix.
+                                </span>
+                              </p>
+                            );
+                          })}
                         </div>
                       );
                     })()}

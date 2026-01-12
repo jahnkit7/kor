@@ -152,11 +152,21 @@ RÈGLE DE DÉDUCTION DE STOCK:
 - "restaurant" = Produit NE DOIT PAS déduire le stock (préparation sur commande)
 - "service" = Produit NE DOIT PAS déduire le stock (pas d'inventaire)
 
+CATÉGORISATION INTELLIGENTE (NOUVEAU):
+Pour les produits "restaurant" et "service", suggère une catégorie "suggested_category":
+- jus, café, thé, soda, eau, bière, vin, smoothie, cocktail, bissap, gingembre → "boissons"
+- plat, riz, poulet, poisson, viande, sauce, omelette, pâtes → "plats"
+- gâteau, crêpe, glace, yaourt, fruit → "desserts"
+- beignet, pain, sandwich, burger, pizza, frites → "snacks"
+- service, coiffure, pressing, réparation, nettoyage, massage, manucure → "autres"
+Si tu n'es pas sûr, utilise "autres".
+
 EXEMPLES:
 - "J'ai vendu 5 chargeurs à 1500 à Kofi, il a payé cash" → 1 vente cash de 7500 pour Kofi, product_type: "retail"
-- "Awa a pris 3 jus d'ananas à 500" → product_type: "restaurant"
-- "J'ai fait une coiffure tresses à 5000 pour Fatou" → product_type: "service"
-- "Mamadou a pris 2 téléphones et 3 jus de bissap" → 1 vente avec 2 produits (téléphone=retail, jus=restaurant)
+- "Awa a pris 3 jus d'ananas à 500" → product_type: "restaurant", suggested_category: "boissons"
+- "J'ai fait une coiffure tresses à 5000 pour Fatou" → product_type: "service", suggested_category: "autres"
+- "Mamadou a pris 2 téléphones et 3 jus de bissap" → 1 vente avec 2 produits (téléphone=retail, jus=restaurant avec suggested_category: "boissons")
+- "Un plat de riz à 2000" → product_type: "restaurant", suggested_category: "plats"
 
 Réponds UNIQUEMENT avec un JSON valide dans ce format:
 {
@@ -180,7 +190,8 @@ Réponds UNIQUEMENT avec un JSON valide dans ce format:
           "quantity": number,
           "unit_price": number,
           "stock_item_id": "string ou null",
-          "product_type": "retail" | "restaurant" | "service"
+          "product_type": "retail" | "restaurant" | "service",
+          "suggested_category": "boissons" | "plats" | "desserts" | "snacks" | "autres" (pour restaurant/service uniquement)
         }
       ],
       "note": "string ou null"
