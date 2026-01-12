@@ -13,6 +13,7 @@ import { Store, User, MapPin, Briefcase, Phone, ArrowRight, Loader2 } from "luci
 import { useAuth } from "@/hooks/use-auth";
 import { getSupabaseClient } from "@/lib/supabase";
 import { toast } from "sonner";
+import { clearProfileCache } from "@/components/RequireProfile";
 
 // Spécialités prédéfinies
 const SPECIALTIES = [
@@ -217,6 +218,9 @@ const ProfileSetup = () => {
         }
       }
 
+      // Clear profile cache so RequireProfile doesn't redirect back
+      clearProfileCache(user.id);
+      
       toast.success("Profil configuré !");
       try {
         window.location.assign("/dashboard");
