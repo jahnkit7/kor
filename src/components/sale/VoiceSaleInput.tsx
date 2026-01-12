@@ -1285,6 +1285,28 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
             <p className="text-muted-foreground text-sm">Vérifiez et confirmez les détails</p>
           </div>
 
+        {/* Product type legend */}
+        <div className="p-3 rounded-xl bg-secondary/30 border border-border/50">
+          <p className="text-xs font-medium text-muted-foreground mb-2">Légende des types de produits :</p>
+          <div className="flex flex-wrap gap-2">
+            <span className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg bg-blue-100 border border-blue-200 text-blue-700">
+              <span>📦</span>
+              <span className="font-medium">Stock</span>
+              <span className="text-blue-500">→ déduction auto</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg bg-purple-100 border border-purple-200 text-purple-700">
+              <span>🍽️</span>
+              <span className="font-medium">Menu</span>
+              <span className="text-purple-500">→ pas de déduction</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg bg-green-100 border border-green-200 text-green-700">
+              <span>🛠️</span>
+              <span className="font-medium">Service</span>
+              <span className="text-green-500">→ pas de déduction</span>
+            </span>
+          </div>
+        </div>
+
         {/* Sales list - Modern cards with colored borders */}
         <div className="space-y-4">
           {parsedSales.map((sale, index) => {
@@ -1365,14 +1387,14 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
                       )}
                     </div>
 
-                    {/* Products preview with type badges */}
+                    {/* Products preview with type badges and icons */}
                     {sale.products && sale.products.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {sale.products.map((p, pIdx) => {
                           const typeConfig = {
-                            retail: { label: "Stock", bg: "bg-blue-100", text: "text-blue-700", border: "border-blue-200" },
-                            restaurant: { label: "Menu", bg: "bg-purple-100", text: "text-purple-700", border: "border-purple-200" },
-                            service: { label: "Service", bg: "bg-green-100", text: "text-green-700", border: "border-green-200" },
+                            retail: { label: "Stock", icon: "📦", bg: "bg-blue-100", text: "text-blue-700", border: "border-blue-200" },
+                            restaurant: { label: "Menu", icon: "🍽️", bg: "bg-purple-100", text: "text-purple-700", border: "border-purple-200" },
+                            service: { label: "Service", icon: "🛠️", bg: "bg-green-100", text: "text-green-700", border: "border-green-200" },
                           };
                           const config = p.product_type ? typeConfig[p.product_type] : typeConfig.retail;
                           
@@ -1384,6 +1406,7 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
                                 config.bg, config.border
                               )}
                             >
+                              <span>{config.icon}</span>
                               <span className="text-muted-foreground">{p.quantity}x</span>
                               <span className="font-medium">{p.name}</span>
                               <Badge 
