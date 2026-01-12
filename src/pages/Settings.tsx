@@ -199,20 +199,27 @@ const Settings = () => {
             <ActivateCodeDialog variant="compact" />
           </motion.div>
 
-          {/* Shop Card */}
+          {/* Shop Card - Enhanced with more info */}
           {canChangeSettings && (
             <motion.div
-              onClick={() => navigate("/profile-setup")}
-              className="bg-card rounded-2xl p-4 border border-border cursor-pointer"
+              onClick={() => navigate("/profile-setup?edit=true")}
+              className="bg-card rounded-2xl p-4 border border-border cursor-pointer col-span-2"
               whileTap={{ scale: 0.98 }}
             >
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                  <Store className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                    <Store className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground">{profile?.shop_name || "Ma Boutique"}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {profile?.owner_name} • {profile?.specialty || "Activité non définie"}
+                    </p>
+                  </div>
                 </div>
-                <p className="font-semibold text-foreground text-sm">Boutique</p>
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
               </div>
-              <p className="text-xs text-muted-foreground truncate">{profile?.shop_name || "Ma Boutique"}</p>
             </motion.div>
           )}
 
