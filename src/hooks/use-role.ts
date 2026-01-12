@@ -53,7 +53,9 @@ export function useRole(): RoleState {
   // This ensures we have the role immediately without waiting for useEffect
   const cachedRole = useMemo(() => {
     if (user?.id) {
-      return getCachedRole(user.id);
+      const cached = getCachedRole(user.id);
+      console.log("[useRole] Cache check for user:", user.id, "cached role:", cached);
+      return cached;
     }
     return null;
   }, [user?.id]);
@@ -128,6 +130,7 @@ export function useRole(): RoleState {
     }
 
     const fetchRole = async () => {
+      console.log("[useRole] Fetching role for user:", user.id);
       // Only show loading state if we DON'T have a cache
       if (!hasCache) {
         setIsFetching(true);
@@ -141,18 +144,22 @@ export function useRole(): RoleState {
           .eq("user_id", user.id)
           .single();
 
+        console.log("[useRole] DB response:", { data, error });
+
         if (error) {
-          console.error("Error fetching role:", error);
+          console.error("[useRole] Error fetching role:", error);
           const fallback = hasCache ? getCachedRole(user.id) : "owner";
+          console.log("[useRole] Using fallback role:", fallback);
           setCachedRole(user.id, fallback);
           setFetchedRole(fallback);
         } else {
           const role = data?.role || "owner";
+          console.log("[useRole] Got role from DB:", role);
           setCachedRole(user.id, role);
           setFetchedRole(role);
         }
       } catch (error) {
-        console.error("Error fetching role:", error);
+        console.error("[useRole] Catch error:", error);
         const fallback = hasCache ? getCachedRole(user.id) : "owner";
         setCachedRole(user.id, fallback);
         setFetchedRole(fallback);
@@ -173,6 +180,16 @@ export function useRole(): RoleState {
   const isLoading = authLoading || 
     (!cachedRole && isFetching) || 
     (!cachedRole && !hasFetched && !!user);
+
+  console.log("[useRole] State:", { 
+    effectiveRole, 
+    cachedRole, 
+    fetchedRole, 
+    isLoading, 
+    isStable, 
+    authLoading,
+    userId: user?.id 
+  });
 
   return {
     role: effectiveRole ?? "owner",
