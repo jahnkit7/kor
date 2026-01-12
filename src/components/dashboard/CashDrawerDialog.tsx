@@ -80,16 +80,15 @@ export function CashDrawerDialog({
             onClick={onClose}
           />
           
-          {/* Dialog */}
+          {/* Dialog - Card extends to bottom, content has padding */}
           <motion.div
             initial={{ opacity: 0, y: 100 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 100 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
             className="fixed bottom-0 left-0 right-0 z-50"
-            style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 80px)" }}
           >
-            <div className="bg-card rounded-t-3xl shadow-2xl border-t border-border/50 max-h-[85vh] overflow-y-auto">
+            <div className="bg-card rounded-t-3xl shadow-2xl border-t border-border/50 max-h-[90vh] overflow-y-auto">
               {/* Handle */}
               <div className="flex justify-center pt-3 pb-2 sticky top-0 bg-card">
                 <div className="w-12 h-1.5 rounded-full bg-muted" />
@@ -284,8 +283,11 @@ export function CashDrawerDialog({
                 </div>
               </div>
 
-              {/* Actions */}
-              <div className="px-6 pb-6 pt-2">
+              {/* Actions - with extra bottom padding for BottomNav */}
+              <div 
+                className="px-6 pt-2"
+                style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 100px)" }}
+              >
                 <Button
                   size="lg"
                   className={cn(
