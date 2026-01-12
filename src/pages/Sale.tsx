@@ -284,6 +284,10 @@ const Sale = () => {
     );
   }
 
+  // Check if service mode (restaurant/services)
+  const { profile } = useProfile();
+  const isServiceMode = profile?.specialty === "restaurant" || profile?.specialty === "services";
+
   return (
     <FullScreenLayout transparentStatusBar>
       {/* Header - Compact with safe area */}
@@ -298,9 +302,17 @@ const Sale = () => {
             >
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <h1 className="text-lg font-bold">
-              {isCash ? "Vente Cash" : "Vente Crédit"}
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg font-bold">
+                {isCash ? "Vente Cash" : "Vente Crédit"}
+              </h1>
+              {isServiceMode && (
+                <Badge className="bg-amber-500/90 text-white border-0 text-[10px] px-1.5 py-0.5 h-auto">
+                  <UtensilsCrossed className="w-3 h-3 mr-0.5" />
+                  Service
+                </Badge>
+              )}
+            </div>
           </div>
           
           {/* Voice button */}
