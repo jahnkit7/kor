@@ -17,11 +17,13 @@ import { useSales } from "@/hooks/use-sales";
 import { useDebts } from "@/hooks/use-debts";
 import { useStock } from "@/hooks/use-stock";
 import { useThemeStyle } from "@/hooks/use-theme";
+import { useCashDrawer } from "@/hooks/use-cash-drawer";
 import ModernDashboard from "@/components/dashboard/ModernDashboard";
 import SalesCard from "@/components/dashboard/SalesCard";
 import QuickActionFAB from "@/components/dashboard/QuickActionFAB";
 import TransactionItem from "@/components/dashboard/TransactionItem";
 import BentoStatsGrid from "@/components/dashboard/BentoStatsGrid";
+import { CashDrawerDialog } from "@/components/dashboard/CashDrawerDialog";
 import { triggerHaptic } from "@/lib/haptics";
 
 const Dashboard = () => {
@@ -35,13 +37,24 @@ const Dashboard = () => {
   const { items: stockItems, loading: stockLoading, getTotalValue } = useStock();
   const { isModern } = useThemeStyle();
   const { trackFeature } = useFeatureTracking();
+  const { todayEntry, loading: cashDrawerLoading, needsOpening, isDrawerOpen, openDrawer, closeDrawer } = useCashDrawer();
 
   const [hideAmounts, setHideAmounts] = useState(false);
+  const [showCashDrawerDialog, setShowCashDrawerDialog] = useState(false);
+  const [cashDrawerMode, setCashDrawerMode] = useState<"open" | "close">("open");
 
   // Track dashboard view
   useEffect(() => {
     trackFeature("dashboard", { action: "page_view" });
   }, [trackFeature]);
+
+  // Auto-show cash drawer dialog at start of day
+  useEffect(() => {
+    if (!cashDrawerLoading && needsOpening && user) {
+      setShowCashDrawerDialog(true);
+      setCashDrawerMode("open");
+    }
+  }, [cashDrawerLoading, needsOpening, user]);
 
   const todayStats = getTodayStats();
   const shopName = profile?.shop_name || "Ma Boutique";
@@ -85,19 +98,46 @@ const Dashboard = () => {
   
   const isDataLoading = salesLoading || debtsLoading || stockLoading;
 
+  const handleCashDrawerConfirm = async (amount: number) => {
+    if (cashDrawerMode === "open") {
+      return await openDrawer(amount);
+    } else {
+      return await closeDrawer(amount);
+    }
+  };
+
   // Render Modern Dashboard if theme is modern
   if (isModern) {
     return (
-      <ModernDashboard
-        profile={profile}
-        todayStats={todayStats}
-        totalDebts={totalDebts}
-        clientsWithDebts={clientsWithDebts}
-        stockTotalValue={stockTotalValue}
-        stockItemsCount={stockItemsCount}
-        recentSales={recentSales}
-        isDataLoading={isDataLoading}
-      />
+      <>
+        <ModernDashboard
+          profile={profile}
+          todayStats={todayStats}
+          totalDebts={totalDebts}
+          clientsWithDebts={clientsWithDebts}
+          stockTotalValue={stockTotalValue}
+          stockItemsCount={stockItemsCount}
+          recentSales={recentSales}
+          isDataLoading={isDataLoading}
+          cashDrawerEntry={todayEntry}
+          isDrawerOpen={isDrawerOpen}
+          onOpenCashDrawer={() => {
+            setCashDrawerMode("open");
+            setShowCashDrawerDialog(true);
+          }}
+          onCloseCashDrawer={() => {
+            setCashDrawerMode("close");
+            setShowCashDrawerDialog(true);
+          }}
+        />
+        <CashDrawerDialog
+          isOpen={showCashDrawerDialog}
+          onClose={() => setShowCashDrawerDialog(false)}
+          onConfirm={handleCashDrawerConfirm}
+          mode={cashDrawerMode}
+          currentAmount={todayEntry?.opening_amount || 0}
+        />
+      </>
     );
   }
 
@@ -236,6 +276,15 @@ const Dashboard = () => {
 
       {/* Bottom spacing for BottomNav - reduced */}
       <div className="h-4" />
+
+      {/* Cash Drawer Dialog */}
+      <CashDrawerDialog
+        isOpen={showCashDrawerDialog}
+        onClose={() => setShowCashDrawerDialog(false)}
+        onConfirm={handleCashDrawerConfirm}
+        mode={cashDrawerMode}
+        currentAmount={todayEntry?.opening_amount || 0}
+      />
     </div>
   );
 };
