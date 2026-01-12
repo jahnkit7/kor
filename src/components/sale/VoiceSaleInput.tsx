@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Mic, Square, Loader2, Check, X, Edit2, User, Wallet, CreditCard, AlertTriangle, UserPlus, Users, History, RotateCcw, Pencil, Trash2, Search, FileText, ChevronDown, WifiOff, Keyboard } from "lucide-react";
+import { Mic, Square, Loader2, Check, X, Edit2, User, Wallet, CreditCard, AlertTriangle, UserPlus, Users, History, RotateCcw, Pencil, Trash2, Search, FileText, ChevronDown, WifiOff, Keyboard, Plus } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -1618,62 +1618,95 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
               </div>
 
               {/* Products */}
-              {editProducts.length > 0 && (
+              {/* Products section - always show */}
+              <div className="space-y-3">
+                <Label className="text-sm font-semibold">Produits</Label>
                 <div className="space-y-3">
-                  <Label className="text-sm font-semibold">Produits détectés</Label>
-                  <div className="space-y-3">
-                    {editProducts.map((product, idx) => (
-                      <Card key={idx} className="p-4 rounded-xl bg-white border shadow-sm space-y-3">
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-muted-foreground">Nom du produit</Label>
-                          <Input
-                            value={product.name}
-                            onChange={(e) => {
-                              const updated = [...editProducts];
-                              updated[idx] = { ...updated[idx], name: e.target.value };
+                  {editProducts.map((product, idx) => (
+                    <Card key={idx} className="p-4 rounded-xl bg-white border shadow-sm space-y-3">
+                      {/* Header with delete button */}
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-muted-foreground">Produit {idx + 1}</span>
+                        {editProducts.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => {
+                              const updated = editProducts.filter((_, i) => i !== idx);
                               setEditProducts(updated);
                             }}
-                            placeholder="Nom du produit"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">Nom du produit</Label>
+                        <Input
+                          value={product.name}
+                          onChange={(e) => {
+                            const updated = [...editProducts];
+                            updated[idx] = { ...updated[idx], name: e.target.value };
+                            setEditProducts(updated);
+                          }}
+                          placeholder="Nom du produit"
+                          className="h-11 rounded-lg"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground">Quantité</Label>
+                          <Input
+                            type="number"
+                            value={product.quantity}
+                            onChange={(e) => {
+                              const updated = [...editProducts];
+                              updated[idx] = { ...updated[idx], quantity: parseInt(e.target.value) || 0 };
+                              setEditProducts(updated);
+                            }}
+                            min={1}
                             className="h-11 rounded-lg"
                           />
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-1.5">
-                            <Label className="text-xs text-muted-foreground">Quantité</Label>
-                            <Input
-                              type="number"
-                              value={product.quantity}
-                              onChange={(e) => {
-                                const updated = [...editProducts];
-                                updated[idx] = { ...updated[idx], quantity: parseInt(e.target.value) || 0 };
-                                setEditProducts(updated);
-                              }}
-                              min={1}
-                              className="h-11 rounded-lg"
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label className="text-xs text-muted-foreground">Prix unit.</Label>
-                            <Input
-                              type="number"
-                              value={product.unit_price}
-                              onChange={(e) => {
-                                const updated = [...editProducts];
-                                updated[idx] = { ...updated[idx], unit_price: parseInt(e.target.value) || 0 };
-                                setEditProducts(updated);
-                              }}
-                              className="h-11 rounded-lg"
-                            />
-                          </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground">Prix unit.</Label>
+                          <Input
+                            type="number"
+                            value={product.unit_price}
+                            onChange={(e) => {
+                              const updated = [...editProducts];
+                              updated[idx] = { ...updated[idx], unit_price: parseInt(e.target.value) || 0 };
+                              setEditProducts(updated);
+                            }}
+                            className="h-11 rounded-lg"
+                          />
                         </div>
-                        <p className="text-sm font-semibold text-right text-primary">
-                          = {formatMoney(product.quantity * product.unit_price)} CFA
-                        </p>
-                      </Card>
-                    ))}
-                  </div>
+                      </div>
+                      <p className="text-sm font-semibold text-right text-primary">
+                        = {formatMoney(product.quantity * product.unit_price)} CFA
+                      </p>
+                    </Card>
+                  ))}
+                  
+                  {/* Add product button */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full h-11 rounded-xl border-dashed border-2"
+                    onClick={() => {
+                      setEditProducts(prev => [
+                        ...prev,
+                        { name: "", quantity: 1, unit_price: 0 }
+                      ]);
+                    }}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Ajouter un produit
+                  </Button>
                 </div>
-              )}
+              </div>
 
               {/* Amounts */}
               <div className={cn("grid gap-4", editType === "credit" ? "grid-cols-2" : "grid-cols-1")}>
