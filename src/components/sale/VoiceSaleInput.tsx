@@ -1545,6 +1545,7 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
                             service: { label: "Service", icon: "🛠️", bg: "bg-green-100", text: "text-green-700", border: "border-green-200" },
                           };
                           const config = p.product_type ? typeConfig[p.product_type] : typeConfig.retail;
+                          const showCategory = (p.product_type === "restaurant" || p.product_type === "service") && p.suggested_category;
                           
                           return (
                             <span 
@@ -1557,10 +1558,21 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
                               <span>{config.icon}</span>
                               <span className="text-muted-foreground">{p.quantity}x</span>
                               <span className="font-medium">{p.name}</span>
+                              {showCategory && (
+                                <Badge 
+                                  variant="outline" 
+                                  className={cn(
+                                    "text-[10px] px-1.5 py-0 h-4 rounded-full ml-0.5",
+                                    config.text, config.border, "bg-white/50"
+                                  )}
+                                >
+                                  {p.suggested_category}
+                                </Badge>
+                              )}
                               <Badge 
                                 variant="outline" 
                                 className={cn(
-                                  "text-[10px] px-1 py-0 h-4 rounded-full ml-1",
+                                  "text-[10px] px-1 py-0 h-4 rounded-full ml-0.5",
                                   config.text, config.border
                                 )}
                               >
