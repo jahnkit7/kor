@@ -1,4 +1,4 @@
-import { useEffect, ReactNode, useRef } from "react";
+import { useEffect, ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
 import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase";
@@ -12,6 +12,22 @@ interface RequireProfileProps {
 const PROFILE_CACHE_KEY = "profile_status_";
 
 /**
+ * Clear profile cache - call this when profile is updated
+ */
+export function clearProfileCache(userId?: string) {
+  if (userId) {
+    sessionStorage.removeItem(`${PROFILE_CACHE_KEY}${userId}`);
+  } else {
+    // Clear all profile caches
+    Object.keys(sessionStorage).forEach((key) => {
+      if (key.startsWith(PROFILE_CACHE_KEY)) {
+        sessionStorage.removeItem(key);
+      }
+    });
+  }
+}
+
+/**
  * NON-BLOCKING profile guard.
  * Renders children immediately (optimistic) and redirects in background if profile incomplete.
  * This prevents the BottomNav from disappearing during navigation.
@@ -22,7 +38,6 @@ export function RequireProfile({ children }: RequireProfileProps) {
   const { isOnline } = useNetworkStatus();
   const location = useLocation();
   const navigate = useNavigate();
-  const checkedRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -37,13 +52,9 @@ export function RequireProfile({ children }: RequireProfileProps) {
       // Not authenticated - let auth guard handle
       if (!user) return;
 
-      // Check session cache first
+      // Check session cache first - but ALWAYS check on first load after auth
       const cached = sessionStorage.getItem(`${PROFILE_CACHE_KEY}${user.id}`);
       if (cached === "complete") return;
-
-      // Already checked this session
-      if (checkedRef.current) return;
-      checkedRef.current = true;
 
       // No Supabase configured
       if (!isSupabaseConfigured()) {
@@ -64,7 +75,11 @@ export function RequireProfile({ children }: RequireProfileProps) {
 
         if (error) {
           console.error("RequireProfile: error fetching profile", error);
-          return; // Don't block on error
+          // On error, redirect to setup to be safe
+          if (location.pathname !== "/profile-setup") {
+            navigate("/profile-setup", { replace: true });
+          }
+          return;
         }
 
         const isComplete = Boolean(
@@ -81,6 +96,10 @@ export function RequireProfile({ children }: RequireProfileProps) {
         }
       } catch (e) {
         console.error("RequireProfile: unexpected error", e);
+        // On error, redirect to setup to be safe
+        if (location.pathname !== "/profile-setup") {
+          navigate("/profile-setup", { replace: true });
+        }
       }
     };
 
