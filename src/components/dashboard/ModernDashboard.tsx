@@ -9,6 +9,8 @@ import {
   Users,
   ArrowUpRight,
   Radio,
+  LockOpen,
+  Lock,
 } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import QuickActionFAB from "@/components/dashboard/QuickActionFAB";
@@ -25,6 +27,7 @@ import { BetaBadge } from "@/components/BetaBadge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { triggerHaptic } from "@/lib/haptics";
+import type { CashDrawerEntry } from "@/hooks/use-cash-drawer";
 
 interface ModernDashboardProps {
   profile: ReturnType<typeof useProfile>["profile"];
@@ -42,6 +45,10 @@ interface ModernDashboardProps {
     created_at: string;
   }>;
   isDataLoading?: boolean;
+  cashDrawerEntry?: CashDrawerEntry | null;
+  isDrawerOpen?: boolean;
+  onOpenCashDrawer?: () => void;
+  onCloseCashDrawer?: () => void;
 }
 
 const ModernDashboard = ({
@@ -53,6 +60,10 @@ const ModernDashboard = ({
   stockItemsCount,
   recentSales,
   isDataLoading = false,
+  cashDrawerEntry,
+  isDrawerOpen = false,
+  onOpenCashDrawer,
+  onCloseCashDrawer,
 }: ModernDashboardProps) => {
   const navigate = useNavigate();
   const { role } = useRole();
@@ -64,7 +75,7 @@ const ModernDashboard = ({
     <AppLayout>
       {/* Modern Header - Clean & Minimal */}
       <div className="px-5 pt-8 pb-6">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-4">
           <div>
             <p className="text-sm text-muted-foreground font-medium mb-1">Bonjour 👋</p>
             <h1 className="text-2xl font-bold text-foreground">{shopName}</h1>
@@ -73,6 +84,65 @@ const ModernDashboard = ({
             <RoleBadge role={role} />
             <HideAmountsToggle />
             <NotificationBell />
+          </div>
+        </div>
+
+        {/* Cash Drawer Status Card */}
+        <div 
+          className={cn(
+            "rounded-2xl p-4 mb-6 cursor-pointer transition-all",
+            isDrawerOpen 
+              ? "bg-success/10 border border-success/20 hover:bg-success/15" 
+              : "bg-muted/50 border border-border hover:bg-muted"
+          )}
+          onClick={() => {
+            triggerHaptic();
+            if (isDrawerOpen) {
+              onCloseCashDrawer?.();
+            } else {
+              onOpenCashDrawer?.();
+            }
+          }}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={cn(
+                "w-10 h-10 rounded-xl flex items-center justify-center",
+                isDrawerOpen ? "bg-success/20" : "bg-muted"
+              )}>
+                {isDrawerOpen ? (
+                  <LockOpen className="w-5 h-5 text-success" />
+                ) : (
+                  <Lock className="w-5 h-5 text-muted-foreground" />
+                )}
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  {isDrawerOpen ? "Caisse ouverte" : "Caisse fermée"}
+                </p>
+                {isDrawerOpen && cashDrawerEntry && (
+                  <p className="text-xs text-muted-foreground">
+                    Ouverture: {formatMoney(cashDrawerEntry.opening_amount)} CFA
+                  </p>
+                )}
+              </div>
+            </div>
+            <Button
+              variant={isDrawerOpen ? "outline" : "default"}
+              size="sm"
+              className="rounded-xl"
+              onClick={(e) => {
+                e.stopPropagation();
+                triggerHaptic();
+                if (isDrawerOpen) {
+                  onCloseCashDrawer?.();
+                } else {
+                  onOpenCashDrawer?.();
+                }
+              }}
+            >
+              {isDrawerOpen ? "Clôturer" : "Ouvrir"}
+            </Button>
           </div>
         </div>
 
