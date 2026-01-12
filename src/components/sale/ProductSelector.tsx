@@ -37,7 +37,8 @@ interface ProductSelectorProps {
   onProductsChange: (products: SaleProduct[]) => void;
   onCreateStockItem?: (item: { name: string; quantity: number; unit_price: number }) => Promise<{ id: string } | null>;
   compact?: boolean;
-  frequentProductNames?: string[]; // Top sold product names
+  frequentProductNames?: string[];
+  frequentProductsMap?: Map<string, number>; // Product name -> total sold
 }
 
 // Web Speech API types (local to this file)
@@ -69,6 +70,7 @@ export function ProductSelector({
   onCreateStockItem,
   compact = false,
   frequentProductNames = [],
+  frequentProductsMap = new Map(),
 }: ProductSelectorProps) {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
@@ -268,34 +270,44 @@ export function ProductSelector({
   };
 
   // Render product item
-  const renderProductItem = (item: StockItem, isFrequent: boolean = false) => (
-    <button
-      key={item.id}
-      onClick={() => addProductFromStock(item)}
-      className={cn(
-        "w-full flex items-center justify-between p-3 rounded-xl transition-colors text-left",
-        isFrequent 
-          ? "bg-card border-l-4 border-l-primary hover:bg-primary/10" 
-          : "bg-card hover:bg-secondary"
-      )}
-    >
-      <div className="flex items-center gap-3">
-        <div className={cn(
-          "w-10 h-10 rounded-full flex items-center justify-center",
-          isFrequent ? "bg-primary/15" : "bg-secondary"
-        )}>
-          <Package className={cn("w-5 h-5", isFrequent ? "text-primary" : "text-muted-foreground")} />
+  const renderProductItem = (item: StockItem, isFrequent: boolean = false) => {
+    const totalSold = frequentProductsMap.get(item.name);
+    return (
+      <button
+        key={item.id}
+        onClick={() => addProductFromStock(item)}
+        className={cn(
+          "w-full flex items-center justify-between p-3 rounded-xl transition-colors text-left",
+          isFrequent 
+            ? "bg-card border-l-4 border-l-primary hover:bg-primary/10" 
+            : "bg-card hover:bg-secondary"
+        )}
+      >
+        <div className="flex items-center gap-3">
+          <div className={cn(
+            "w-10 h-10 rounded-full flex items-center justify-center",
+            isFrequent ? "bg-primary/15" : "bg-secondary"
+          )}>
+            <Package className={cn("w-5 h-5", isFrequent ? "text-primary" : "text-muted-foreground")} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <p className="font-medium">{item.name}</p>
+              {isFrequent && totalSold && (
+                <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">
+                  {totalSold} vendus
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {formatMoney(item.unit_price)} CFA • {item.quantity} en stock
+            </p>
+          </div>
         </div>
-        <div>
-          <p className="font-medium">{item.name}</p>
-          <p className="text-xs text-muted-foreground">
-            {formatMoney(item.unit_price)} CFA • {item.quantity} en stock
-          </p>
-        </div>
-      </div>
-      <Plus className="w-5 h-5 text-primary" />
-    </button>
-  );
+        <Plus className="w-5 h-5 text-primary" />
+      </button>
+    );
+  };
 
   return (
     <div className="space-y-4">

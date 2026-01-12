@@ -111,7 +111,7 @@ const Sale = () => {
   }, [clients, clientSearch]);
 
   // Frequent products from real sales data
-  const { frequentProductNames } = useFrequentProducts(3);
+  const { frequentProductNames, frequentProductsMap } = useFrequentProducts(3);
   // Calculate total from products if any selected
   const productTotal = useMemo(() => {
     return selectedProducts.reduce(
@@ -482,6 +482,7 @@ const Sale = () => {
               selectedProducts={selectedProducts}
               onProductsChange={setSelectedProducts}
               frequentProductNames={frequentProductNames}
+              frequentProductsMap={frequentProductsMap}
               onCreateStockItem={async (item) => {
                 const result = await addItem({
                   name: item.name,

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 
-interface FrequentProduct {
+export interface FrequentProduct {
   product_name: string;
   total_sold: number;
 }
@@ -21,7 +21,6 @@ export function useFrequentProducts(limit: number = 3) {
       }
 
       try {
-        // Query sale_items grouped by product_name, ordered by total quantity sold
         const { data, error } = await supabase
           .from("sale_items")
           .select("product_name, quantity")
@@ -38,14 +37,12 @@ export function useFrequentProducts(limit: number = 3) {
           return;
         }
 
-        // Aggregate by product_name
         const productMap = new Map<string, number>();
         data.forEach((item) => {
           const current = productMap.get(item.product_name) || 0;
           productMap.set(item.product_name, current + item.quantity);
         });
 
-        // Sort by total sold and take top N
         const sorted = Array.from(productMap.entries())
           .map(([product_name, total_sold]) => ({ product_name, total_sold }))
           .sort((a, b) => b.total_sold - a.total_sold)
@@ -63,12 +60,17 @@ export function useFrequentProducts(limit: number = 3) {
     fetchFrequentProducts();
   }, [user?.id, limit]);
 
-  // Return just the product names for easy filtering
   const frequentProductNames = frequentProducts.map((p) => p.product_name);
+
+  // Map for quick lookup of total sold by product name
+  const frequentProductsMap = new Map(
+    frequentProducts.map((p) => [p.product_name, p.total_sold])
+  );
 
   return {
     frequentProducts,
     frequentProductNames,
+    frequentProductsMap,
     isLoading,
   };
 }
