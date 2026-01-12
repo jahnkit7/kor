@@ -529,14 +529,24 @@ const ProfileSetup = () => {
             <Sparkles className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-white mb-2">
-            {step === 1 && "Qui êtes-vous ?"}
-            {step === 2 && "Votre boutique"}
-            {step === 3 && "Derniers détails"}
+            {isEditMode ? (
+              step === 1 ? "Modifier mon profil" :
+              step === 2 ? "Modifier ma boutique" :
+              "Modifier mon activité"
+            ) : (
+              step === 1 ? "Qui êtes-vous ?" :
+              step === 2 ? "Votre boutique" :
+              "Derniers détails"
+            )}
           </h1>
           <p className="text-white/70 text-sm">
-            {step === 1 && "Commençons par faire connaissance"}
-            {step === 2 && "Parlez-nous de votre commerce"}
-            {step === 3 && "Presque terminé !"}
+            {isEditMode ? (
+              "Mettez à jour vos informations"
+            ) : (
+              step === 1 ? "Commençons par faire connaissance" :
+              step === 2 ? "Parlez-nous de votre commerce" :
+              "Presque terminé !"
+            )}
           </p>
         </div>
 
