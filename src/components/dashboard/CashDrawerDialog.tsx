@@ -8,7 +8,10 @@ import {
   ArrowRight, 
   Banknote,
   CheckCircle,
-  Loader2
+  Loader2,
+  TrendingUp,
+  TrendingDown,
+  AlertTriangle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +21,7 @@ interface CashDrawerDialogProps {
   onConfirm: (amount: number, notes?: string) => Promise<boolean>;
   mode: "open" | "close";
   currentAmount?: number;
+  todayCashSales?: number;
 }
 
 export function CashDrawerDialog({ 
@@ -25,14 +29,19 @@ export function CashDrawerDialog({
   onClose, 
   onConfirm, 
   mode,
-  currentAmount = 0 
+  currentAmount = 0,
+  todayCashSales = 0
 }: CashDrawerDialogProps) {
   const [amount, setAmount] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const numAmount = parseInt(amount.replace(/\s/g, ""), 10) || 0;
+  
+  // Calculate expected amount and difference for closing
+  const expectedAmount = currentAmount + todayCashSales;
+  const difference = numAmount - expectedAmount;
+
   const handleConfirm = async () => {
-    const numAmount = parseInt(amount.replace(/\s/g, ""), 10) || 0;
-    
     if (numAmount < 0) return;
     
     setLoading(true);
@@ -79,9 +88,9 @@ export function CashDrawerDialog({
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
             className="fixed bottom-0 left-0 right-0 z-50 safe-bottom"
           >
-            <div className="bg-card rounded-t-3xl shadow-2xl border-t border-border/50">
+            <div className="bg-card rounded-t-3xl shadow-2xl border-t border-border/50 max-h-[90vh] overflow-y-auto">
               {/* Handle */}
-              <div className="flex justify-center pt-3 pb-2">
+              <div className="flex justify-center pt-3 pb-2 sticky top-0 bg-card">
                 <div className="w-12 h-1.5 rounded-full bg-muted" />
               </div>
               
@@ -122,13 +131,47 @@ export function CashDrawerDialog({
                   </Button>
                 </div>
 
-                {/* Current amount info for close mode */}
-                {mode === "close" && currentAmount > 0 && (
-                  <div className="bg-muted/50 rounded-2xl p-4 mb-4">
-                    <p className="text-sm text-muted-foreground mb-1">Ouverture</p>
-                    <p className="text-lg font-semibold text-foreground">
-                      {currentAmount.toLocaleString("fr-FR")} CFA
-                    </p>
+                {/* Day Summary for close mode */}
+                {mode === "close" && (
+                  <div className="space-y-3 mb-4">
+                    {/* Opening amount */}
+                    <div className="bg-muted/50 rounded-2xl p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Wallet className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">Ouverture</span>
+                        </div>
+                        <span className="font-semibold text-foreground">
+                          {currentAmount.toLocaleString("fr-FR")} CFA
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Today's cash sales */}
+                    <div className="bg-success/10 rounded-2xl p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className="w-4 h-4 text-success" />
+                          <span className="text-sm text-success">Ventes cash du jour</span>
+                        </div>
+                        <span className="font-semibold text-success">
+                          +{todayCashSales.toLocaleString("fr-FR")} CFA
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Expected amount */}
+                    <div className="bg-primary/10 rounded-2xl p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Banknote className="w-4 h-4 text-primary" />
+                          <span className="text-sm text-primary font-medium">Montant attendu</span>
+                        </div>
+                        <span className="font-bold text-primary text-lg">
+                          {expectedAmount.toLocaleString("fr-FR")} CFA
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -150,6 +193,69 @@ export function CashDrawerDialog({
                     </span>
                   </div>
 
+                  {/* Difference indicator for close mode */}
+                  {mode === "close" && numAmount > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={cn(
+                        "rounded-xl p-3 flex items-center justify-between",
+                        difference === 0 
+                          ? "bg-success/10" 
+                          : difference > 0 
+                            ? "bg-primary/10" 
+                            : "bg-destructive/10"
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        {difference === 0 ? (
+                          <CheckCircle className="w-5 h-5 text-success" />
+                        ) : difference > 0 ? (
+                          <TrendingUp className="w-5 h-5 text-primary" />
+                        ) : (
+                          <TrendingDown className="w-5 h-5 text-destructive" />
+                        )}
+                        <span className={cn(
+                          "text-sm font-medium",
+                          difference === 0 
+                            ? "text-success" 
+                            : difference > 0 
+                              ? "text-primary" 
+                              : "text-destructive"
+                        )}>
+                          {difference === 0 
+                            ? "Caisse équilibrée ✓" 
+                            : difference > 0 
+                              ? "Excédent" 
+                              : "Manquant"}
+                        </span>
+                      </div>
+                      {difference !== 0 && (
+                        <span className={cn(
+                          "font-bold",
+                          difference > 0 ? "text-primary" : "text-destructive"
+                        )}>
+                          {difference > 0 ? "+" : ""}{difference.toLocaleString("fr-FR")} CFA
+                        </span>
+                      )}
+                    </motion.div>
+                  )}
+
+                  {/* Warning for large difference */}
+                  {mode === "close" && numAmount > 0 && expectedAmount > 0 && Math.abs(difference) > expectedAmount * 0.1 && difference !== 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="bg-orange-500/10 rounded-xl p-3 flex items-start gap-2"
+                    >
+                      <AlertTriangle className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
+                      <p className="text-sm text-orange-600 dark:text-orange-400">
+                        La différence est importante ({Math.abs(Math.round((difference / expectedAmount) * 100))}%). 
+                        Vérifiez votre comptage.
+                      </p>
+                    </motion.div>
+                  )}
+
                   {/* Quick amount buttons */}
                   <div className="grid grid-cols-4 gap-2">
                     {quickAmounts.map((quickAmount) => (
@@ -163,6 +269,17 @@ export function CashDrawerDialog({
                       </button>
                     ))}
                   </div>
+
+                  {/* Auto-fill expected amount button for close mode */}
+                  {mode === "close" && expectedAmount > 0 && (
+                    <Button
+                      variant="outline"
+                      className="w-full rounded-xl"
+                      onClick={() => setAmount(formatAmount(expectedAmount.toString()))}
+                    >
+                      Utiliser le montant attendu ({expectedAmount.toLocaleString("fr-FR")} CFA)
+                    </Button>
+                  )}
                 </div>
               </div>
 
