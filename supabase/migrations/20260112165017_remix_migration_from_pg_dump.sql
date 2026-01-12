@@ -504,6 +504,24 @@ $$;
 
 
 --
+-- Name: prevent_trial_reuse(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.prevent_trial_reuse() RETURNS trigger
+    LANGUAGE plpgsql
+    SET search_path TO 'public'
+    AS $$
+BEGIN
+  -- If trying to switch to gratuit plan AND trial_used_at is already set
+  IF NEW.plan = 'gratuit' AND OLD.trial_used_at IS NOT NULL THEN
+    RAISE EXCEPTION 'Trial already used for this account';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+
+--
 -- Name: process_referral_reward(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -844,6 +862,24 @@ CREATE TABLE public.beta_feedback (
 
 
 --
+-- Name: cash_drawer; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.cash_drawer (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    owner_user_id uuid,
+    opening_amount numeric DEFAULT 0 NOT NULL,
+    closing_amount numeric,
+    opened_at timestamp with time zone DEFAULT now() NOT NULL,
+    closed_at timestamp with time zone,
+    notes text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
 -- Name: changelog_views; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -949,7 +985,8 @@ CREATE TABLE public.debts (
     amount integer DEFAULT 0 NOT NULL,
     paid integer DEFAULT 0 NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    sale_id uuid
 );
 
 
@@ -1432,7 +1469,9 @@ CREATE TABLE public.stock_items (
     model text,
     source text DEFAULT 'manual'::text,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    category text,
+    is_menu_item boolean DEFAULT false
 );
 
 
@@ -1489,7 +1528,8 @@ CREATE TABLE public.subscriptions (
     is_active boolean DEFAULT true,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    max_sales_per_day integer
+    max_sales_per_day integer,
+    trial_used_at timestamp with time zone
 );
 
 
@@ -1590,6 +1630,14 @@ ALTER TABLE ONLY public.beta_feedback
 
 
 --
+-- Name: cash_drawer cash_drawer_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_drawer
+    ADD CONSTRAINT cash_drawer_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: changelog_views changelog_views_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1675,6 +1723,14 @@ ALTER TABLE ONLY public.countries
 
 ALTER TABLE ONLY public.debts
     ADD CONSTRAINT debts_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: debts debts_sale_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.debts
+    ADD CONSTRAINT debts_sale_id_key UNIQUE (sale_id);
 
 
 --
@@ -2072,6 +2128,20 @@ CREATE INDEX idx_beta_feedback_user ON public.beta_feedback USING btree (user_id
 
 
 --
+-- Name: idx_cash_drawer_owner_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_cash_drawer_owner_date ON public.cash_drawer USING btree (owner_user_id, opened_at);
+
+
+--
+-- Name: idx_cash_drawer_user_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_cash_drawer_user_date ON public.cash_drawer USING btree (user_id, opened_at);
+
+
+--
 -- Name: idx_corrections_original; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2083,6 +2153,13 @@ CREATE INDEX idx_corrections_original ON public.transcription_corrections USING 
 --
 
 CREATE INDEX idx_corrections_type ON public.transcription_corrections USING btree (user_id, correction_type);
+
+
+--
+-- Name: idx_debts_sale_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_debts_sale_id ON public.debts USING btree (sale_id);
 
 
 --
@@ -2226,6 +2303,20 @@ CREATE INDEX idx_stock_alerts_user_unread ON public.stock_alerts USING btree (us
 
 
 --
+-- Name: idx_stock_items_category; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_stock_items_category ON public.stock_items USING btree (category) WHERE (category IS NOT NULL);
+
+
+--
+-- Name: idx_stock_items_is_menu_item; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_stock_items_is_menu_item ON public.stock_items USING btree (is_menu_item) WHERE (is_menu_item = true);
+
+
+--
 -- Name: idx_stock_voice_entries_user_created_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2244,6 +2335,13 @@ CREATE TRIGGER check_debt_threshold AFTER INSERT OR UPDATE ON public.debts FOR E
 --
 
 CREATE TRIGGER check_stock_threshold AFTER INSERT OR UPDATE ON public.stock_items FOR EACH ROW EXECUTE FUNCTION public.check_and_notify_low_stock();
+
+
+--
+-- Name: subscriptions check_trial_reuse; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER check_trial_reuse BEFORE UPDATE ON public.subscriptions FOR EACH ROW EXECUTE FUNCTION public.prevent_trial_reuse();
 
 
 --
@@ -2328,6 +2426,13 @@ CREATE TRIGGER trigger_set_profile_referral_code BEFORE INSERT ON public.profile
 --
 
 CREATE TRIGGER trigger_update_commission_on_sale AFTER INSERT ON public.sales FOR EACH ROW EXECUTE FUNCTION public.update_commission_balance_on_sale();
+
+
+--
+-- Name: cash_drawer update_cash_drawer_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER update_cash_drawer_updated_at BEFORE UPDATE ON public.cash_drawer FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 
 --
@@ -2784,12 +2889,26 @@ CREATE POLICY "Admins can create roadmap items" ON public.roadmap_items FOR INSE
 
 
 --
+-- Name: recharge_codes Admins can delete codes; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Admins can delete codes" ON public.recharge_codes FOR DELETE USING (public.has_role(auth.uid(), 'admin'::public.app_role));
+
+
+--
 -- Name: roadmap_items Admins can delete roadmap items; Type: POLICY; Schema: public; Owner: -
 --
 
 CREATE POLICY "Admins can delete roadmap items" ON public.roadmap_items FOR DELETE USING ((EXISTS ( SELECT 1
    FROM public.user_roles
   WHERE ((user_roles.user_id = auth.uid()) AND (user_roles.role = 'admin'::public.app_role)))));
+
+
+--
+-- Name: recharge_codes Admins can insert codes; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Admins can insert codes" ON public.recharge_codes FOR INSERT WITH CHECK (public.has_role(auth.uid(), 'admin'::public.app_role));
 
 
 --
@@ -2825,13 +2944,6 @@ CREATE POLICY "Admins can manage all tickets" ON public.support_tickets TO authe
 --
 
 CREATE POLICY "Admins can manage changelogs" ON public.feature_changelogs TO authenticated USING (public.has_role(auth.uid(), 'admin'::public.app_role));
-
-
---
--- Name: recharge_codes Admins can manage codes; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY "Admins can manage codes" ON public.recharge_codes TO authenticated USING (public.has_role(auth.uid(), 'admin'::public.app_role)) WITH CHECK (public.has_role(auth.uid(), 'admin'::public.app_role));
 
 
 --
@@ -2891,6 +3003,13 @@ CREATE POLICY "Admins can manage variants" ON public.feature_variants TO authent
 
 
 --
+-- Name: recharge_codes Admins can update codes; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Admins can update codes" ON public.recharge_codes FOR UPDATE USING (public.has_role(auth.uid(), 'admin'::public.app_role));
+
+
+--
 -- Name: roadmap_items Admins can update roadmap items; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -2918,6 +3037,13 @@ CREATE POLICY "Admins can view all balances" ON public.commission_balances FOR S
 --
 
 CREATE POLICY "Admins can view all clients" ON public.clients FOR SELECT USING (public.has_role(auth.uid(), 'admin'::public.app_role));
+
+
+--
+-- Name: recharge_codes Admins can view all codes; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Admins can view all codes" ON public.recharge_codes FOR SELECT USING (public.has_role(auth.uid(), 'admin'::public.app_role));
 
 
 --
@@ -3167,6 +3293,13 @@ CREATE POLICY "Users can create own corrections" ON public.transcription_correct
 --
 
 CREATE POLICY "Users can create referral invites" ON public.referrals FOR INSERT WITH CHECK ((auth.uid() = referrer_id));
+
+
+--
+-- Name: cash_drawer Users can create their own cash drawer entries; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can create their own cash drawer entries" ON public.cash_drawer FOR INSERT WITH CHECK ((auth.uid() = user_id));
 
 
 --
@@ -3478,6 +3611,13 @@ CREATE POLICY "Users can update their negotiations" ON public.merchant_negotiati
 
 
 --
+-- Name: cash_drawer Users can update their own cash drawer entries; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can update their own cash drawer entries" ON public.cash_drawer FOR UPDATE USING ((auth.uid() = user_id));
+
+
+--
 -- Name: clients Users can update their own clients; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -3587,6 +3727,15 @@ CREATE POLICY "Users can validate available codes" ON public.recharge_codes FOR 
 --
 
 CREATE POLICY "Users can view open or own requests" ON public.product_requests FOR SELECT USING (((status = 'open'::text) OR (auth.uid() = user_id) OR (auth.uid() = fulfilled_by)));
+
+
+--
+-- Name: cash_drawer Users can view own and team cash drawer entries; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can view own and team cash drawer entries" ON public.cash_drawer FOR SELECT USING (((auth.uid() = user_id) OR (auth.uid() = owner_user_id) OR (EXISTS ( SELECT 1
+   FROM public.profiles
+  WHERE ((profiles.user_id = auth.uid()) AND (profiles.linked_owner_id = cash_drawer.owner_user_id))))));
 
 
 --
@@ -3786,6 +3935,12 @@ ALTER TABLE public.admin_logs ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.beta_feedback ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: cash_drawer; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.cash_drawer ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: changelog_views; Type: ROW SECURITY; Schema: public; Owner: -
