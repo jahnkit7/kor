@@ -136,6 +136,7 @@ const Dashboard = () => {
           onConfirm={handleCashDrawerConfirm}
           mode={cashDrawerMode}
           currentAmount={todayEntry?.opening_amount || 0}
+          todayCashSales={todayStats.cash}
         />
       </>
     );
@@ -284,6 +285,7 @@ const Dashboard = () => {
         onConfirm={handleCashDrawerConfirm}
         mode={cashDrawerMode}
         currentAmount={todayEntry?.opening_amount || 0}
+        todayCashSales={todayStats.cash}
       />
     </div>
   );
