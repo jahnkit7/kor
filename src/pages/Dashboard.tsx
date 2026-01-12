@@ -18,6 +18,7 @@ import { useDebts } from "@/hooks/use-debts";
 import { useStock } from "@/hooks/use-stock";
 import { useThemeStyle } from "@/hooks/use-theme";
 import { useCashDrawer } from "@/hooks/use-cash-drawer";
+import { useWhatsAppReport } from "@/hooks/use-whatsapp-report";
 import ModernDashboard from "@/components/dashboard/ModernDashboard";
 import SalesCard from "@/components/dashboard/SalesCard";
 import QuickActionFAB from "@/components/dashboard/QuickActionFAB";
@@ -38,7 +39,7 @@ const Dashboard = () => {
   const { isModern } = useThemeStyle();
   const { trackFeature } = useFeatureTracking();
   const { todayEntry, loading: cashDrawerLoading, needsOpening, isDrawerOpen, openDrawer, closeDrawer } = useCashDrawer();
-
+  const { shareReport } = useWhatsAppReport();
   const [hideAmounts, setHideAmounts] = useState(false);
   const [showCashDrawerDialog, setShowCashDrawerDialog] = useState(false);
   const [cashDrawerMode, setCashDrawerMode] = useState<"open" | "close">("open");
@@ -178,6 +179,16 @@ const Dashboard = () => {
           hideAmounts={hideAmounts}
           onToggleHide={() => setHideAmounts(!hideAmounts)}
           formatMoney={formatMoney}
+          isDrawerOpen={isDrawerOpen}
+          onOpenCashDrawer={() => {
+            setCashDrawerMode("open");
+            setShowCashDrawerDialog(true);
+          }}
+          onCloseCashDrawer={() => {
+            setCashDrawerMode("close");
+            setShowCashDrawerDialog(true);
+          }}
+          onShareReport={shareReport}
         />
       </div>
 
@@ -241,9 +252,9 @@ const Dashboard = () => {
           <h2 className="text-base font-bold text-[#051425]">Activité récente</h2>
           <button
             className="flex items-center gap-1 text-sm text-[#4f7df3] font-semibold"
-            onClick={() => navigate("/sales/history")}
+            onClick={() => navigate("/reports")}
           >
-            Voir tout
+            Afficher Rapport
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>

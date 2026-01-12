@@ -1,7 +1,9 @@
 import { motion } from "framer-motion";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Store01Icon, ViewIcon, ViewOffSlashIcon } from "@hugeicons/core-free-icons";
+import { Wallet, Send, LockOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { triggerHaptic } from "@/lib/haptics";
 
 interface SalesCardProps {
   shopName: string;
@@ -12,6 +14,10 @@ interface SalesCardProps {
   onToggleHide: () => void;
   formatMoney: (value: number) => string;
   className?: string;
+  isDrawerOpen?: boolean;
+  onOpenCashDrawer?: () => void;
+  onCloseCashDrawer?: () => void;
+  onShareReport?: () => void;
 }
 
 const SalesCard = ({
@@ -23,7 +29,20 @@ const SalesCard = ({
   onToggleHide,
   formatMoney,
   className,
+  isDrawerOpen = false,
+  onOpenCashDrawer,
+  onCloseCashDrawer,
+  onShareReport,
 }: SalesCardProps) => {
+  const handleCashDrawer = () => {
+    triggerHaptic();
+    if (isDrawerOpen) {
+      onCloseCashDrawer?.();
+    } else {
+      onOpenCashDrawer?.();
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -46,10 +65,41 @@ const SalesCard = ({
             <p className="text-xs text-[#718096]">Ventes du jour</p>
           </div>
         </div>
+        {/* Action Buttons */}
         <div className="flex items-center gap-2">
-          <span className="px-2.5 py-1 rounded-full bg-gradient-to-r from-[#4f7df3] to-[#3b6ce8] text-white text-[10px] font-bold tracking-wide">
-            DÉKON
-          </span>
+          <motion.button
+            onClick={handleCashDrawer}
+            whileTap={{ scale: 0.9 }}
+            className={cn(
+              "h-9 px-3 rounded-full flex items-center gap-1.5 text-xs font-semibold transition-colors",
+              isDrawerOpen 
+                ? "bg-success/10 text-success hover:bg-success/20" 
+                : "bg-primary/10 text-primary hover:bg-primary/20"
+            )}
+          >
+            {isDrawerOpen ? (
+              <>
+                <LockOpen className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Caisse</span>
+              </>
+            ) : (
+              <>
+                <Wallet className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Ouvrir</span>
+              </>
+            )}
+          </motion.button>
+          <motion.button
+            onClick={() => {
+              triggerHaptic();
+              onShareReport?.();
+            }}
+            whileTap={{ scale: 0.9 }}
+            className="h-9 w-9 rounded-full bg-[#25D366]/10 flex items-center justify-center hover:bg-[#25D366]/20 transition-colors"
+            aria-label="Envoyer rapport WhatsApp"
+          >
+            <Send className="w-4 h-4 text-[#25D366]" />
+          </motion.button>
         </div>
       </div>
 

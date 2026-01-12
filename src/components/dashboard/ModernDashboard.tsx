@@ -318,10 +318,10 @@ const ModernDashboard = ({
               <h2 className="text-lg font-bold text-foreground">Récent</h2>
               {canViewReports && (
                 <button 
-                  className="text-sm text-primary font-semibold hover:underline"
+                  className="text-sm text-primary font-semibold hover:underline flex items-center gap-1"
                   onClick={() => navigate("/reports")}
                 >
-                  Voir tout
+                  Afficher Rapport
                 </button>
               )}
             </div>
