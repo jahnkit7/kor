@@ -931,34 +931,90 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
       }
       
       // Auto-create stock items for products without stock_item_id
+      console.debug("[VoiceSaleInput] 🔄 Starting auto-creation of stock items...");
+      console.debug("[VoiceSaleInput] 📋 Total sales to process:", updatedSales.length);
+      console.debug("[VoiceSaleInput] 🔧 onCreateStockItem callback available:", !!onCreateStockItem);
+      
       if (onCreateStockItem) {
+        let totalProductsProcessed = 0;
+        let totalItemsCreated = 0;
+        
         for (let i = 0; i < updatedSales.length; i++) {
           const sale = updatedSales[i];
+          console.debug(`[VoiceSaleInput] 📦 Processing sale ${i + 1}/${updatedSales.length}:`, {
+            type: sale.type,
+            amount: sale.amount,
+            productsCount: sale.products?.length || 0,
+          });
+          
           if (sale.products && sale.products.length > 0) {
             const updatedProducts = [...sale.products];
             for (let j = 0; j < updatedProducts.length; j++) {
               const product = updatedProducts[j];
+              totalProductsProcessed++;
+              
+              console.debug(`[VoiceSaleInput] 🏷️ Product ${j + 1}/${updatedProducts.length}:`, {
+                name: product.name,
+                stock_item_id: product.stock_item_id,
+                unit_price: product.unit_price,
+                product_type: product.product_type,
+                needsCreation: !product.stock_item_id && product.unit_price > 0,
+              });
+              
               if (!product.stock_item_id && product.unit_price > 0) {
                 const productType = product.product_type || "retail";
                 const isMenuOrService = productType === "restaurant" || productType === "service";
                 
-                console.log("[VoiceSaleInput] Auto-creating stock item:", product.name, "type:", productType, "is_menu_item:", isMenuOrService);
-                const created = await onCreateStockItem({
-                  name: product.name,
-                  quantity: 0, // Initial stock quantity
+                console.debug(`[VoiceSaleInput] ✨ Creating stock item for "${product.name}":`, {
+                  productType,
+                  isMenuOrService,
+                  is_menu_item: isMenuOrService,
+                  category: isMenuOrService ? "Autre" : undefined,
                   unit_price: product.unit_price,
-                  is_menu_item: isMenuOrService, // Menu items for restaurant/service products
-                  category: isMenuOrService ? "Autre" : undefined, // Default category for menu items
-                } as any); // Type assertion needed as base interface may not include these fields
-                if (created) {
-                  updatedProducts[j] = { ...product, stock_item_id: created.id };
-                  console.log("[VoiceSaleInput] Stock item created with ID:", created.id);
+                });
+                
+                try {
+                  const created = await onCreateStockItem({
+                    name: product.name,
+                    quantity: 0, // Initial stock quantity
+                    unit_price: product.unit_price,
+                    is_menu_item: isMenuOrService, // Menu items for restaurant/service products
+                    category: isMenuOrService ? "Autre" : undefined, // Default category for menu items
+                  } as any); // Type assertion needed as base interface may not include these fields
+                  
+                  if (created) {
+                    updatedProducts[j] = { ...product, stock_item_id: created.id };
+                    totalItemsCreated++;
+                    console.debug(`[VoiceSaleInput] ✅ Stock item created successfully:`, {
+                      productName: product.name,
+                      newStockItemId: created.id,
+                      isMenuOrService,
+                    });
+                  } else {
+                    console.warn(`[VoiceSaleInput] ⚠️ onCreateStockItem returned null for "${product.name}"`);
+                  }
+                } catch (error) {
+                  console.error(`[VoiceSaleInput] ❌ Error creating stock item for "${product.name}":`, error);
                 }
+              } else {
+                console.debug(`[VoiceSaleInput] ⏭️ Skipping "${product.name}":`, {
+                  hasStockItemId: !!product.stock_item_id,
+                  unitPrice: product.unit_price,
+                  reason: product.stock_item_id ? "Already has stock_item_id" : "No unit_price",
+                });
               }
             }
             updatedSales[i] = { ...sale, products: updatedProducts };
           }
         }
+        
+        console.debug(`[VoiceSaleInput] 📊 Auto-creation summary:`, {
+          totalProductsProcessed,
+          totalItemsCreated,
+          skipped: totalProductsProcessed - totalItemsCreated,
+        });
+      } else {
+        console.warn("[VoiceSaleInput] ⚠️ onCreateStockItem callback is not available!");
       }
       
       // Now save all sales
