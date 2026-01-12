@@ -78,7 +78,13 @@ interface ParsedSale {
   paid: number;
   remaining: number;
   client_match: ClientMatch;
-  products: Array<{ name: string; quantity: number; unit_price: number; stock_item_id?: string | null }>;
+  products: Array<{ 
+    name: string; 
+    quantity: number; 
+    unit_price: number; 
+    stock_item_id?: string | null;
+    product_type?: "retail" | "restaurant" | "service"; // NEW: intelligent product type detection
+  }>;
   note: string | null;
   // Resolved client info (set after disambiguation)
   resolved_client_id?: string | null;
@@ -934,13 +940,22 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
       
       // Now save all sales
       for (const sale of updatedSales) {
-        // Prepare sale items for stock deduction
-        const saleItems = sale.products?.map(product => ({
-          stock_item_id: product.stock_item_id || null,
-          product_name: product.name,
-          quantity: product.quantity,
-          unit_price: product.unit_price,
-        })) || [];
+        // Prepare sale items for stock deduction with intelligent product_type detection
+        const saleItems = sale.products?.map(product => {
+          // Determine if this product should deduct stock based on product_type
+          // "retail" → should deduct (default), "restaurant"/"service" → should NOT deduct
+          const productType = product.product_type || "retail"; // Default to retail if not specified
+          const shouldDeduct = productType === "retail";
+          
+          return {
+            stock_item_id: product.stock_item_id || null,
+            product_name: product.name,
+            quantity: product.quantity,
+            unit_price: product.unit_price,
+            product_type: productType,
+            should_deduct: shouldDeduct,
+          };
+        }) || [];
 
         await onComplete({
           type: sale.type,

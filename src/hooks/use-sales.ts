@@ -27,6 +27,8 @@ export interface SaleItem {
   product_name: string;
   quantity: number;
   unit_price: number;
+  product_type?: "retail" | "restaurant" | "service"; // NEW: intelligent product type detection
+  should_deduct?: boolean; // NEW: per-item stock deduction control
 }
 
 interface SalesState {
@@ -199,9 +201,22 @@ export function useSales(): SalesState {
           unit_price: item.unit_price,
         })));
 
-        // Deduct stock locally for items with stock_item_id ONLY if shouldDeductStock is true
+        // Deduct stock locally for items with stock_item_id
+        // NEW: Intelligent per-item deduction based on product_type
+        // - If shouldDeductStock is explicitly false, skip all deductions
+        // - Otherwise, check each item's should_deduct flag (derived from product_type)
+        // - "retail" products should deduct, "restaurant"/"service" should not
         if (saleData.shouldDeductStock !== false) {
           for (const item of saleData.items) {
+            // Skip if item explicitly marked as should_deduct: false
+            if (item.should_deduct === false) {
+              if (import.meta.env.DEV) {
+                console.log(`[useSales] Skipping deduction for ${item.product_name} (product_type: ${item.product_type})`);
+              }
+              continue;
+            }
+            
+            // Deduct stock if item has stock_item_id
             if (item.stock_item_id) {
               const stockItem = await localDB.getStockItem(item.stock_item_id);
               if (stockItem) {
@@ -209,6 +224,9 @@ export function useSales(): SalesState {
                 await localDB.updateStockItem(item.stock_item_id, {
                   quantity: newQuantity,
                 });
+                if (import.meta.env.DEV) {
+                  console.log(`[useSales] Deducted ${item.quantity} from ${item.product_name} (new qty: ${newQuantity})`);
+                }
               }
             }
           }
