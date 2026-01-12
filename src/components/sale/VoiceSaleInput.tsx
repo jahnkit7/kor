@@ -1013,6 +1013,14 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
           totalItemsCreated,
           skipped: totalProductsProcessed - totalItemsCreated,
         });
+        
+        // Show toast confirmation if items were created
+        if (totalItemsCreated > 0) {
+          toast({
+            title: `${totalItemsCreated} produit${totalItemsCreated > 1 ? 's' : ''} ajouté${totalItemsCreated > 1 ? 's' : ''} au stock`,
+            description: "Les nouveaux produits ont été enregistrés automatiquement.",
+          });
+        }
       } else {
         console.warn("[VoiceSaleInput] ⚠️ onCreateStockItem callback is not available!");
       }
