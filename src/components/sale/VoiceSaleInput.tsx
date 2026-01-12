@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FullScreenSheet, FullScreenSheetHeader, FullScreenSheetTitle, FullScreenSheetContent } from "@/components/ui/fullscreen-sheet";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -1247,24 +1248,20 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
     const currentSale = disambiguationSaleIndex !== null ? parsedSales[disambiguationSaleIndex] : null;
 
     return (
-      <div className="min-h-screen relative overflow-hidden">
-        {/* KÒR Hero gradient background */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#4f7df3] via-[#5b8af5] to-[#3b6ce8]">
-          {/* Decorative circles */}
-          <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-white/10 blur-3xl" />
-          <div className="absolute top-40 -left-20 w-48 h-48 rounded-full bg-[#a78bfa]/20 blur-3xl" />
-          <div className="absolute bottom-20 right-10 w-32 h-32 rounded-full bg-[#f97316]/15 blur-2xl" />
-        </div>
+      <div className="min-h-screen relative overflow-hidden bg-gradient-to-b from-[#f0f4ff] via-[#f8faff] to-white">
+        {/* Subtle decorative elements */}
+        <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-[#4f7df3]/5 blur-3xl" />
+        <div className="absolute top-40 -left-20 w-48 h-48 rounded-full bg-[#a78bfa]/5 blur-3xl" />
         
         {/* Content */}
         <div className="relative z-10 p-4 space-y-5">
           {/* Header with badge */}
           <div className="text-center space-y-2 pt-4">
-            <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-5 py-2 rounded-full text-sm font-semibold shadow-lg">
+            <div className="inline-flex items-center gap-2 bg-[#4f7df3] text-white px-5 py-2 rounded-full text-sm font-semibold shadow-lg">
               <Check className="w-4 h-4" />
               {parsedSales.length} vente{parsedSales.length > 1 ? 's' : ''} détectée{parsedSales.length > 1 ? 's' : ''}
             </div>
-            <p className="text-white/80 text-sm">Vérifiez et confirmez les détails</p>
+            <p className="text-muted-foreground text-sm">Vérifiez et confirmez les détails</p>
           </div>
 
         {/* Sales list - Modern cards with colored borders */}
@@ -1279,10 +1276,10 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
               <Card 
                 key={index} 
                 className={cn(
-                  "p-5 rounded-2xl border-2 transition-all cursor-pointer",
+                  "p-5 rounded-2xl border transition-all cursor-pointer bg-white shadow-sm",
                   sale.type === "cash" 
-                    ? "border-l-4 border-l-[#4f7df3] bg-[#4f7df3]/5 hover:bg-[#4f7df3]/10" 
-                    : "border-l-4 border-l-[#f97316] bg-[#f97316]/5 hover:bg-[#f97316]/10",
+                    ? "border-l-4 border-l-[#4f7df3] hover:shadow-md" 
+                    : "border-l-4 border-l-[#f97316] hover:shadow-md",
                   status === "needs_action" && "ring-2 ring-amber-300"
                 )}
                 onClick={() => status === "needs_action" && openDisambiguation(index)}
@@ -1587,34 +1584,34 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
           </DialogContent>
         </Dialog>
 
-        {/* Edit Sale Dialog */}
-        <Dialog open={editSaleIndex !== null} onOpenChange={(open) => !open && setEditSaleIndex(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Modifier la vente</DialogTitle>
-            </DialogHeader>
+        {/* Edit Sale FullScreen Sheet */}
+        <FullScreenSheet open={editSaleIndex !== null} onOpenChange={(open) => !open && setEditSaleIndex(null)}>
+          <FullScreenSheetHeader>
+            <FullScreenSheetTitle>Modifier la vente</FullScreenSheetTitle>
+          </FullScreenSheetHeader>
 
-            <div className="space-y-4">
+          <FullScreenSheetContent className="pb-[calc(env(safe-area-inset-bottom)+100px)]">
+            <div className="space-y-5">
               {/* Type toggle */}
               <div className="space-y-2">
-                <Label>Type de vente</Label>
-                <div className="flex gap-2">
+                <Label className="text-sm font-semibold">Type de vente</Label>
+                <div className="flex gap-3">
                   <Button
                     type="button"
                     variant={editType === "cash" ? "default" : "outline"}
-                    className={cn("flex-1", editType === "cash" && "bg-cash hover:bg-cash/90")}
+                    className={cn("flex-1 h-12 rounded-xl", editType === "cash" && "bg-[#4f7df3] hover:bg-[#4f7df3]/90")}
                     onClick={() => setEditType("cash")}
                   >
-                    <Wallet className="w-4 h-4 mr-2" />
+                    <Wallet className="w-5 h-5 mr-2" />
                     Cash
                   </Button>
                   <Button
                     type="button"
                     variant={editType === "credit" ? "default" : "outline"}
-                    className={cn("flex-1", editType === "credit" && "bg-credit hover:bg-credit/90")}
+                    className={cn("flex-1 h-12 rounded-xl", editType === "credit" && "bg-[#f97316] hover:bg-[#f97316]/90")}
                     onClick={() => setEditType("credit")}
                   >
-                    <CreditCard className="w-4 h-4 mr-2" />
+                    <CreditCard className="w-5 h-5 mr-2" />
                     Crédit
                   </Button>
                 </div>
@@ -1622,12 +1619,12 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
 
               {/* Products */}
               {editProducts.length > 0 && (
-                <div className="space-y-2">
-                  <Label>Produits détectés</Label>
-                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                <div className="space-y-3">
+                  <Label className="text-sm font-semibold">Produits détectés</Label>
+                  <div className="space-y-3">
                     {editProducts.map((product, idx) => (
-                      <div key={idx} className="p-3 border rounded-lg bg-secondary/30 space-y-2">
-                        <div className="space-y-1">
+                      <Card key={idx} className="p-4 rounded-xl bg-white border shadow-sm space-y-3">
+                        <div className="space-y-1.5">
                           <Label className="text-xs text-muted-foreground">Nom du produit</Label>
                           <Input
                             value={product.name}
@@ -1637,10 +1634,11 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
                               setEditProducts(updated);
                             }}
                             placeholder="Nom du produit"
+                            className="h-11 rounded-lg"
                           />
                         </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="space-y-1">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1.5">
                             <Label className="text-xs text-muted-foreground">Quantité</Label>
                             <Input
                               type="number"
@@ -1651,9 +1649,10 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
                                 setEditProducts(updated);
                               }}
                               min={1}
+                              className="h-11 rounded-lg"
                             />
                           </div>
-                          <div className="space-y-1">
+                          <div className="space-y-1.5">
                             <Label className="text-xs text-muted-foreground">Prix unit.</Label>
                             <Input
                               type="number"
@@ -1663,73 +1662,77 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
                                 updated[idx] = { ...updated[idx], unit_price: parseInt(e.target.value) || 0 };
                                 setEditProducts(updated);
                               }}
+                              className="h-11 rounded-lg"
                             />
                           </div>
                         </div>
-                        <p className="text-xs text-muted-foreground text-right">
+                        <p className="text-sm font-semibold text-right text-primary">
                           = {formatMoney(product.quantity * product.unit_price)} CFA
                         </p>
-                      </div>
+                      </Card>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Amounts - same line */}
-              <div className={cn("grid gap-3", editType === "credit" ? "grid-cols-2" : "grid-cols-1")}>
-                <div className="space-y-1">
-                  <Label htmlFor="edit-amount" className="text-xs">Montant total</Label>
+              {/* Amounts */}
+              <div className={cn("grid gap-4", editType === "credit" ? "grid-cols-2" : "grid-cols-1")}>
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-amount" className="text-sm font-semibold">Montant total</Label>
                   <Input
                     id="edit-amount"
                     type="number"
                     value={editAmount}
                     onChange={(e) => setEditAmount(e.target.value)}
                     placeholder="15000"
+                    className="h-12 text-lg rounded-xl"
                   />
                 </div>
                 {editType === "credit" && (
-                  <div className="space-y-1">
-                    <Label htmlFor="edit-paid" className="text-xs">Montant payé</Label>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-paid" className="text-sm font-semibold">Montant payé</Label>
                     <Input
                       id="edit-paid"
                       type="number"
                       value={editPaid}
                       onChange={(e) => setEditPaid(e.target.value)}
                       placeholder="0"
+                      className="h-12 text-lg rounded-xl"
                     />
                   </div>
                 )}
               </div>
               {editType === "credit" && (
-                <p className="text-xs text-muted-foreground -mt-2">
-                  Restant : {formatMoney(Math.max(0, (parseInt(editAmount) || 0) - (parseInt(editPaid) || 0)))} CFA
+                <p className="text-sm text-muted-foreground -mt-2">
+                  Restant : <span className="font-semibold text-amber-600">{formatMoney(Math.max(0, (parseInt(editAmount) || 0) - (parseInt(editPaid) || 0)))} CFA</span>
                 </p>
               )}
 
               {/* Note - collapsible */}
               <Collapsible>
-                <CollapsibleTrigger className="flex items-center justify-between w-full p-2 rounded-lg hover:bg-secondary/50 border">
+                <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-xl hover:bg-secondary/50 border">
                   <div className="flex items-center gap-2">
                     <FileText className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm">Note</span>
+                    <span className="text-sm font-medium">Note</span>
                     {editNote && <Badge variant="secondary" className="text-xs px-1.5 py-0">1</Badge>}
                   </div>
                   <ChevronDown className="w-4 h-4 text-muted-foreground" />
                 </CollapsibleTrigger>
-                <CollapsibleContent className="pt-2">
+                <CollapsibleContent className="pt-3">
                   <Input
                     id="edit-note"
                     value={editNote}
                     onChange={(e) => setEditNote(e.target.value)}
                     placeholder="Note optionnelle..."
+                    className="h-11 rounded-lg"
                   />
                 </CollapsibleContent>
               </Collapsible>
 
-              {/* Client selection - compact */}
-              <div className="space-y-2">
+              {/* Client selection */}
+              <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <Label className="text-sm">Client</Label>
+                  <Label className="text-sm font-semibold">Client</Label>
                   {onCreateClient && (
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-muted-foreground">Nouveau</span>
@@ -1754,15 +1757,14 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
                       value={editNewClientName}
                       onChange={(e) => setEditNewClientName(e.target.value)}
                       placeholder="Nom du nouveau client"
-                      className="text-lg"
+                      className="h-12 text-lg rounded-xl"
                     />
                   </div>
                 )}
                 
-                {/* Client search and list - only if not creating new */}
+                {/* Client search and list */}
                 {!editCreateNewClient && (
                   <>
-                    {/* Search bar with voice search */}
                     <div className="flex gap-2">
                       <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -1771,7 +1773,7 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
                           value={clientSearchQuery}
                           onChange={(e) => setClientSearchQuery(e.target.value)}
                           placeholder="Rechercher un client..."
-                          className="pl-10 pr-3"
+                          className="pl-10 pr-3 h-11 rounded-xl"
                         />
                       </div>
                       <Button
@@ -1780,7 +1782,7 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
                         size="icon"
                         onClick={isVoiceSearching ? stopVoiceSearch : startVoiceSearch}
                         className={cn(
-                          "shrink-0",
+                          "shrink-0 h-11 w-11 rounded-xl",
                           isVoiceSearching && "animate-pulse"
                         )}
                       >
@@ -1798,12 +1800,12 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
                       </p>
                     )}
                     
-                    <ScrollArea className="h-32 border rounded-lg">
+                    <ScrollArea className="h-40 border rounded-xl">
                       <div className="p-2 space-y-1">
                         <button
                           type="button"
                           className={cn(
-                            "w-full text-left px-3 py-2 rounded-md text-sm transition-colors",
+                            "w-full text-left px-4 py-3 rounded-lg text-sm transition-colors",
                             editClientId === null && !editCreateNewClient ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
                           )}
                           onClick={() => setEditClientId(null)}
@@ -1818,7 +1820,7 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
                             key={client.id}
                             type="button"
                             className={cn(
-                              "w-full text-left px-3 py-2 rounded-md text-sm transition-colors",
+                              "w-full text-left px-4 py-3 rounded-lg text-sm transition-colors",
                               editClientId === client.id ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
                             )}
                             onClick={() => setEditClientId(client.id)}
@@ -1831,7 +1833,7 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
                           </button>
                         ))}
                         {filteredClients.length === 0 && clientSearchQuery && (
-                          <p className="text-sm text-muted-foreground text-center py-2">
+                          <p className="text-sm text-muted-foreground text-center py-3">
                             Aucun client trouvé
                           </p>
                         )}
@@ -1840,18 +1842,19 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
                   </>
                 )}
               </div>
-            </div>
 
-            <div className="flex gap-3 pt-2">
-              <Button variant="outline" onClick={() => setEditSaleIndex(null)} className="flex-1">
-                Annuler
-              </Button>
-              <Button onClick={handleEditSaleConfirm} className="flex-1">
-                Valider
-              </Button>
+              {/* Action buttons */}
+              <div className="flex gap-3 pt-4">
+                <Button variant="outline" onClick={() => setEditSaleIndex(null)} className="flex-1 h-12 rounded-xl">
+                  Annuler
+                </Button>
+                <Button onClick={handleEditSaleConfirm} className="flex-1 h-12 rounded-xl bg-[#4f7df3] hover:bg-[#4f7df3]/90">
+                  Valider
+                </Button>
+              </div>
             </div>
-          </DialogContent>
-        </Dialog>
+          </FullScreenSheetContent>
+        </FullScreenSheet>
 
         {/* Delete Confirmation Dialog */}
         <AlertDialog open={deleteSaleIndex !== null} onOpenChange={(open) => !open && setDeleteSaleIndex(null)}>
