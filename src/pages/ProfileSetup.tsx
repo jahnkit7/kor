@@ -197,10 +197,27 @@ const ModernInput = ({
   </motion.div>
 );
 
+// Helper to detect activity type from specialty
+const detectActivityType = (specialty: string | null | undefined): "retail" | "restaurant" | "services" => {
+  if (!specialty) return "retail";
+  
+  // Check restaurant specialties
+  if (SPECIALTIES_BY_TYPE.restaurant.some(s => s.value === specialty)) return "restaurant";
+  // Check services specialties  
+  if (SPECIALTIES_BY_TYPE.services.some(s => s.value === specialty)) return "services";
+  // Check if specialty IS the activity type directly
+  if (specialty === "restaurant" || specialty === "services") return specialty;
+  // Default to retail
+  return "retail";
+};
+
 const ProfileSetup = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user, loading: authLoading } = useAuth();
+  
+  // Edit mode from URL param - allows modifying existing profile
+  const isEditMode = searchParams.get("edit") === "true";
 
   const [step, setStep] = useState(1);
   const [shopName, setShopName] = useState("");
@@ -318,10 +335,12 @@ const ProfileSetup = () => {
         const isComplete = Boolean(
           data?.shop_name &&
             data.shop_name !== "Ma Boutique" &&
-            data?.owner_name
+            data?.owner_name &&
+            data?.specialty
         );
 
-        if (isComplete) {
+        // In edit mode, don't redirect - allow editing
+        if (isComplete && !isEditMode) {
           // Check if we have a pending invite to accept
           const pendingInvite = localStorage.getItem("pendingInviteCode");
           if (pendingInvite) {
@@ -340,6 +359,11 @@ const ProfileSetup = () => {
           setCity(data.city ?? "");
           setSpecialty(data.specialty ?? "");
           setPhone(data.phone ?? extractedPhone);
+          
+          // In edit mode, also detect and set the activity type from specialty
+          if (isEditMode && data.specialty) {
+            setActivityType(detectActivityType(data.specialty));
+          }
         } else {
           // Pre-fill phone from extracted value
           setPhone(extractedPhone);
@@ -356,7 +380,7 @@ const ProfileSetup = () => {
     return () => {
       cancelled = true;
     };
-  }, [user, authLoading, extractedPhone, navigate]);
+  }, [user, authLoading, extractedPhone, navigate, isEditMode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
