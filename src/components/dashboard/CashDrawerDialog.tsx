@@ -86,9 +86,10 @@ export function CashDrawerDialog({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 100 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="fixed bottom-0 left-0 right-0 z-50 safe-bottom"
+            className="fixed bottom-0 left-0 right-0 z-50"
+            style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 80px)" }}
           >
-            <div className="bg-card rounded-t-3xl shadow-2xl border-t border-border/50 max-h-[90vh] overflow-y-auto">
+            <div className="bg-card rounded-t-3xl shadow-2xl border-t border-border/50 max-h-[85vh] overflow-y-auto">
               {/* Handle */}
               <div className="flex justify-center pt-3 pb-2 sticky top-0 bg-card">
                 <div className="w-12 h-1.5 rounded-full bg-muted" />
