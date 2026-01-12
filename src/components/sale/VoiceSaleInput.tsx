@@ -1242,20 +1242,30 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
   }
 
 
-  // Validate step - Multi-sale view - Modern Design
+  // Validate step - Multi-sale view - Modern KÒR Design
   if (step === "validate" && parsedSales.length > 0) {
     const currentSale = disambiguationSaleIndex !== null ? parsedSales[disambiguationSaleIndex] : null;
 
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[#f8f9ff] via-white to-[#f8f9ff] p-4 space-y-6">
-        {/* Header with badge */}
-        <div className="text-center space-y-2 pt-4">
-          <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-1.5 rounded-full text-sm font-semibold">
-            <Check className="w-4 h-4" />
-            {parsedSales.length} vente{parsedSales.length > 1 ? 's' : ''} détectée{parsedSales.length > 1 ? 's' : ''}
-          </div>
-          <p className="text-muted-foreground">Vérifiez et confirmez</p>
+      <div className="min-h-screen relative overflow-hidden">
+        {/* KÒR Hero gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#4f7df3] via-[#5b8af5] to-[#3b6ce8]">
+          {/* Decorative circles */}
+          <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-white/10 blur-3xl" />
+          <div className="absolute top-40 -left-20 w-48 h-48 rounded-full bg-[#a78bfa]/20 blur-3xl" />
+          <div className="absolute bottom-20 right-10 w-32 h-32 rounded-full bg-[#f97316]/15 blur-2xl" />
         </div>
+        
+        {/* Content */}
+        <div className="relative z-10 p-4 space-y-5">
+          {/* Header with badge */}
+          <div className="text-center space-y-2 pt-4">
+            <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-5 py-2 rounded-full text-sm font-semibold shadow-lg">
+              <Check className="w-4 h-4" />
+              {parsedSales.length} vente{parsedSales.length > 1 ? 's' : ''} détectée{parsedSales.length > 1 ? 's' : ''}
+            </div>
+            <p className="text-white/80 text-sm">Vérifiez et confirmez les détails</p>
+          </div>
 
         {/* Sales list - Modern cards with colored borders */}
         <div className="space-y-4">
@@ -1871,6 +1881,7 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        </div>
       </div>
     );
   }

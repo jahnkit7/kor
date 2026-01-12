@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,8 +12,9 @@ import {
   FullScreenSheetTitle, 
   FullScreenSheetContent 
 } from "@/components/ui/fullscreen-sheet";
-import { Search, Plus, Package, AlertTriangle, Check, Trash2, Loader2, X } from "lucide-react";
+import { Search, Plus, Package, AlertTriangle, Check, Trash2, Loader2, X, Mic } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 interface StockItem {
   id: string;
@@ -36,6 +37,29 @@ interface ProductSelectorProps {
   onProductsChange: (products: SaleProduct[]) => void;
   onCreateStockItem?: (item: { name: string; quantity: number; unit_price: number }) => Promise<{ id: string } | null>;
   compact?: boolean;
+  frequentProductNames?: string[]; // Top sold product names
+}
+
+// Web Speech API types (local to this file)
+interface SpeechRecognitionEvent extends Event {
+  resultIndex: number;
+  results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string;
+}
+
+interface SpeechRecognitionInstance extends EventTarget {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  start: () => void;
+  stop: () => void;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
+  onend: (() => void) | null;
+  onstart: (() => void) | null;
 }
 
 export function ProductSelector({
@@ -44,16 +68,28 @@ export function ProductSelector({
   onProductsChange,
   onCreateStockItem,
   compact = false,
+  frequentProductNames = [],
 }: ProductSelectorProps) {
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [addToStock, setAddToStock] = useState(true);
   const [isCreatingStock, setIsCreatingStock] = useState(false);
+  const [isVoiceSearching, setIsVoiceSearching] = useState(false);
+  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const [newProduct, setNewProduct] = useState<SaleProduct>({
     product_name: "",
     quantity: 1,
     unit_price: 0,
   });
+
+  // Frequent products from stock (top 3)
+  const frequentProducts = useMemo(() => {
+    if (frequentProductNames.length === 0) return [];
+    return stockItems
+      .filter(item => frequentProductNames.includes(item.name))
+      .slice(0, 3);
+  }, [stockItems, frequentProductNames]);
 
   // Filter stock items by search
   const filteredStock = useMemo(() => {
@@ -69,6 +105,59 @@ export function ProductSelector({
   const formatMoney = (amount: number) => {
     return new Intl.NumberFormat("fr-FR").format(amount);
   };
+
+  // Voice search handler
+  const startVoiceSearch = useCallback(async () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    
+    if (!SpeechRecognition) {
+      toast({ title: "Reconnaissance vocale non supportée", variant: "destructive" });
+      return;
+    }
+
+    try {
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      toast({ title: "Accès au microphone refusé", variant: "destructive" });
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "fr-FR";
+    recognition.continuous = false;
+    recognition.interimResults = true;
+
+    recognition.onstart = () => {
+      setIsVoiceSearching(true);
+    };
+
+    recognition.onresult = (event) => {
+      let transcript = "";
+      for (let i = 0; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+      }
+      setSearchQuery(transcript.trim());
+    };
+
+    recognition.onerror = () => {
+      setIsVoiceSearching(false);
+    };
+
+    recognition.onend = () => {
+      setIsVoiceSearching(false);
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+  }, [toast]);
+
+  const stopVoiceSearch = useCallback(() => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+    }
+    setIsVoiceSearching(false);
+  }, []);
 
   const addProductFromStock = (stockItem: StockItem) => {
     // Check if already added
@@ -178,47 +267,120 @@ export function ProductSelector({
     return null;
   };
 
+  // Render product item
+  const renderProductItem = (item: StockItem, isFrequent: boolean = false) => (
+    <button
+      key={item.id}
+      onClick={() => addProductFromStock(item)}
+      className={cn(
+        "w-full flex items-center justify-between p-3 rounded-xl transition-colors text-left",
+        isFrequent 
+          ? "bg-card border-l-4 border-l-primary hover:bg-primary/10" 
+          : "bg-card hover:bg-secondary"
+      )}
+    >
+      <div className="flex items-center gap-3">
+        <div className={cn(
+          "w-10 h-10 rounded-full flex items-center justify-center",
+          isFrequent ? "bg-primary/15" : "bg-secondary"
+        )}>
+          <Package className={cn("w-5 h-5", isFrequent ? "text-primary" : "text-muted-foreground")} />
+        </div>
+        <div>
+          <p className="font-medium">{item.name}</p>
+          <p className="text-xs text-muted-foreground">
+            {formatMoney(item.unit_price)} CFA • {item.quantity} en stock
+          </p>
+        </div>
+      </div>
+      <Plus className="w-5 h-5 text-primary" />
+    </button>
+  );
+
   return (
     <div className="space-y-4">
-      {/* Search bar */}
+      {/* Search bar with mic */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
         <Input
           placeholder="Rechercher un produit..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10 h-12 text-base"
+          className="pl-10 pr-14 h-12 text-base rounded-xl"
         />
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn(
+            "absolute right-1 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full",
+            isVoiceSearching && "bg-primary/10 text-primary"
+          )}
+          onClick={isVoiceSearching ? stopVoiceSearch : startVoiceSearch}
+        >
+          <Mic className={cn("w-5 h-5", isVoiceSearching && "animate-pulse text-primary")} />
+        </Button>
       </div>
 
-      {/* Stock results (when searching) */}
-      {searchQuery.trim() && (
-        <ScrollArea className="max-h-40">
-          <div className="space-y-1">
-            {filteredStock.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-2">
-                Aucun produit trouvé
-              </p>
-            ) : (
-              filteredStock.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => addProductFromStock(item)}
-                  className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-secondary transition-colors text-left"
-                >
-                  <div className="flex items-center gap-2">
-                    <Package className="w-4 h-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm font-medium">{item.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatMoney(item.unit_price)} CFA • {item.quantity} en stock
-                      </p>
-                    </div>
-                  </div>
-                  <Plus className="w-4 h-4 text-primary" />
-                </button>
-              ))
+      {/* Product sections */}
+      {!searchQuery.trim() ? (
+        <ScrollArea className="max-h-60">
+          <div className="space-y-4">
+            {/* Frequent products section */}
+            {frequentProducts.length > 0 && (
+              <div className="bg-primary/5 rounded-xl p-3">
+                <p className="text-xs font-semibold text-primary uppercase mb-2">
+                  Produits fréquents
+                </p>
+                <div className="space-y-2">
+                  {frequentProducts.map((item) => renderProductItem(item, true))}
+                </div>
+              </div>
             )}
+
+            {/* All products section */}
+            {stockItems.length > 0 && (
+              <div className="bg-muted/30 rounded-xl p-3">
+                <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">
+                  Tous les produits
+                </p>
+                <div className="space-y-2">
+                  {stockItems.slice(0, 10).map((item) => renderProductItem(item, false))}
+                </div>
+                {stockItems.length > 10 && (
+                  <p className="text-xs text-muted-foreground text-center mt-2">
+                    Utilisez la recherche pour voir plus de produits
+                  </p>
+                )}
+              </div>
+            )}
+
+            {stockItems.length === 0 && (
+              <div className="text-center py-6">
+                <Package className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                <p className="text-muted-foreground">Aucun produit en stock</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Ajoutez un produit personnalisé ci-dessous
+                </p>
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+      ) : (
+        /* Search results */
+        <ScrollArea className="max-h-60">
+          <div className="bg-muted/30 rounded-xl p-3">
+            <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">
+              Résultats
+            </p>
+            <div className="space-y-2">
+              {filteredStock.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Aucun produit trouvé
+                </p>
+              ) : (
+                filteredStock.map((item) => renderProductItem(item, false))
+              )}
+            </div>
           </div>
         </ScrollArea>
       )}
