@@ -141,11 +141,22 @@ RÈGLES IMPORTANTES:
 8. Adapte-toi au français africain et aux expressions locales
 9. "rendu" peut signifier "vendu" (erreur de transcription courante)
 
+CLASSIFICATION INTELLIGENTE DES PRODUITS (IMPORTANT):
+Pour CHAQUE produit, détermine son type "product_type":
+- "retail": Produits physiques avec inventaire (téléphones, chargeurs, écouteurs, sacs, chaussures, vêtements, bracelets, montres, cosmétiques, électronique, accessoires, quincaillerie, alimentation emballée, etc.)
+- "restaurant": Nourriture/boissons préparées (jus, plats, riz, sauce, poulet, poisson, boisson, cocktail, gâteau, pain, beignets, café, thé, etc.)
+- "service": Services immatériels (coiffure, pressing, réparation, couture, visa, assistance, conseil, formation, livraison, etc.)
+
+RÈGLE DE DÉDUCTION DE STOCK:
+- "retail" = Produit DOIT déduire le stock
+- "restaurant" = Produit NE DOIT PAS déduire le stock (préparation sur commande)
+- "service" = Produit NE DOIT PAS déduire le stock (pas d'inventaire)
+
 EXEMPLES:
-- "J'ai vendu 5 chargeurs à 1500 à Kofi, il a payé cash" → 1 vente cash de 7500 pour Kofi, matcher "chargeurs" avec le stock
-- "Mamadou a pris 3 écrans à 5000, il a payé 10000, et Fatou a pris 2 batteries à 2000" → 2 ventes séparées
-- "Jacob m'a pris des produits" (et il y a 3 Jacob dans la liste) → status: "ambiguous" avec les 3 candidats
-- "Awa a pris 3 sachets à 500" (et Awa n'est pas dans la liste) → status: "not_found"
+- "J'ai vendu 5 chargeurs à 1500 à Kofi, il a payé cash" → 1 vente cash de 7500 pour Kofi, product_type: "retail"
+- "Awa a pris 3 jus d'ananas à 500" → product_type: "restaurant"
+- "J'ai fait une coiffure tresses à 5000 pour Fatou" → product_type: "service"
+- "Mamadou a pris 2 téléphones et 3 jus de bissap" → 1 vente avec 2 produits (téléphone=retail, jus=restaurant)
 
 Réponds UNIQUEMENT avec un JSON valide dans ce format:
 {
@@ -163,7 +174,15 @@ Réponds UNIQUEMENT avec un JSON valide dans ce format:
           {"id": "string", "name": "string", "phone": "string ou null"}
         ]
       },
-      "products": [{"name": "string", "quantity": number, "unit_price": number, "stock_item_id": "string ou null"}],
+      "products": [
+        {
+          "name": "string",
+          "quantity": number,
+          "unit_price": number,
+          "stock_item_id": "string ou null",
+          "product_type": "retail" | "restaurant" | "service"
+        }
+      ],
       "note": "string ou null"
     }
   ],
