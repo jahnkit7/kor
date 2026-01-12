@@ -28,23 +28,64 @@ import { clearProfileCache } from "@/components/RequireProfile";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
-// Spécialités prédéfinies
-const SPECIALTIES = [
-  { value: "alimentation", label: "Alimentation générale", icon: "🛒" },
-  { value: "vetements", label: "Vêtements & Mode", icon: "👔" },
-  { value: "electronique", label: "Électronique", icon: "📱" },
-  { value: "cosmetiques", label: "Cosmétiques & Beauté", icon: "💄" },
-  { value: "quincaillerie", label: "Quincaillerie", icon: "🔧" },
-  { value: "restaurant", label: "Restaurant / Maquis", icon: "🍽️" },
-  { value: "pharmacie", label: "Pharmacie", icon: "💊" },
-  { value: "autre", label: "Autre", icon: "📦" },
-];
+// Types d'activité avec configuration automatique
+const ACTIVITY_TYPES = [
+  { 
+    value: "retail", 
+    label: "Commerce de détail", 
+    icon: "🛒",
+    description: "Boutique, quincaillerie, vêtements...",
+    autoDeductStock: true,
+  },
+  { 
+    value: "restaurant", 
+    label: "Restauration", 
+    icon: "🍽️",
+    description: "Bar, restaurant, maquis, snack...",
+    autoDeductStock: false,
+  },
+  { 
+    value: "services", 
+    label: "Services", 
+    icon: "✂️",
+    description: "Salon, pressing, réparation...",
+    autoDeductStock: false,
+  },
+] as const;
+
+// Spécialités prédéfinies (affinement après le type d'activité)
+const SPECIALTIES_BY_TYPE: Record<string, Array<{ value: string; label: string; icon: string }>> = {
+  retail: [
+    { value: "alimentation", label: "Alimentation générale", icon: "🛒" },
+    { value: "vetements", label: "Vêtements & Mode", icon: "👔" },
+    { value: "electronique", label: "Électronique", icon: "📱" },
+    { value: "cosmetiques", label: "Cosmétiques & Beauté", icon: "💄" },
+    { value: "quincaillerie", label: "Quincaillerie", icon: "🔧" },
+    { value: "pharmacie", label: "Pharmacie", icon: "💊" },
+    { value: "autre_retail", label: "Autre commerce", icon: "📦" },
+  ],
+  restaurant: [
+    { value: "restaurant", label: "Restaurant / Maquis", icon: "🍽️" },
+    { value: "bar", label: "Bar / Buvette", icon: "🍹" },
+    { value: "snack", label: "Snack / Fast-food", icon: "🍔" },
+    { value: "jus", label: "Bar à jus", icon: "🧃" },
+    { value: "boulangerie", label: "Boulangerie / Pâtisserie", icon: "🥐" },
+    { value: "autre_resto", label: "Autre restauration", icon: "🍳" },
+  ],
+  services: [
+    { value: "salon_coiffure", label: "Salon de coiffure", icon: "✂️" },
+    { value: "pressing", label: "Pressing / Laverie", icon: "👔" },
+    { value: "reparation", label: "Réparation / Dépannage", icon: "🔧" },
+    { value: "couture", label: "Couture / Tailleur", icon: "🧵" },
+    { value: "autre_service", label: "Autre service", icon: "💼" },
+  ],
+};
 
 // Steps configuration
 const STEPS = [
   { id: 1, title: "Identité", icon: User },
   { id: 2, title: "Boutique", icon: Store },
-  { id: 3, title: "Détails", icon: Briefcase },
+  { id: 3, title: "Activité", icon: Briefcase },
 ];
 
 // Progress indicator component
@@ -165,6 +206,7 @@ const ProfileSetup = () => {
   const [shopName, setShopName] = useState("");
   const [ownerName, setOwnerName] = useState("");
   const [city, setCity] = useState("");
+  const [activityType, setActivityType] = useState<"retail" | "restaurant" | "services">("retail");
   const [specialty, setSpecialty] = useState("");
   const [phone, setPhone] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -348,13 +390,15 @@ const ProfileSetup = () => {
         return;
       }
 
+      const activityConfig = ACTIVITY_TYPES.find(t => t.value === activityType);
       const profileData = {
         shop_name: shopName.trim(),
         owner_name: ownerName.trim(),
         city: city.trim() || null,
-        specialty: specialty || null,
+        specialty: specialty || activityType, // Use activity type as fallback
         phone: phone.trim() || null,
         onboarding_completed: true,
+        auto_deduct_stock: activityConfig?.autoDeductStock ?? true,
       };
 
       if (!existing) {
@@ -561,26 +605,61 @@ const ProfileSetup = () => {
                 </motion.div>
               )}
 
-              {/* Step 3: Details */}
+              {/* Step 3: Activity Type */}
               {step === 3 && (
                 <motion.div
                   key="step3"
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
-                  className="space-y-4"
+                  className="space-y-5"
                 >
-                  <div className="space-y-2">
+                  {/* Activity Type Selection */}
+                  <div className="space-y-3">
                     <Label className="text-sm font-medium text-foreground flex items-center gap-2">
                       <Briefcase className="w-4 h-4 text-muted-foreground" />
-                      Spécialité de votre boutique
+                      Type d'activité
+                    </Label>
+                    <div className="grid gap-2">
+                      {ACTIVITY_TYPES.map((type) => (
+                        <button
+                          key={type.value}
+                          type="button"
+                          onClick={() => {
+                            setActivityType(type.value as "retail" | "restaurant" | "services");
+                            setSpecialty(""); // Reset specialty when type changes
+                          }}
+                          className={cn(
+                            "flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left",
+                            activityType === type.value
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:border-primary/50"
+                          )}
+                        >
+                          <span className="text-2xl">{type.icon}</span>
+                          <div className="flex-1">
+                            <p className="font-semibold text-foreground">{type.label}</p>
+                            <p className="text-xs text-muted-foreground">{type.description}</p>
+                          </div>
+                          {activityType === type.value && (
+                            <Check className="w-5 h-5 text-primary" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Specialty Selection (based on activity type) */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-foreground">
+                      Spécialité (optionnel)
                     </Label>
                     <Select value={specialty} onValueChange={setSpecialty}>
-                      <SelectTrigger className="h-14 bg-card border border-border/50 rounded-2xl text-foreground focus:ring-2 focus:ring-primary/20 shadow-sm">
-                        <SelectValue placeholder="Sélectionnez une spécialité" />
+                      <SelectTrigger className="h-12 bg-card border border-border/50 rounded-xl text-foreground">
+                        <SelectValue placeholder="Précisez votre activité..." />
                       </SelectTrigger>
                       <SelectContent className="bg-card border-border rounded-xl">
-                        {SPECIALTIES.map((spec) => (
+                        {(SPECIALTIES_BY_TYPE[activityType] || []).map((spec) => (
                           <SelectItem key={spec.value} value={spec.value} className="text-foreground">
                             <span className="flex items-center gap-2">
                               <span>{spec.icon}</span>
@@ -591,6 +670,18 @@ const ProfileSetup = () => {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {/* Service Mode Info Banner */}
+                  {(activityType === "restaurant" || activityType === "services") && (
+                    <div className="bg-amber-50 dark:bg-amber-950 rounded-xl p-4 border border-amber-200 dark:border-amber-800">
+                      <p className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-1">
+                        ✨ Mode Service activé
+                      </p>
+                      <p className="text-xs text-amber-700 dark:text-amber-300">
+                        La déduction automatique du stock sera désactivée. Idéal pour les activités sans gestion d'inventaire physique.
+                      </p>
+                    </div>
+                  )}
 
                   {/* Summary */}
                   <div className="bg-muted/50 rounded-2xl p-4 space-y-3">
@@ -610,6 +701,12 @@ const ProfileSetup = () => {
                           <span className="font-medium text-foreground">{city}</span>
                         </div>
                       )}
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Activité</span>
+                        <span className="font-medium text-foreground">
+                          {ACTIVITY_TYPES.find(t => t.value === activityType)?.label}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </motion.div>

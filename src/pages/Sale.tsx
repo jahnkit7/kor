@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useFeatureTracking } from "@/hooks/use-feature-tracking";
 import { useFeatureAccess } from "@/hooks/use-feature-access";
 import { useFrequentProducts } from "@/hooks/use-frequent-products";
+import { useProfile } from "@/hooks/use-profile";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +15,7 @@ import {
   FullScreenSheetTitle, 
   FullScreenSheetContent 
 } from "@/components/ui/fullscreen-sheet";
-import { ArrowLeft, Check, User, MessageSquare, Mic, Wallet, CreditCard, Clock, Lock, Package, ChevronRight, Search } from "lucide-react";
+import { ArrowLeft, Check, User, MessageSquare, Mic, Wallet, CreditCard, Clock, Lock, Package, ChevronRight, Search, UtensilsCrossed } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { PrimaryActionButton } from "@/components/ui/primary-action-button";
 import { toast } from "sonner";

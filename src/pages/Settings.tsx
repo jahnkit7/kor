@@ -263,7 +263,10 @@ const Settings = () => {
                   <div className="flex-1">
                     <p className="font-semibold text-[#051425]">Déduction automatique</p>
                     <p className="text-sm text-muted-foreground">
-                      Stock déduit lors des ventes
+                      {!(profile?.auto_deduct_stock ?? true)
+                        ? "Désactivé (mode service)"
+                        : "Stock déduit lors des ventes"
+                      }
                     </p>
                   </div>
                   <Switch

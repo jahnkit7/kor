@@ -65,6 +65,8 @@ export interface StockItem {
   unit_price: number;
   model?: string | null;
   source?: "manual" | "approximate" | "voice";
+  category?: string | null;
+  is_menu_item?: boolean;
   user_id?: string;
   createdAt: string;
   updatedAt: string;
