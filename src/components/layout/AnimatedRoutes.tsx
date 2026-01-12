@@ -22,6 +22,7 @@ import ClientDetail from "@/pages/ClientDetail";
 import NewClient from "@/pages/NewClient";
 import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
+import MoreSettings from "@/pages/MoreSettings";
 import Stock from "@/pages/Stock";
 import SalesHistory from "@/pages/SalesHistoryV2";
 import InvoiceHistory from "@/pages/InvoiceHistory";
@@ -68,6 +69,7 @@ export const AnimatedRoutes = () => {
     location.pathname.startsWith('/clients') ||
     location.pathname.startsWith('/reports') ||
     location.pathname.startsWith('/settings') ||
+    location.pathname.startsWith('/more-settings') ||
     location.pathname.startsWith('/stock') ||
     location.pathname.startsWith('/sales') ||
     location.pathname.startsWith('/invoices') ||
@@ -141,6 +143,7 @@ export const AnimatedRoutes = () => {
             <Route path="/clients/:id" element={<ClientDetail />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/more-settings" element={<MoreSettings />} />
             <Route path="/stock" element={<Stock />} />
             <Route path="/sales/history" element={<SalesHistory />} />
             <Route path="/invoices" element={<InvoiceHistory />} />

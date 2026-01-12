@@ -59,7 +59,9 @@ const Sale = () => {
   const { addSale, sales } = useSales();
   const { items: stockItems, refetch: refetchStock, addItem } = useStock();
   const { profile } = useProfile();
-  const isServiceMode = profile?.specialty === "restaurant" || profile?.specialty === "services";
+  // FIX: isServiceMode now based on auto_deduct_stock setting, not specialty
+  const shouldDeductStock = profile?.auto_deduct_stock ?? true;
+  const isServiceMode = !shouldDeductStock;
 
   // Track page view
   useEffect(() => {
@@ -181,6 +183,7 @@ const Sale = () => {
         // FIX: Allow client_id for both cash AND credit sales (for tracking/loyalty)
         client_id: selectedClient || undefined,
         items: saleItems.length > 0 ? saleItems : undefined,
+        shouldDeductStock, // Pass the setting from profile
       });
 
       if (!created) {

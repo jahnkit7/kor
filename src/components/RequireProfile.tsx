@@ -67,7 +67,7 @@ export function RequireProfile({ children }: RequireProfileProps) {
         
         const { data, error } = await supabase
           .from("profiles")
-          .select("shop_name, owner_name")
+          .select("shop_name, owner_name, specialty")
           .eq("user_id", user.id)
           .maybeSingle();
 
@@ -85,7 +85,8 @@ export function RequireProfile({ children }: RequireProfileProps) {
         const isComplete = Boolean(
           data?.shop_name &&
           data.shop_name !== "Ma Boutique" &&
-          data?.owner_name
+          data?.owner_name &&
+          data?.specialty // NEW: Require specialty (activity type) for old accounts
         );
 
         if (isComplete) {
