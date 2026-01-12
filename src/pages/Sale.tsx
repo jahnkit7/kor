@@ -57,6 +57,8 @@ const Sale = () => {
   const { clients, loading: clientsLoading, quickCreateClient } = useClients();
   const { addSale, sales } = useSales();
   const { items: stockItems, refetch: refetchStock, addItem } = useStock();
+  const { profile } = useProfile();
+  const isServiceMode = profile?.specialty === "restaurant" || profile?.specialty === "services";
 
   // Track page view
   useEffect(() => {
@@ -286,9 +288,6 @@ const Sale = () => {
     );
   }
 
-  // Check if service mode (restaurant/services)
-  const { profile } = useProfile();
-  const isServiceMode = profile?.specialty === "restaurant" || profile?.specialty === "services";
 
   return (
     <FullScreenLayout transparentStatusBar>
