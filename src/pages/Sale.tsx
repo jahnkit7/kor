@@ -23,6 +23,7 @@ import { useClients } from "@/hooks/use-clients";
 import { useSales, SaleItem } from "@/hooks/use-sales";
 import { useStock } from "@/hooks/use-stock";
 import { VoiceSaleInput } from "@/components/sale/VoiceSaleInput";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ProductSelector } from "@/components/sale/ProductSelector";
 import { MenuSelector } from "@/components/sale/MenuSelector";
 import { cn } from "@/lib/utils";
@@ -244,26 +245,31 @@ const Sale = () => {
           </div>
         </div>
         <div className="flex-1 overflow-auto">
-          <VoiceSaleInput
-            clients={clients}
-            stockItems={stockItems}
-            onComplete={handleVoiceSaleComplete}
-            onCancel={() => setShowVoiceInput(false)}
-            onCreateClient={quickCreateClient}
-            onCreateStockItem={async (item) => {
-              const result = await addItem({
-                name: item.name,
-                quantity: item.quantity,
-                unit_price: item.unit_price,
-                source: "voice",
-              });
-              if (result) {
-                return { id: result.id };
-              }
-              return null;
-            }}
-            onFinish={handleVoiceSalesFinished}
-          />
+          <ErrorBoundary 
+            fallbackTitle="Erreur de saisie vocale"
+            onRetry={() => setShowVoiceInput(false)}
+          >
+            <VoiceSaleInput
+              clients={clients}
+              stockItems={stockItems}
+              onComplete={handleVoiceSaleComplete}
+              onCancel={() => setShowVoiceInput(false)}
+              onCreateClient={quickCreateClient}
+              onCreateStockItem={async (item) => {
+                const result = await addItem({
+                  name: item.name,
+                  quantity: item.quantity,
+                  unit_price: item.unit_price,
+                  source: "voice",
+                });
+                if (result) {
+                  return { id: result.id };
+                }
+                return null;
+              }}
+              onFinish={handleVoiceSalesFinished}
+            />
+          </ErrorBoundary>
         </div>
       </FullScreenLayout>
     );
