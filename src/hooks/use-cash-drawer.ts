@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "./use-auth";
 import { useProfile } from "./use-profile";
+import { useRole } from "./use-role";
 import { isSupabaseConfigured, getSupabaseClient } from "@/lib/supabase";
 import { toast } from "sonner";
 
@@ -21,7 +22,7 @@ interface CashDrawerState {
   isDrawerOpen: boolean;
   needsOpening: boolean;
   openDrawer: (amount: number, notes?: string) => Promise<boolean>;
-  closeDrawer: (amount: number) => Promise<boolean>;
+  closeDrawer: (amount: number, todayCashSales?: number) => Promise<boolean>;
   refetch: () => Promise<void>;
 }
 
@@ -39,6 +40,7 @@ const isToday = (dateString: string): boolean => {
 export function useCashDrawer(): CashDrawerState {
   const { user } = useAuth();
   const { profile } = useProfile();
+  const { role } = useRole();
   const [todayEntry, setTodayEntry] = useState<CashDrawerEntry | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -120,7 +122,7 @@ export function useCashDrawer(): CashDrawerState {
     }
   }, [user, profile]);
 
-  const closeDrawer = useCallback(async (amount: number): Promise<boolean> => {
+  const closeDrawer = useCallback(async (amount: number, todayCashSales: number = 0): Promise<boolean> => {
     if (!user || !todayEntry || !isSupabaseConfigured()) return false;
 
     try {
@@ -144,13 +146,42 @@ export function useCashDrawer(): CashDrawerState {
 
       setTodayEntry(data as CashDrawerEntry);
       toast.success(`Caisse clôturée avec ${amount.toLocaleString("fr-FR")} CFA`);
+
+      // Send notification to owner if employee closes with significant difference
+      if (role === "employee" && profile?.linked_owner_id) {
+        const expectedAmount = todayEntry.opening_amount + todayCashSales;
+        const difference = amount - expectedAmount;
+        const percentDiff = expectedAmount > 0 ? Math.abs(difference / expectedAmount) : 0;
+
+        // Notify if difference > 10%
+        if (percentDiff > 0.1 && difference !== 0) {
+          try {
+            const employeeName = profile.owner_name || "Un employé";
+            const diffText = difference > 0 
+              ? `+${difference.toLocaleString("fr-FR")} CFA (excédent)`
+              : `${difference.toLocaleString("fr-FR")} CFA (manquant)`;
+            
+            await supabase.rpc("send_notification", {
+              target_user_id: profile.linked_owner_id,
+              notification_title: "⚠️ Écart de caisse important",
+              notification_message: `${employeeName} a clôturé la caisse avec un écart de ${diffText}. Montant attendu: ${expectedAmount.toLocaleString("fr-FR")} CFA, Montant réel: ${amount.toLocaleString("fr-FR")} CFA.`,
+              notification_type: "cash_drawer_alert",
+              notification_action_url: "/reports",
+            });
+          } catch (notifError) {
+            console.error("Error sending cash drawer notification:", notifError);
+            // Don't fail the operation if notification fails
+          }
+        }
+      }
+
       return true;
     } catch (error) {
       console.error("Error closing cash drawer:", error);
       toast.error("Erreur lors de la clôture de la caisse");
       return false;
     }
-  }, [user, todayEntry]);
+  }, [user, todayEntry, role, profile]);
 
   const isDrawerOpen = todayEntry !== null && todayEntry.closed_at === null;
   const needsOpening = todayEntry === null;

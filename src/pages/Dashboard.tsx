@@ -103,7 +103,8 @@ const Dashboard = () => {
     if (cashDrawerMode === "open") {
       return await openDrawer(amount);
     } else {
-      return await closeDrawer(amount);
+      // Pass todayCashSales for notification calculation
+      return await closeDrawer(amount, todayStats.cash);
     }
   };
 
