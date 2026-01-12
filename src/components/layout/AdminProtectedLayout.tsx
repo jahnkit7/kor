@@ -25,8 +25,19 @@ export function AdminProtectedLayout() {
 
   // Handle redirects - only once when auth is STABLE (not just done loading)
   useEffect(() => {
+    console.log("[AdminProtectedLayout] State:", { 
+      loading, 
+      isStable, 
+      isAdmin, 
+      userId: user?.id,
+      hasHandledRedirect: hasHandledRedirect.current 
+    });
+
     // Wait for stability - prevents flash redirects during initial load
-    if (loading || !isStable) return;
+    if (loading || !isStable) {
+      console.log("[AdminProtectedLayout] Waiting for stability...");
+      return;
+    }
     
     // Already redirected - do nothing
     if (hasHandledRedirect.current) return;
@@ -36,6 +47,7 @@ export function AdminProtectedLayout() {
 
     // Not logged in -> auth page
     if (!user) {
+      console.log("[AdminProtectedLayout] No user, redirecting to /auth");
       hasHandledRedirect.current = true;
       navigate("/auth", { replace: true });
       return;
@@ -43,10 +55,13 @@ export function AdminProtectedLayout() {
 
     // Logged in but not admin -> dashboard
     if (!isAdmin) {
+      console.log("[AdminProtectedLayout] Not admin, redirecting to /dashboard");
       hasHandledRedirect.current = true;
       navigate("/dashboard", { replace: true });
       return;
     }
+    
+    console.log("[AdminProtectedLayout] User is admin, allowing access");
   }, [loading, isStable, user, isAdmin, navigate]);
 
   // Reset redirect flag if user changes (logout/login as different user)
