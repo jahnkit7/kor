@@ -97,6 +97,8 @@ interface StockItem {
   quantity: number;
   unit_price: number;
   model?: string | null;
+  is_menu_item?: boolean;
+  category?: string | null;
 }
 
 interface VoiceSaleInputProps {
@@ -953,17 +955,43 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
               const product = updatedProducts[j];
               totalProductsProcessed++;
               
+              const productType = product.product_type || "retail";
+              const isMenuOrService = productType === "restaurant" || productType === "service";
+              
+              // FIXED: Force creation for restaurant/service products even if AI found a retail match
+              // The issue was that AI would match "plat de riz" to existing "Riz" (retail) 
+              // and assign a stock_item_id, preventing menu item creation
+              const needsCreation = (!product.stock_item_id && product.unit_price > 0) || 
+                                    (isMenuOrService && product.unit_price > 0);
+              
               console.debug(`[VoiceSaleInput] 🏷️ Product ${j + 1}/${updatedProducts.length}:`, {
                 name: product.name,
                 stock_item_id: product.stock_item_id,
                 unit_price: product.unit_price,
-                product_type: product.product_type,
-                needsCreation: !product.stock_item_id && product.unit_price > 0,
+                product_type: productType,
+                isMenuOrService,
+                needsCreation,
+                reason: needsCreation 
+                  ? (isMenuOrService ? "Force creation for menu/service" : "No stock_item_id") 
+                  : "Already has stock_item_id (retail)",
               });
               
-              if (!product.stock_item_id && product.unit_price > 0) {
-                const productType = product.product_type || "retail";
-                const isMenuOrService = productType === "restaurant" || productType === "service";
+              if (needsCreation) {
+                // Check if a menu item with the same name already exists to avoid duplicates
+                const existingMenuItem = stockItems?.find(s => 
+                  s.name.toLowerCase() === product.name.toLowerCase() && 
+                  s.is_menu_item === true
+                );
+                
+                if (existingMenuItem) {
+                  // Use existing menu item instead of creating a duplicate
+                  updatedProducts[j] = { ...product, stock_item_id: existingMenuItem.id };
+                  console.debug(`[VoiceSaleInput] 🔄 Using existing menu item for "${product.name}":`, {
+                    existingId: existingMenuItem.id,
+                    existingName: existingMenuItem.name,
+                  });
+                  continue;
+                }
                 
                 console.debug(`[VoiceSaleInput] ✨ Creating stock item for "${product.name}":`, {
                   productType,
@@ -1000,7 +1028,7 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
                 console.debug(`[VoiceSaleInput] ⏭️ Skipping "${product.name}":`, {
                   hasStockItemId: !!product.stock_item_id,
                   unitPrice: product.unit_price,
-                  reason: product.stock_item_id ? "Already has stock_item_id" : "No unit_price",
+                  reason: "Retail product already has stock_item_id",
                 });
               }
             }
