@@ -24,6 +24,7 @@ export interface Profile {
   notification_settings: NotificationSettings | null;
   auto_deduct_stock: boolean;
   referred_by: string | null;
+  linked_owner_id: string | null;
 }
 
 interface ProfileState {
@@ -76,6 +77,7 @@ export function useProfile(): ProfileState {
           notification_settings: data.notification_settings as unknown as NotificationSettings | null,
           auto_deduct_stock: data.auto_deduct_stock ?? true,
           referred_by: data.referred_by ?? null,
+          linked_owner_id: data.linked_owner_id ?? null,
         };
         setProfile(profileData);
       }
