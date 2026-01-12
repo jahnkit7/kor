@@ -14,6 +14,8 @@ export interface StockItem {
   unit_price: number;
   model: string | null;
   source: "manual" | "approximate" | "voice";
+  category?: string | null;
+  is_menu_item?: boolean;
   created_at: string;
   updated_at: string;
   synced?: boolean;
@@ -25,6 +27,8 @@ export interface NewStockItem {
   unit_price: number;
   model?: string | null;
   source?: "manual" | "approximate" | "voice";
+  category?: string | null;
+  is_menu_item?: boolean;
 }
 
 export function useStock() {
@@ -138,6 +142,8 @@ export function useStock() {
           unit_price: item.unit_price,
           model: item.model || null,
           source: item.source || "manual",
+          category: item.category || null,
+          is_menu_item: item.is_menu_item || false,
           user_id: user.id,
         });
         console.log("[useStock] ✅ Saved locally with ID:", localItem.id);
@@ -171,6 +177,8 @@ export function useStock() {
             unit_price: item.unit_price,
             model: item.model || null,
             source: item.source || "manual",
+            category: item.category || null,
+            is_menu_item: item.is_menu_item || false,
             created_at: localItem.createdAt,
             updated_at: localItem.updatedAt,
           };

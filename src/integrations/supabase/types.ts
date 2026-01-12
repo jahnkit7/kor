@@ -1586,8 +1586,10 @@ export type Database = {
       }
       stock_items: {
         Row: {
+          category: string | null
           created_at: string
           id: string
+          is_menu_item: boolean | null
           model: string | null
           name: string
           quantity: number
@@ -1597,8 +1599,10 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          category?: string | null
           created_at?: string
           id?: string
+          is_menu_item?: boolean | null
           model?: string | null
           name: string
           quantity?: number
@@ -1608,8 +1612,10 @@ export type Database = {
           user_id: string
         }
         Update: {
+          category?: string | null
           created_at?: string
           id?: string
+          is_menu_item?: boolean | null
           model?: string | null
           name?: string
           quantity?: number
