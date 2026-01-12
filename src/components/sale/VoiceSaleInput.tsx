@@ -161,7 +161,7 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
   const [editCreateNewClient, setEditCreateNewClient] = useState(false);
   const [editNewClientName, setEditNewClientName] = useState("");
   const [clientSearchQuery, setClientSearchQuery] = useState("");
-  const [editProducts, setEditProducts] = useState<Array<{ name: string; quantity: number; unit_price: number }>>([]);
+  const [editProducts, setEditProducts] = useState<Array<{ name: string; quantity: number; unit_price: number; product_type?: "retail" | "restaurant" | "service" }>>([]);
   const [editNote, setEditNote] = useState("");
   
   // Voice search for client
@@ -624,7 +624,13 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
     setEditClientId(sale.resolved_client_id || sale.client_match.client_id || null);
     setEditPaid(String(sale.paid));
     setClientSearchQuery("");
-    setEditProducts(sale.products ? [...sale.products] : []);
+    // Preserve product_type when copying products
+    setEditProducts(sale.products ? sale.products.map(p => ({
+      name: p.name,
+      quantity: p.quantity,
+      unit_price: p.unit_price,
+      product_type: p.product_type || "retail"
+    })) : []);
     setEditNote(sale.note || "");
     
     // Pre-fill for new client creation if client was not found
@@ -1359,11 +1365,40 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
                       )}
                     </div>
 
-                    {/* Products preview */}
+                    {/* Products preview with type badges */}
                     {sale.products && sale.products.length > 0 && (
-                      <p className="text-xs text-muted-foreground mt-2 bg-white/50 px-2 py-1 rounded-lg inline-block">
-                        {sale.products.map(p => `${p.quantity}x ${p.name}`).join(", ")}
-                      </p>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {sale.products.map((p, pIdx) => {
+                          const typeConfig = {
+                            retail: { label: "Stock", bg: "bg-blue-100", text: "text-blue-700", border: "border-blue-200" },
+                            restaurant: { label: "Menu", bg: "bg-purple-100", text: "text-purple-700", border: "border-purple-200" },
+                            service: { label: "Service", bg: "bg-green-100", text: "text-green-700", border: "border-green-200" },
+                          };
+                          const config = p.product_type ? typeConfig[p.product_type] : typeConfig.retail;
+                          
+                          return (
+                            <span 
+                              key={pIdx} 
+                              className={cn(
+                                "text-xs px-2 py-1 rounded-lg border inline-flex items-center gap-1",
+                                config.bg, config.border
+                              )}
+                            >
+                              <span className="text-muted-foreground">{p.quantity}x</span>
+                              <span className="font-medium">{p.name}</span>
+                              <Badge 
+                                variant="outline" 
+                                className={cn(
+                                  "text-[10px] px-1 py-0 h-4 rounded-full ml-1",
+                                  config.text, config.border
+                                )}
+                              >
+                                {config.label}
+                              </Badge>
+                            </span>
+                          );
+                        })}
+                      </div>
                     )}
 
                     {/* Stock warnings */}
@@ -1670,6 +1705,43 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
                           className="h-11 rounded-lg"
                         />
                       </div>
+                      
+                      {/* Product type selector */}
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">Type de produit</Label>
+                        <div className="flex gap-2">
+                          {[
+                            { value: "retail", label: "Stock", icon: "📦", bg: "bg-blue-100 border-blue-300 text-blue-700", activeBg: "bg-blue-500 text-white" },
+                            { value: "restaurant", label: "Menu", icon: "🍽️", bg: "bg-purple-100 border-purple-300 text-purple-700", activeBg: "bg-purple-500 text-white" },
+                            { value: "service", label: "Service", icon: "🛠️", bg: "bg-green-100 border-green-300 text-green-700", activeBg: "bg-green-500 text-white" },
+                          ].map((type) => (
+                            <button
+                              key={type.value}
+                              type="button"
+                              onClick={() => {
+                                const updated = [...editProducts];
+                                updated[idx] = { ...updated[idx], product_type: type.value as "retail" | "restaurant" | "service" };
+                                setEditProducts(updated);
+                              }}
+                              className={cn(
+                                "flex-1 h-10 rounded-lg border text-xs font-medium flex items-center justify-center gap-1.5 transition-all",
+                                (product.product_type || "retail") === type.value
+                                  ? type.activeBg
+                                  : type.bg + " hover:opacity-80"
+                              )}
+                            >
+                              <span>{type.icon}</span>
+                              <span>{type.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-[10px] text-muted-foreground">
+                          {(product.product_type || "retail") === "retail" 
+                            ? "Le stock sera déduit automatiquement" 
+                            : "Le stock ne sera pas déduit"}
+                        </p>
+                      </div>
+                      
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1.5">
                           <Label className="text-xs text-muted-foreground">Quantité</Label>
@@ -1713,7 +1785,7 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
                     onClick={() => {
                       setEditProducts(prev => [
                         ...prev,
-                        { name: "", quantity: 1, unit_price: 0 }
+                        { name: "", quantity: 1, unit_price: 0, product_type: "retail" }
                       ]);
                     }}
                   >
