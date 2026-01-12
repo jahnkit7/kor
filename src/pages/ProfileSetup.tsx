@@ -456,7 +456,14 @@ const ProfileSetup = () => {
       // Clear profile cache so RequireProfile doesn't redirect back
       clearProfileCache(user.id);
       
-      toast.success("Profil configuré !");
+      toast.success(isEditMode ? "Profil mis à jour !" : "Profil configuré !");
+      setIsLoading(false);
+      
+      // In edit mode, go back to settings
+      if (isEditMode) {
+        navigate("/settings", { replace: true });
+        return;
+      }
       
       // Check if we have a pending invite
       const pendingInvite = localStorage.getItem("pendingInviteCode");
