@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useFeatureTracking } from "@/hooks/use-feature-tracking";
 import { useFeatureAccess } from "@/hooks/use-feature-access";
+import { useFrequentProducts } from "@/hooks/use-frequent-products";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -109,13 +110,8 @@ const Sale = () => {
     );
   }, [clients, clientSearch]);
 
-  // Frequent products - simplified: use stock items sorted by quantity sold
-  // In future, this could be enhanced with sale_items data
-  const frequentProductNames = useMemo(() => {
-    // For now, return top 3 stock items by name (alphabetically as placeholder)
-    // This will be enhanced when sale_items data is available in the sales hook
-    return stockItems.slice(0, 3).map(item => item.name);
-  }, [stockItems]);
+  // Frequent products from real sales data
+  const { frequentProductNames } = useFrequentProducts(3);
   // Calculate total from products if any selected
   const productTotal = useMemo(() => {
     return selectedProducts.reduce(
