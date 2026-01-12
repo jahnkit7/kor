@@ -27,18 +27,25 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Pencil, Trash2, UtensilsCrossed } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, UtensilsCrossed, Download, Check } from "lucide-react";
 import { useMenuItems, MENU_CATEGORIES, type MenuCategory, type MenuItem } from "@/hooks/use-menu-items";
+import { useStock } from "@/hooks/use-stock";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 
 export function MenuManagement() {
   const { menuItems, menuItemsByCategory, loading, addMenuItem, updateMenuItem, deleteMenuItem, refetch } = useMenuItems();
+  const { items: stockItems } = useStock();
   
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
+  const [isImportSheetOpen, setIsImportSheetOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [deleteConfirmItem, setDeleteConfirmItem] = useState<MenuItem | null>(null);
+  const [selectedForImport, setSelectedForImport] = useState<Set<string>>(new Set());
+  const [importCategory, setImportCategory] = useState<MenuCategory | "">("");
+  const [isImporting, setIsImporting] = useState(false);
   
   // Form state
   const [formName, setFormName] = useState("");
@@ -46,6 +53,11 @@ export function MenuManagement() {
   const [formCategory, setFormCategory] = useState<MenuCategory | "">("");
   const [formModel, setFormModel] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+
+  // Filter stock items that are NOT already menu items
+  const importableStockItems = stockItems.filter(
+    item => !item.is_menu_item && item.unit_price > 0
+  );
 
   const formatMoney = (amount: number) => {
     return new Intl.NumberFormat("fr-FR").format(amount) + " CFA";
@@ -155,10 +167,23 @@ export function MenuManagement() {
             {menuItems.length} article{menuItems.length > 1 ? "s" : ""}
           </p>
         </div>
-        <Button onClick={openAddSheet} size="sm" className="gap-2">
-          <Plus className="h-4 w-4" />
-          Ajouter
-        </Button>
+        <div className="flex gap-2">
+          {importableStockItems.length > 0 && (
+            <Button 
+              onClick={() => setIsImportSheetOpen(true)} 
+              variant="outline" 
+              size="sm" 
+              className="gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Importer
+            </Button>
+          )}
+          <Button onClick={openAddSheet} size="sm" className="gap-2">
+            <Plus className="h-4 w-4" />
+            Ajouter
+          </Button>
+        </div>
       </div>
 
       {/* Search */}
@@ -364,6 +389,156 @@ export function MenuManagement() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Import from Stock Sheet */}
+      <Sheet open={isImportSheetOpen} onOpenChange={setIsImportSheetOpen}>
+        <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl">
+          <SheetHeader className="pb-4 border-b">
+            <SheetTitle className="flex items-center gap-2">
+              <Download className="h-5 w-5" />
+              Importer depuis le stock
+            </SheetTitle>
+          </SheetHeader>
+          
+          <div className="py-4 space-y-4 h-[calc(100%-8rem)] overflow-auto">
+            {/* Category for imported items */}
+            <div className="space-y-2">
+              <Label>Catégorie pour les articles importés</Label>
+              <Select value={importCategory} onValueChange={(v) => setImportCategory(v as MenuCategory)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choisir une catégorie" />
+                </SelectTrigger>
+                <SelectContent>
+                  {MENU_CATEGORIES.map((cat) => (
+                    <SelectItem key={cat.value} value={cat.value}>
+                      <span className="flex items-center gap-2">
+                        <span>{cat.icon}</span>
+                        {cat.label}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Stock items list */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Produits du stock ({importableStockItems.length})</Label>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    if (selectedForImport.size === importableStockItems.length) {
+                      setSelectedForImport(new Set());
+                    } else {
+                      setSelectedForImport(new Set(importableStockItems.map(i => i.id)));
+                    }
+                  }}
+                >
+                  {selectedForImport.size === importableStockItems.length ? "Tout désélectionner" : "Tout sélectionner"}
+                </Button>
+              </div>
+              
+              <div className="space-y-2 max-h-[40vh] overflow-auto">
+                {importableStockItems.map((item) => (
+                  <Card 
+                    key={item.id}
+                    className={`p-3 cursor-pointer transition-all ${
+                      selectedForImport.has(item.id) 
+                        ? "ring-2 ring-primary bg-primary/5" 
+                        : ""
+                    }`}
+                    onClick={() => {
+                      setSelectedForImport(prev => {
+                        const newSet = new Set(prev);
+                        if (newSet.has(item.id)) {
+                          newSet.delete(item.id);
+                        } else {
+                          newSet.add(item.id);
+                        }
+                        return newSet;
+                      });
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Checkbox 
+                        checked={selectedForImport.has(item.id)}
+                        onCheckedChange={() => {}}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{item.name}</p>
+                        {item.model && (
+                          <p className="text-sm text-muted-foreground truncate">{item.model}</p>
+                        )}
+                      </div>
+                      <p className="text-sm font-semibold text-primary shrink-0">
+                        {formatMoney(item.unit_price)}
+                      </p>
+                    </div>
+                  </Card>
+                ))}
+                
+                {importableStockItems.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Aucun produit à importer
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Import button */}
+          <div className="absolute bottom-0 left-0 right-0 p-4 bg-background border-t">
+            <Button
+              onClick={async () => {
+                if (selectedForImport.size === 0) {
+                  toast.error("Sélectionnez au moins un produit");
+                  return;
+                }
+                
+                setIsImporting(true);
+                try {
+                  let successCount = 0;
+                  for (const itemId of selectedForImport) {
+                    const stockItem = importableStockItems.find(i => i.id === itemId);
+                    if (stockItem) {
+                      await addMenuItem({
+                        name: stockItem.name,
+                        price: stockItem.unit_price,
+                        category: importCategory as MenuCategory || undefined,
+                        model: stockItem.model || undefined,
+                      });
+                      successCount++;
+                    }
+                  }
+                  toast.success(`${successCount} article${successCount > 1 ? "s" : ""} importé${successCount > 1 ? "s" : ""}`);
+                  setSelectedForImport(new Set());
+                  setImportCategory("");
+                  setIsImportSheetOpen(false);
+                  refetch();
+                } catch (error) {
+                  console.error("Import error:", error);
+                  toast.error("Erreur lors de l'import");
+                } finally {
+                  setIsImporting(false);
+                }
+              }}
+              disabled={selectedForImport.size === 0 || isImporting}
+              className="w-full h-12 gap-2"
+            >
+              {isImporting ? (
+                "Import en cours..."
+              ) : (
+                <>
+                  <Check className="h-5 w-5" />
+                  Importer {selectedForImport.size > 0 ? `(${selectedForImport.size})` : ""}
+                </>
+              )}
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

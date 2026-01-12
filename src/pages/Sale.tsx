@@ -24,6 +24,7 @@ import { useSales, SaleItem } from "@/hooks/use-sales";
 import { useStock } from "@/hooks/use-stock";
 import { VoiceSaleInput } from "@/components/sale/VoiceSaleInput";
 import { ProductSelector } from "@/components/sale/ProductSelector";
+import { MenuSelector } from "@/components/sale/MenuSelector";
 import { cn } from "@/lib/utils";
 import FullScreenLayout from "@/components/layout/FullScreenLayout";
 import { triggerHaptic } from "@/lib/haptics";
@@ -64,6 +65,7 @@ const Sale = () => {
   
   const [selectedProducts, setSelectedProducts] = useState<SaleProduct[]>([]);
   const [showProductsSheet, setShowProductsSheet] = useState(false);
+  const [showMenuSheet, setShowMenuSheet] = useState(false);
   const [showHistorySheet, setShowHistorySheet] = useState(false);
   const [showNoteSheet, setShowNoteSheet] = useState(false);
   const [showClientSheet, setShowClientSheet] = useState(false);
@@ -439,8 +441,8 @@ const Sale = () => {
           ))}
         </div>
 
-        {/* Produits / Récentes - 50/50 */}
-        <div className="grid grid-cols-2 gap-2 mb-3 shrink-0">
+        {/* Produits / Menu / Récentes */}
+        <div className={`grid gap-2 mb-3 shrink-0 ${isServiceMode ? "grid-cols-3" : "grid-cols-2"}`}>
           {/* Produits */}
           <button 
             onClick={() => setShowProductsSheet(true)}
@@ -454,6 +456,19 @@ const Sale = () => {
               <Badge variant="secondary" className="text-xs h-5 px-2">{selectedProducts.length}</Badge>
             )}
           </button>
+
+          {/* Menu - Only for service mode */}
+          {isServiceMode && (
+            <button 
+              onClick={() => setShowMenuSheet(true)}
+              className="flex items-center justify-between px-3 py-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800"
+            >
+              <span className="flex items-center gap-2 text-sm font-medium text-amber-700 dark:text-amber-400">
+                <UtensilsCrossed className="w-4 h-4" />
+                Menu
+              </span>
+            </button>
+          )}
 
           {/* Ventes récentes */}
           <button 
@@ -508,6 +523,38 @@ const Sale = () => {
                 }
                 return null;
               }}
+            />
+          </FullScreenSheetContent>
+        </FullScreenSheet>
+
+        {/* FullScreen Sheet - Menu (Service Mode) */}
+        <FullScreenSheet open={showMenuSheet} onOpenChange={setShowMenuSheet}>
+          <FullScreenSheetHeader className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20">
+            <FullScreenSheetTitle className="flex items-center gap-2">
+              <UtensilsCrossed className="w-5 h-5 text-amber-500" />
+              Sélectionner du menu
+            </FullScreenSheetTitle>
+          </FullScreenSheetHeader>
+          <FullScreenSheetContent className="h-[calc(100%-4rem)]">
+            <MenuSelector
+              onSelect={(items) => {
+                // Add menu items to selected products
+                setSelectedProducts(prev => {
+                  const newProducts = [...prev];
+                  items.forEach(item => {
+                    const existingIndex = newProducts.findIndex(
+                      p => p.stock_item_id === item.stock_item_id
+                    );
+                    if (existingIndex >= 0) {
+                      newProducts[existingIndex].quantity += item.quantity;
+                    } else {
+                      newProducts.push(item);
+                    }
+                  });
+                  return newProducts;
+                });
+              }}
+              onClose={() => setShowMenuSheet(false)}
             />
           </FullScreenSheetContent>
         </FullScreenSheet>
