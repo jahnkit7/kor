@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import type { User } from "@supabase/supabase-js";
 import { useAuth } from "./use-auth";
 import { isSupabaseConfigured, getSupabaseClient } from "@/lib/supabase";
 
@@ -7,12 +8,13 @@ type AppRole = "owner" | "employee" | "admin" | null;
 const ROLE_CACHE_KEY = "user_role_cache_";
 
 interface RoleState {
+  user: User | null;
   role: AppRole;
   loading: boolean;
   isOwner: boolean;
   isEmployee: boolean;
   isAdmin: boolean;
-  isStable: boolean; // New: indicates auth+role are fully settled
+  isStable: boolean; // indicates auth+role are fully settled
 }
 
 function getCachedRole(userId: string): AppRole | null {
@@ -53,9 +55,7 @@ export function useRole(): RoleState {
   // This ensures we have the role immediately without waiting for useEffect
   const cachedRole = useMemo(() => {
     if (user?.id) {
-      const cached = getCachedRole(user.id);
-      console.log("[useRole] Cache check for user:", user.id, "cached role:", cached);
-      return cached;
+      return getCachedRole(user.id);
     }
     return null;
   }, [user?.id]);
@@ -130,12 +130,11 @@ export function useRole(): RoleState {
     }
 
     const fetchRole = async () => {
-      console.log("[useRole] Fetching role for user:", user.id);
       // Only show loading state if we DON'T have a cache
       if (!hasCache) {
         setIsFetching(true);
       }
-      
+
       try {
         const supabase = await getSupabaseClient();
         const { data, error } = await supabase
@@ -144,22 +143,16 @@ export function useRole(): RoleState {
           .eq("user_id", user.id)
           .single();
 
-        console.log("[useRole] DB response:", { data, error });
-
         if (error) {
-          console.error("[useRole] Error fetching role:", error);
           const fallback = hasCache ? getCachedRole(user.id) : "owner";
-          console.log("[useRole] Using fallback role:", fallback);
           setCachedRole(user.id, fallback);
           setFetchedRole(fallback);
         } else {
           const role = data?.role || "owner";
-          console.log("[useRole] Got role from DB:", role);
           setCachedRole(user.id, role);
           setFetchedRole(role);
         }
-      } catch (error) {
-        console.error("[useRole] Catch error:", error);
+      } catch {
         const fallback = hasCache ? getCachedRole(user.id) : "owner";
         setCachedRole(user.id, fallback);
         setFetchedRole(fallback);
@@ -181,23 +174,14 @@ export function useRole(): RoleState {
     (!cachedRole && isFetching) || 
     (!cachedRole && !hasFetched && !!user);
 
-  console.log("[useRole] State:", { 
-    effectiveRole, 
-    cachedRole, 
-    fetchedRole, 
-    isLoading, 
-    isStable, 
-    authLoading,
-    userId: user?.id 
-  });
-
   return {
+    user,
     role: effectiveRole ?? "owner",
     loading: isLoading,
     isOwner: effectiveRole === "owner" || effectiveRole === null,
     isEmployee: effectiveRole === "employee",
     isAdmin: effectiveRole === "admin",
-    isStable, // New: consumers can use this to delay redirects
+    isStable,
   };
 }
 
