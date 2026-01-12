@@ -147,6 +147,7 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
   const [lastTranscript, setLastTranscript] = useState<string | null>(null);
   const [canRetry, setCanRetry] = useState(false);
   const [useLocalParser, setUseLocalParser] = useState(false);
+  const [legendOpen, setLegendOpen] = useState(false); // Collapsible legend state
   
   // Disambiguation state
   const [disambiguationSaleIndex, setDisambiguationSaleIndex] = useState<number | null>(null);
@@ -581,12 +582,17 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
   };
 
   // Check if any product in a sale has insufficient stock
+  // Only check retail products - restaurant/service products don't deduct stock
   const getStockWarnings = (sale: ParsedSale): Array<{ productName: string; stockAfter: number; currentStock: number }> => {
     if (!stockItems) return [];
     
     const warnings: Array<{ productName: string; stockAfter: number; currentStock: number }> = [];
     
     sale.products?.forEach(product => {
+      // Skip non-retail products - they don't deduct from stock
+      const productType = product.product_type || "retail";
+      if (productType !== "retail") return;
+      
       if (product.stock_item_id) {
         const stockItem = stockItems.find(s => s.id === product.stock_item_id);
         if (stockItem && stockItem.quantity < product.quantity) {
@@ -927,12 +933,17 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
             for (let j = 0; j < updatedProducts.length; j++) {
               const product = updatedProducts[j];
               if (!product.stock_item_id && product.unit_price > 0) {
-                console.log("[VoiceSaleInput] Auto-creating stock item:", product.name);
+                const productType = product.product_type || "retail";
+                const isMenuOrService = productType === "restaurant" || productType === "service";
+                
+                console.log("[VoiceSaleInput] Auto-creating stock item:", product.name, "type:", productType, "is_menu_item:", isMenuOrService);
                 const created = await onCreateStockItem({
                   name: product.name,
                   quantity: 0, // Initial stock quantity
                   unit_price: product.unit_price,
-                });
+                  is_menu_item: isMenuOrService, // Menu items for restaurant/service products
+                  category: isMenuOrService ? "Autre" : undefined, // Default category for menu items
+                } as any); // Type assertion needed as base interface may not include these fields
                 if (created) {
                   updatedProducts[j] = { ...product, stock_item_id: created.id };
                   console.log("[VoiceSaleInput] Stock item created with ID:", created.id);
@@ -1285,27 +1296,34 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
             <p className="text-muted-foreground text-sm">Vérifiez et confirmez les détails</p>
           </div>
 
-        {/* Product type legend */}
-        <div className="p-3 rounded-xl bg-secondary/30 border border-border/50">
-          <p className="text-xs font-medium text-muted-foreground mb-2">Légende des types de produits :</p>
-          <div className="flex flex-wrap gap-2">
-            <span className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg bg-blue-100 border border-blue-200 text-blue-700">
-              <span>📦</span>
-              <span className="font-medium">Stock</span>
-              <span className="text-blue-500">→ déduction auto</span>
+        {/* Product type legend - Collapsible */}
+        <Collapsible open={legendOpen} onOpenChange={setLegendOpen}>
+          <CollapsibleTrigger className="w-full p-3 rounded-xl bg-secondary/30 border border-border/50 flex items-center justify-between hover:bg-secondary/40 transition-colors">
+            <span className="text-xs font-medium text-muted-foreground">
+              Légende des types de produits
             </span>
-            <span className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg bg-purple-100 border border-purple-200 text-purple-700">
-              <span>🍽️</span>
-              <span className="font-medium">Menu</span>
-              <span className="text-purple-500">→ pas de déduction</span>
-            </span>
-            <span className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg bg-green-100 border border-green-200 text-green-700">
-              <span>🛠️</span>
-              <span className="font-medium">Service</span>
-              <span className="text-green-500">→ pas de déduction</span>
-            </span>
-          </div>
-        </div>
+            <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform duration-200", legendOpen && "rotate-180")} />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-2">
+            <div className="p-3 rounded-xl bg-secondary/20 border border-border/30 flex flex-wrap gap-2">
+              <span className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg bg-blue-100 border border-blue-200 text-blue-700">
+                <span>📦</span>
+                <span className="font-medium">Stock</span>
+                <span className="text-blue-500">→ déduction auto</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg bg-purple-100 border border-purple-200 text-purple-700">
+                <span>🍽️</span>
+                <span className="font-medium">Menu</span>
+                <span className="text-purple-500">→ pas de déduction</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg bg-green-100 border border-green-200 text-green-700">
+                <span>🛠️</span>
+                <span className="font-medium">Service</span>
+                <span className="text-green-500">→ pas de déduction</span>
+              </span>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* Sales list - Modern cards with colored borders */}
         <div className="space-y-4">
