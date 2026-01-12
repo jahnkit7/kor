@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useFeatureTracking } from "@/hooks/use-feature-tracking";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SalesHistoryTab } from "@/components/reports/SalesHistoryTab";
 import { PrimaryActionButton } from "@/components/ui/primary-action-button";
 import { HoverCard } from "@/components/ui/animated-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -112,10 +113,14 @@ const Reports = () => {
           </div>
 
           {/* Tabs */}
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="sales" className="gap-2">
               <BarChart3 className="w-4 h-4" />
-              Ventes
+              Résumé
+            </TabsTrigger>
+            <TabsTrigger value="history" className="gap-2">
+              <Calendar className="w-4 h-4" />
+              Historique
             </TabsTrigger>
             <TabsTrigger value="caisse" className="gap-2">
               <Wallet className="w-4 h-4" />
@@ -244,6 +249,11 @@ const Reports = () => {
               Télécharger
             </PrimaryActionButton>
           </div>
+        </TabsContent>
+
+        {/* Sales History Tab Content */}
+        <TabsContent value="history" className="mt-0 flex-1">
+          <SalesHistoryTab />
         </TabsContent>
 
         {/* Cash Drawer Tab Content */}

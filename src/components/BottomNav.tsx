@@ -168,7 +168,7 @@ const BottomNav = () => {
       <div className="pointer-events-auto">
       {/* Unified Sync status bar - clickable for force sync */}
       <AnimatePresence>
-        {pendingCount > 0 && (
+        {(pendingCount > 0 || !isOnline) && (
           <motion.button 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -177,9 +177,9 @@ const BottomNav = () => {
             onClick={handleSyncClick}
             disabled={isSyncing || !isOnline}
             className={cn(
-              "absolute -top-10 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-1.5 rounded-full shadow-lg transition-all duration-300",
+              "absolute -top-10 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 rounded-full shadow-lg transition-all duration-300",
               !isOnline 
-                ? "bg-amber-500 text-white" 
+                ? "bg-gradient-to-r from-[#4f7df3] via-[#a78bfa] to-[#f97316] text-white shadow-xl" 
                 : isSyncing 
                   ? "bg-primary text-primary-foreground" 
                   : "bg-blue-500 text-white hover:bg-blue-600 active:bg-blue-700"
@@ -193,10 +193,12 @@ const BottomNav = () => {
             ) : !isOnline ? (
               <>
                 <HugeiconsIcon icon={CloudIcon} className="w-3.5 h-3.5" />
-                <span className="text-xs font-medium">Hors-ligne</span>
-                <span className="bg-white/20 px-2 py-0.5 rounded-full text-[11px] font-bold">
-                  {pendingCount} en attente
-                </span>
+                <span className="text-xs font-semibold">Hors-ligne</span>
+                {pendingCount > 0 && (
+                  <span className="bg-white/25 px-2 py-0.5 rounded-full text-[11px] font-bold">
+                    {pendingCount} en attente
+                  </span>
+                )}
               </>
             ) : (
               <>

@@ -91,12 +91,12 @@ const Sale = () => {
       }
     });
     
-    // Sort by usage frequency and take top 5
+    // Sort by usage frequency and take top 3 (limited for UX)
     return [...clients].sort((a, b) => {
       const aUsage = clientUsage.get(a.id) || 0;
       const bUsage = clientUsage.get(b.id) || 0;
       return bUsage - aUsage;
-    }).slice(0, 5);
+    }).slice(0, 3);
   }, [clients, sales]);
 
   // Filter clients by search
@@ -242,6 +242,18 @@ const Sale = () => {
             onComplete={handleVoiceSaleComplete}
             onCancel={() => setShowVoiceInput(false)}
             onCreateClient={quickCreateClient}
+            onCreateStockItem={async (item) => {
+              const result = await addItem({
+                name: item.name,
+                quantity: item.quantity,
+                unit_price: item.unit_price,
+                source: "voice",
+              });
+              if (result) {
+                return { id: result.id };
+              }
+              return null;
+            }}
             onFinish={handleVoiceSalesFinished}
           />
         </div>
@@ -584,8 +596,8 @@ const Sale = () => {
                         <Card
                           key={`frequent-${client.id}`}
                           className={cn(
-                            "cursor-pointer transition-all mb-2",
-                            selectedClient === client.id && "border-2 border-primary bg-primary/5"
+                            "cursor-pointer transition-all mb-2 bg-primary/5 border-l-4 border-l-primary",
+                            selectedClient === client.id && "border-2 border-primary"
                           )}
                           onClick={() => {
                             setSelectedClient(client.id);
@@ -594,7 +606,7 @@ const Sale = () => {
                           }}
                         >
                           <CardContent className="p-3 flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                            <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center">
                               <User className="w-5 h-5 text-primary" />
                             </div>
                             <div className="flex-1">
@@ -611,6 +623,11 @@ const Sale = () => {
                   )}
                   
                   {/* Section tous les clients */}
+                  {!clientSearch && recentAndFrequentClients.length > 0 && (
+                    <p className="text-xs font-semibold text-muted-foreground uppercase mb-2 px-1 mt-4">
+                      Tous les clients
+                    </p>
+                  )}
                   {clientSearch && (
                     <p className="text-xs font-semibold text-muted-foreground uppercase mb-2 px-1">
                       Résultats
@@ -620,7 +637,7 @@ const Sale = () => {
                     <Card
                       key={client.id}
                       className={cn(
-                        "cursor-pointer transition-all mb-2",
+                        "cursor-pointer transition-all mb-2 bg-background",
                         selectedClient === client.id && "border-2 border-primary bg-primary/5"
                       )}
                       onClick={() => {
