@@ -162,7 +162,13 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
   const [editCreateNewClient, setEditCreateNewClient] = useState(false);
   const [editNewClientName, setEditNewClientName] = useState("");
   const [clientSearchQuery, setClientSearchQuery] = useState("");
-  const [editProducts, setEditProducts] = useState<Array<{ name: string; quantity: number; unit_price: number; product_type?: "retail" | "restaurant" | "service" }>>([]);
+  const [editProducts, setEditProducts] = useState<Array<{ 
+    name: string; 
+    quantity: number; 
+    unit_price: number; 
+    product_type?: "retail" | "restaurant" | "service";
+    category?: string; // Menu category (Boissons, Plats, Desserts, etc.)
+  }>>([]);
   const [editNote, setEditNote] = useState("");
   
   // Voice search for client
@@ -1296,34 +1302,51 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
             <p className="text-muted-foreground text-sm">Vérifiez et confirmez les détails</p>
           </div>
 
-        {/* Product type legend - Collapsible */}
-        <Collapsible open={legendOpen} onOpenChange={setLegendOpen}>
-          <CollapsibleTrigger className="w-full p-3 rounded-xl bg-secondary/30 border border-border/50 flex items-center justify-between hover:bg-secondary/40 transition-colors">
-            <span className="text-xs font-medium text-muted-foreground">
-              Légende des types de produits
-            </span>
-            <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform duration-200", legendOpen && "rotate-180")} />
-          </CollapsibleTrigger>
-          <CollapsibleContent className="pt-2">
-            <div className="p-3 rounded-xl bg-secondary/20 border border-border/30 flex flex-wrap gap-2">
-              <span className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg bg-blue-100 border border-blue-200 text-blue-700">
-                <span>📦</span>
-                <span className="font-medium">Stock</span>
-                <span className="text-blue-500">→ déduction auto</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg bg-purple-100 border border-purple-200 text-purple-700">
-                <span>🍽️</span>
-                <span className="font-medium">Menu</span>
-                <span className="text-purple-500">→ pas de déduction</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg bg-green-100 border border-green-200 text-green-700">
-                <span>🛠️</span>
-                <span className="font-medium">Service</span>
-                <span className="text-green-500">→ pas de déduction</span>
-              </span>
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
+        {/* Product type legend - Collapsible with counters */}
+        {(() => {
+          // Calculate product type counts across all sales
+          const typeCounts = { retail: 0, restaurant: 0, service: 0 };
+          parsedSales.forEach(sale => {
+            sale.products?.forEach(p => {
+              const type = p.product_type || "retail";
+              typeCounts[type]++;
+            });
+          });
+          const totalProducts = typeCounts.retail + typeCounts.restaurant + typeCounts.service;
+          
+          return (
+            <Collapsible open={legendOpen} onOpenChange={setLegendOpen}>
+              <CollapsibleTrigger className="w-full p-3 rounded-xl bg-secondary/30 border border-border/50 flex items-center justify-between hover:bg-secondary/40 transition-colors">
+                <span className="text-xs font-medium text-muted-foreground">
+                  Légende des types de produits {totalProducts > 0 && `(${totalProducts})`}
+                </span>
+                <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform duration-200", legendOpen && "rotate-180")} />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-2">
+                <div className="p-3 rounded-xl bg-secondary/20 border border-border/30 flex flex-wrap gap-2">
+                  <span className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg bg-blue-100 border border-blue-200 text-blue-700">
+                    <span>📦</span>
+                    <span className="font-medium">Stock</span>
+                    {typeCounts.retail > 0 && <Badge variant="secondary" className="h-4 px-1 text-[10px] bg-blue-200/50">{typeCounts.retail}</Badge>}
+                    <span className="text-blue-500">→ déduction auto</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg bg-purple-100 border border-purple-200 text-purple-700">
+                    <span>🍽️</span>
+                    <span className="font-medium">Menu</span>
+                    {typeCounts.restaurant > 0 && <Badge variant="secondary" className="h-4 px-1 text-[10px] bg-purple-200/50">{typeCounts.restaurant}</Badge>}
+                    <span className="text-purple-500">→ pas de déduction</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg bg-green-100 border border-green-200 text-green-700">
+                    <span>🛠️</span>
+                    <span className="font-medium">Service</span>
+                    {typeCounts.service > 0 && <Badge variant="secondary" className="h-4 px-1 text-[10px] bg-green-200/50">{typeCounts.service}</Badge>}
+                    <span className="text-green-500">→ pas de déduction</span>
+                  </span>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          );
+        })()}
 
         {/* Sales list - Modern cards with colored borders */}
         <div className="space-y-4">
@@ -1782,6 +1805,39 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
                             : "Le stock ne sera pas déduit"}
                         </p>
                       </div>
+                      
+                      {/* Category selector for Menu/Service products */}
+                      {(product.product_type === "restaurant" || product.product_type === "service") && (
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground">Catégorie</Label>
+                          <div className="flex flex-wrap gap-1.5">
+                            {(product.product_type === "restaurant" 
+                              ? ["Boissons", "Plats", "Desserts", "Entrées", "Autre"]
+                              : ["Services", "Réparations", "Autre"]
+                            ).map((cat) => (
+                              <button
+                                key={cat}
+                                type="button"
+                                onClick={() => {
+                                  const updated = [...editProducts];
+                                  updated[idx] = { ...updated[idx], category: cat };
+                                  setEditProducts(updated);
+                                }}
+                                className={cn(
+                                  "px-3 py-1.5 rounded-lg border text-xs font-medium transition-all",
+                                  (product.category || "Autre") === cat
+                                    ? product.product_type === "restaurant"
+                                      ? "bg-purple-500 text-white border-purple-500"
+                                      : "bg-green-500 text-white border-green-500"
+                                    : "bg-secondary/50 border-border hover:bg-secondary"
+                                )}
+                              >
+                                {cat}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                       
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1.5">

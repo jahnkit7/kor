@@ -485,7 +485,8 @@ export default function AdminSetup() {
       const [
         countries, plans, features, roadmap,
         profiles, userRoles, commissions,
-        promoCodes, rechargeCodes, regions
+        promoCodes, rechargeCodes, regions,
+        subscriptions, resellers, featureVariants, featureChangelogs, referrals
       ] = await Promise.all([
         supabase.from("countries").select("*"),
         supabase.from("subscription_plans").select("*"),
@@ -497,21 +498,31 @@ export default function AdminSetup() {
         supabase.from("promo_codes").select("*"),
         supabase.from("recharge_codes").select("*"),
         supabase.from("regions").select("*"),
+        supabase.from("subscriptions").select("*"),
+        supabase.from("resellers").select("*"),
+        supabase.from("feature_variants").select("*"),
+        supabase.from("feature_changelogs").select("*"),
+        supabase.from("referrals").select("*"),
       ]);
 
       const backup = {
-        version: "2.0",
+        version: "3.0",
         type: "full_system_backup",
         exportDate: new Date().toISOString(),
         countries: countries.data || [],
         plans: plans.data || [],
         features: features.data || [],
+        featureVariants: featureVariants.data || [],
+        featureChangelogs: featureChangelogs.data || [],
         roadmap: roadmap.data || [],
+        subscriptions: subscriptions.data || [],
         profiles: profiles.data || [],
         userRoles: userRoles.data || [],
+        referrals: referrals.data || [],
         commissions: commissions.data || [],
         promoCodes: promoCodes.data || [],
         rechargeCodes: rechargeCodes.data || [],
+        resellers: resellers.data || [],
         regions: regions.data || [],
       };
 
@@ -519,12 +530,12 @@ export default function AdminSetup() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `caisse-plus-full-backup-${new Date().toISOString().split("T")[0]}.json`;
+      a.download = `kor-full-backup-${new Date().toISOString().split("T")[0]}.json`;
       a.click();
       URL.revokeObjectURL(url);
 
       const totalItems = Object.values(backup).filter(Array.isArray).reduce((sum, arr) => sum + arr.length, 0);
-      toast.success(`Sauvegarde complète exportée (${totalItems} éléments)`);
+      toast.success(`Sauvegarde complète exportée (${totalItems} éléments, 15 tables)`);
     } catch (error) {
       console.error("Error exporting full backup:", error);
       toast.error("Erreur lors de l'export complet");
@@ -539,7 +550,8 @@ export default function AdminSetup() {
       const [
         countries, plans, features, roadmap,
         profiles, userRoles, commissions,
-        promoCodes, rechargeCodes, regions
+        promoCodes, rechargeCodes, regions,
+        subscriptions, resellers, featureVariants, featureChangelogs, referrals
       ] = await Promise.all([
         supabase.from("countries").select("*"),
         supabase.from("subscription_plans").select("*"),
@@ -551,28 +563,48 @@ export default function AdminSetup() {
         supabase.from("promo_codes").select("*"),
         supabase.from("recharge_codes").select("*"),
         supabase.from("regions").select("*"),
+        supabase.from("subscriptions").select("*"),
+        supabase.from("resellers").select("*"),
+        supabase.from("feature_variants").select("*"),
+        supabase.from("feature_changelogs").select("*"),
+        supabase.from("referrals").select("*"),
       ]);
 
-      let sql = `-- CaissePlus FULL System Backup\n-- Generated: ${new Date().toISOString()}\n-- Version: 2.0\n\n`;
+      let sql = `-- KÒR FULL System Backup\n-- Generated: ${new Date().toISOString()}\n-- Version: 3.0\n-- This file contains INSERT/UPSERT statements for all system tables\n\n`;
 
       // Countries
       sql += `-- ===============================\n-- COUNTRIES (${countries.data?.length || 0} rows)\n-- ===============================\n`;
       countries.data?.forEach(c => {
-        sql += `INSERT INTO countries (name, code, phone_prefix, currency, is_active) VALUES ('${c.name}', '${c.code}', '${c.phone_prefix}', '${c.currency}', ${c.is_active}) ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name, phone_prefix = EXCLUDED.phone_prefix, currency = EXCLUDED.currency, is_active = EXCLUDED.is_active;\n`;
+        sql += `INSERT INTO countries (name, code, phone_prefix, currency, is_active) VALUES ('${c.name.replace(/'/g, "''")}', '${c.code}', '${c.phone_prefix}', '${c.currency}', ${c.is_active}) ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name, phone_prefix = EXCLUDED.phone_prefix, currency = EXCLUDED.currency, is_active = EXCLUDED.is_active;\n`;
       });
 
       // Plans
       sql += `\n-- ===============================\n-- SUBSCRIPTION PLANS (${plans.data?.length || 0} rows)\n-- ===============================\n`;
       plans.data?.forEach(p => {
         const featuresJson = JSON.stringify(p.features || []).replace(/'/g, "''");
-        sql += `INSERT INTO subscription_plans (name, price, duration_days, currency, features, is_active, sort_order, description, max_clients, max_sales_per_day) VALUES ('${p.name}', ${p.price}, ${p.duration_days}, '${p.currency}', '${featuresJson}'::jsonb, ${p.is_active}, ${p.sort_order || 0}, '${(p.description || '').replace(/'/g, "''")}', ${p.max_clients || 'NULL'}, ${p.max_sales_per_day || 'NULL'}) ON CONFLICT (name) DO UPDATE SET price = EXCLUDED.price, duration_days = EXCLUDED.duration_days, features = EXCLUDED.features, is_active = EXCLUDED.is_active, sort_order = EXCLUDED.sort_order, description = EXCLUDED.description;\n`;
+        sql += `INSERT INTO subscription_plans (name, price, duration_days, currency, features, is_active, sort_order, description, max_clients, max_sales_per_day, commission_reduction) VALUES ('${p.name}', ${p.price}, ${p.duration_days}, '${p.currency}', '${featuresJson}'::jsonb, ${p.is_active}, ${p.sort_order || 0}, '${(p.description || '').replace(/'/g, "''")}', ${p.max_clients || 'NULL'}, ${p.max_sales_per_day || 'NULL'}, ${p.commission_reduction || 'NULL'}) ON CONFLICT (name) DO UPDATE SET price = EXCLUDED.price, duration_days = EXCLUDED.duration_days, features = EXCLUDED.features, is_active = EXCLUDED.is_active, sort_order = EXCLUDED.sort_order, description = EXCLUDED.description, max_clients = EXCLUDED.max_clients, max_sales_per_day = EXCLUDED.max_sales_per_day;\n`;
       });
 
       // Features
       sql += `\n-- ===============================\n-- FEATURE FLAGS (${features.data?.length || 0} rows)\n-- ===============================\n`;
       features.data?.forEach(f => {
         const dependsOn = JSON.stringify(f.depends_on || []).replace(/'/g, "''");
-        sql += `INSERT INTO feature_flags (feature_key, name, description, is_globally_enabled, min_plan_required, depends_on, category, sort_order, is_beta, current_version) VALUES ('${f.feature_key}', '${f.name.replace(/'/g, "''")}', '${(f.description || '').replace(/'/g, "''")}', ${f.is_globally_enabled}, ${f.min_plan_required ? `'${f.min_plan_required}'` : 'NULL'}, '${dependsOn}'::jsonb, '${f.category || 'secondary'}', ${f.sort_order || 0}, ${f.is_beta || false}, '${f.current_version || '1.0.0'}') ON CONFLICT (feature_key) DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.description, is_globally_enabled = EXCLUDED.is_globally_enabled, min_plan_required = EXCLUDED.min_plan_required, depends_on = EXCLUDED.depends_on, category = EXCLUDED.category, is_beta = EXCLUDED.is_beta;\n`;
+        const disabledCountries = JSON.stringify(f.disabled_countries || []).replace(/'/g, "''");
+        const enabledUsers = JSON.stringify(f.enabled_for_users || []).replace(/'/g, "''");
+        sql += `INSERT INTO feature_flags (feature_key, name, description, is_globally_enabled, min_plan_required, depends_on, category, sort_order, is_beta, current_version, disabled_countries, enabled_for_users) VALUES ('${f.feature_key}', '${f.name.replace(/'/g, "''")}', '${(f.description || '').replace(/'/g, "''")}', ${f.is_globally_enabled}, ${f.min_plan_required ? `'${f.min_plan_required}'` : 'NULL'}, '${dependsOn}'::jsonb, '${f.category || 'secondary'}', ${f.sort_order || 0}, ${f.is_beta || false}, '${f.current_version || '1.0.0'}', '${disabledCountries}'::jsonb, '${enabledUsers}'::jsonb) ON CONFLICT (feature_key) DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.description, is_globally_enabled = EXCLUDED.is_globally_enabled, min_plan_required = EXCLUDED.min_plan_required, depends_on = EXCLUDED.depends_on, category = EXCLUDED.category, is_beta = EXCLUDED.is_beta;\n`;
+      });
+
+      // Feature Variants (NEW)
+      sql += `\n-- ===============================\n-- FEATURE VARIANTS (${featureVariants.data?.length || 0} rows)\n-- ===============================\n`;
+      featureVariants.data?.forEach(v => {
+        const config = JSON.stringify(v.config || {}).replace(/'/g, "''");
+        sql += `INSERT INTO feature_variants (id, feature_key, variant_key, name, description, is_control, is_active, traffic_percentage, config) VALUES ('${v.id}', '${v.feature_key}', '${v.variant_key}', '${v.name.replace(/'/g, "''")}', '${(v.description || '').replace(/'/g, "''")}', ${v.is_control ?? false}, ${v.is_active ?? true}, ${v.traffic_percentage || 50}, '${config}'::jsonb) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, is_active = EXCLUDED.is_active, traffic_percentage = EXCLUDED.traffic_percentage;\n`;
+      });
+
+      // Feature Changelogs (NEW)
+      sql += `\n-- ===============================\n-- FEATURE CHANGELOGS (${featureChangelogs.data?.length || 0} rows)\n-- ===============================\n`;
+      featureChangelogs.data?.forEach(c => {
+        sql += `INSERT INTO feature_changelogs (id, feature_key, version, title, content_md, change_type, published_at) VALUES ('${c.id}', '${c.feature_key}', '${c.version}', '${c.title.replace(/'/g, "''")}', '${(c.content_md || '').replace(/'/g, "''")}', '${c.change_type}', ${c.published_at ? `'${c.published_at}'` : 'NULL'}) ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, content_md = EXCLUDED.content_md;\n`;
       });
 
       // Roadmap
@@ -582,13 +614,20 @@ export default function AdminSetup() {
         sql += `INSERT INTO roadmap_items (title, description, category, status, priority, target_version, estimated_effort) VALUES ('${r.title.replace(/'/g, "''")}', '${description}', '${r.category}', '${r.status}', '${r.priority}', ${r.target_version ? `'${r.target_version}'` : 'NULL'}, ${r.estimated_effort ? `'${r.estimated_effort}'` : 'NULL'}) ON CONFLICT (title) DO UPDATE SET description = EXCLUDED.description, category = EXCLUDED.category, status = EXCLUDED.status, priority = EXCLUDED.priority;\n`;
       });
 
+      // Subscriptions (NEW - critical!)
+      sql += `\n-- ===============================\n-- SUBSCRIPTIONS (${subscriptions.data?.length || 0} rows)\n-- Note: user_id must exist in auth.users\n-- ===============================\n`;
+      subscriptions.data?.forEach(s => {
+        sql += `-- Subscription for user ${s.user_id}\n`;
+        sql += `INSERT INTO subscriptions (id, user_id, plan, trial_started_at, trial_ends_at, trial_used_at, is_active, max_clients, max_sales_per_day) VALUES ('${s.id}', '${s.user_id}', '${s.plan}', '${s.trial_started_at}', '${s.trial_ends_at}', ${s.trial_used_at ? `'${s.trial_used_at}'` : 'NULL'}, ${s.is_active ?? true}, ${s.max_clients || 'NULL'}, ${s.max_sales_per_day || 'NULL'}) ON CONFLICT (id) DO UPDATE SET plan = EXCLUDED.plan, trial_ends_at = EXCLUDED.trial_ends_at, is_active = EXCLUDED.is_active, max_clients = EXCLUDED.max_clients, max_sales_per_day = EXCLUDED.max_sales_per_day;\n`;
+      });
+
       // Profiles
-      sql += `\n-- ===============================\n-- PROFILES (${profiles.data?.length || 0} rows)\n-- Note: Profiles are linked to auth.users, import carefully\n-- ===============================\n`;
+      sql += `\n-- ===============================\n-- PROFILES (${profiles.data?.length || 0} rows)\n-- Note: user_id must exist in auth.users\n-- ===============================\n`;
       profiles.data?.forEach(p => {
         const notifSettings = JSON.stringify(p.notification_settings || {}).replace(/'/g, "''");
         const invoiceSettings = JSON.stringify(p.invoice_settings || {}).replace(/'/g, "''");
         sql += `-- Profile: ${p.shop_name || 'N/A'} (${p.phone || 'no phone'})\n`;
-        sql += `INSERT INTO profiles (user_id, shop_name, owner_name, phone, currency, referral_code, onboarding_completed, auto_deduct_stock, notification_settings, invoice_settings) VALUES ('${p.user_id}', '${(p.shop_name || '').replace(/'/g, "''")}', '${(p.owner_name || '').replace(/'/g, "''")}', '${p.phone || ''}', '${p.currency || 'XOF'}', '${p.referral_code || ''}', ${p.onboarding_completed || false}, ${p.auto_deduct_stock ?? true}, '${notifSettings}'::jsonb, '${invoiceSettings}'::jsonb) ON CONFLICT (user_id) DO UPDATE SET shop_name = EXCLUDED.shop_name, owner_name = EXCLUDED.owner_name, phone = EXCLUDED.phone, currency = EXCLUDED.currency, notification_settings = EXCLUDED.notification_settings, invoice_settings = EXCLUDED.invoice_settings;\n`;
+        sql += `INSERT INTO profiles (user_id, shop_name, owner_name, phone, currency, referral_code, referred_by, onboarding_completed, auto_deduct_stock, specialty, city, linked_owner_id, language, hide_amounts, notification_settings, invoice_settings) VALUES ('${p.user_id}', '${(p.shop_name || '').replace(/'/g, "''")}', '${(p.owner_name || '').replace(/'/g, "''")}', '${p.phone || ''}', '${p.currency || 'XOF'}', ${p.referral_code ? `'${p.referral_code}'` : 'NULL'}, ${p.referred_by ? `'${p.referred_by}'` : 'NULL'}, ${p.onboarding_completed || false}, ${p.auto_deduct_stock ?? true}, ${p.specialty ? `'${p.specialty}'` : 'NULL'}, ${p.city ? `'${p.city.replace(/'/g, "''")}'` : 'NULL'}, ${p.linked_owner_id ? `'${p.linked_owner_id}'` : 'NULL'}, '${p.language || 'fr'}', ${p.hide_amounts || false}, '${notifSettings}'::jsonb, '${invoiceSettings}'::jsonb) ON CONFLICT (user_id) DO UPDATE SET shop_name = EXCLUDED.shop_name, owner_name = EXCLUDED.owner_name, phone = EXCLUDED.phone, currency = EXCLUDED.currency, specialty = EXCLUDED.specialty, auto_deduct_stock = EXCLUDED.auto_deduct_stock;\n`;
       });
 
       // User Roles
@@ -597,39 +636,62 @@ export default function AdminSetup() {
         sql += `INSERT INTO user_roles (user_id, role) VALUES ('${r.user_id}', '${r.role}') ON CONFLICT (user_id, role) DO NOTHING;\n`;
       });
 
+      // Referrals (NEW)
+      sql += `\n-- ===============================\n-- REFERRALS (${referrals.data?.length || 0} rows)\n-- ===============================\n`;
+      referrals.data?.forEach(r => {
+        sql += `INSERT INTO referrals (id, referrer_id, referred_id, referral_code, status, converted_at, reward_type, reward_value, reward_applied) VALUES ('${r.id}', '${r.referrer_id}', ${r.referred_id ? `'${r.referred_id}'` : 'NULL'}, '${r.referral_code}', '${r.status}', ${r.converted_at ? `'${r.converted_at}'` : 'NULL'}, ${r.reward_type ? `'${r.reward_type}'` : 'NULL'}, ${r.reward_value || 'NULL'}, ${r.reward_applied || false}) ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status, converted_at = EXCLUDED.converted_at, reward_applied = EXCLUDED.reward_applied;\n`;
+      });
+
       // Commissions
       sql += `\n-- ===============================\n-- COMMISSIONS (${commissions.data?.length || 0} rows)\n-- ===============================\n`;
       commissions.data?.forEach(c => {
-        sql += `INSERT INTO commissions (name, type, value, applies_to, is_active) VALUES ('${c.name.replace(/'/g, "''")}', '${c.type}', ${c.value}, '${c.applies_to}', ${c.is_active}) ON CONFLICT (name) DO UPDATE SET type = EXCLUDED.type, value = EXCLUDED.value, applies_to = EXCLUDED.applies_to, is_active = EXCLUDED.is_active;\n`;
+        sql += `INSERT INTO commissions (name, type, value, applies_to, is_active, country_id) VALUES ('${c.name.replace(/'/g, "''")}', '${c.type}', ${c.value}, '${c.applies_to}', ${c.is_active}, ${c.country_id ? `'${c.country_id}'` : 'NULL'}) ON CONFLICT (name) DO UPDATE SET type = EXCLUDED.type, value = EXCLUDED.value, applies_to = EXCLUDED.applies_to, is_active = EXCLUDED.is_active;\n`;
       });
 
       // Promo Codes
       sql += `\n-- ===============================\n-- PROMO CODES (${promoCodes.data?.length || 0} rows)\n-- ===============================\n`;
       promoCodes.data?.forEach(p => {
-        sql += `INSERT INTO promo_codes (code, discount_type, discount_value, max_uses, used_count, valid_from, valid_until, is_active, applies_to_plan, applies_to_duration) VALUES ('${p.code}', '${p.discount_type}', ${p.discount_value}, ${p.max_uses || 'NULL'}, ${p.used_count || 0}, ${p.valid_from ? `'${p.valid_from}'` : 'NULL'}, ${p.valid_until ? `'${p.valid_until}'` : 'NULL'}, ${p.is_active}, ${p.applies_to_plan ? `'${p.applies_to_plan}'` : 'NULL'}, ${p.applies_to_duration ? `'${p.applies_to_duration}'` : 'NULL'}) ON CONFLICT (code) DO UPDATE SET discount_value = EXCLUDED.discount_value, max_uses = EXCLUDED.max_uses, is_active = EXCLUDED.is_active;\n`;
+        sql += `INSERT INTO promo_codes (code, discount_type, discount_value, max_uses, used_count, valid_from, valid_until, is_active, applies_to_plan, applies_to_duration, created_by) VALUES ('${p.code}', '${p.discount_type}', ${p.discount_value}, ${p.max_uses || 'NULL'}, ${p.used_count || 0}, ${p.valid_from ? `'${p.valid_from}'` : 'NULL'}, ${p.valid_until ? `'${p.valid_until}'` : 'NULL'}, ${p.is_active}, ${p.applies_to_plan ? `'${p.applies_to_plan}'` : 'NULL'}, ${p.applies_to_duration ? `'${p.applies_to_duration}'` : 'NULL'}, '${p.created_by}') ON CONFLICT (code) DO UPDATE SET discount_value = EXCLUDED.discount_value, max_uses = EXCLUDED.max_uses, is_active = EXCLUDED.is_active;\n`;
       });
 
       // Recharge Codes
       sql += `\n-- ===============================\n-- RECHARGE CODES (${rechargeCodes.data?.length || 0} rows)\n-- ===============================\n`;
       rechargeCodes.data?.forEach(r => {
-        sql += `INSERT INTO recharge_codes (code, plan_id, is_used, created_by, expires_at, batch_name) VALUES ('${r.code}', ${r.plan_id ? `'${r.plan_id}'` : 'NULL'}, ${r.is_used}, ${r.created_by ? `'${r.created_by}'` : 'NULL'}, ${r.expires_at ? `'${r.expires_at}'` : 'NULL'}, ${r.batch_name ? `'${r.batch_name}'` : 'NULL'}) ON CONFLICT (code) DO UPDATE SET is_used = EXCLUDED.is_used;\n`;
+        sql += `INSERT INTO recharge_codes (code, plan_id, is_used, is_active, created_by, expires_at, batch_name, reseller_id, sold_at, used_at, used_by) VALUES ('${r.code}', '${r.plan_id}', ${r.is_used}, ${r.is_active ?? true}, '${r.created_by}', ${r.expires_at ? `'${r.expires_at}'` : 'NULL'}, ${r.batch_name ? `'${r.batch_name.replace(/'/g, "''")}'` : 'NULL'}, ${r.reseller_id ? `'${r.reseller_id}'` : 'NULL'}, ${r.sold_at ? `'${r.sold_at}'` : 'NULL'}, ${r.used_at ? `'${r.used_at}'` : 'NULL'}, ${r.used_by ? `'${r.used_by}'` : 'NULL'}) ON CONFLICT (code) DO UPDATE SET is_used = EXCLUDED.is_used, used_at = EXCLUDED.used_at, used_by = EXCLUDED.used_by;\n`;
+      });
+
+      // Resellers (NEW)
+      sql += `\n-- ===============================\n-- RESELLERS (${resellers.data?.length || 0} rows)\n-- ===============================\n`;
+      resellers.data?.forEach(r => {
+        sql += `INSERT INTO resellers (id, name, email, phone, city, commission_rate, is_active, total_codes_sold, total_earnings, user_id) VALUES ('${r.id}', '${r.name.replace(/'/g, "''")}', ${r.email ? `'${r.email}'` : 'NULL'}, ${r.phone ? `'${r.phone}'` : 'NULL'}, ${r.city ? `'${r.city.replace(/'/g, "''")}'` : 'NULL'}, ${r.commission_rate || 10}, ${r.is_active ?? true}, ${r.total_codes_sold || 0}, ${r.total_earnings || 0}, ${r.user_id ? `'${r.user_id}'` : 'NULL'}) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, commission_rate = EXCLUDED.commission_rate, is_active = EXCLUDED.is_active, total_codes_sold = EXCLUDED.total_codes_sold, total_earnings = EXCLUDED.total_earnings;\n`;
       });
 
       // Regions
       sql += `\n-- ===============================\n-- REGIONS (${regions.data?.length || 0} rows)\n-- ===============================\n`;
       regions.data?.forEach(r => {
-        sql += `INSERT INTO regions (name, country_id, is_active) VALUES ('${r.name.replace(/'/g, "''")}', ${r.country_id ? `'${r.country_id}'` : 'NULL'}, ${r.is_active ?? true}) ON CONFLICT (name) DO UPDATE SET is_active = EXCLUDED.is_active;\n`;
+        sql += `INSERT INTO regions (name, country_id, is_active, launch_date) VALUES ('${r.name.replace(/'/g, "''")}', ${r.country_id ? `'${r.country_id}'` : 'NULL'}, ${r.is_active ?? true}, ${r.launch_date ? `'${r.launch_date}'` : 'NULL'}) ON CONFLICT (name) DO UPDATE SET is_active = EXCLUDED.is_active;\n`;
       });
+
+      // Summary at the end
+      const totalRows = (countries.data?.length || 0) + (plans.data?.length || 0) + (features.data?.length || 0) +
+        (roadmap.data?.length || 0) + (profiles.data?.length || 0) + (userRoles.data?.length || 0) +
+        (commissions.data?.length || 0) + (promoCodes.data?.length || 0) + (rechargeCodes.data?.length || 0) +
+        (regions.data?.length || 0) + (subscriptions.data?.length || 0) + (resellers.data?.length || 0) +
+        (featureVariants.data?.length || 0) + (featureChangelogs.data?.length || 0) + (referrals.data?.length || 0);
+      
+      sql += `\n-- ===============================\n-- BACKUP SUMMARY\n-- ===============================\n`;
+      sql += `-- Total rows: ${totalRows}\n`;
+      sql += `-- Tables: countries (${countries.data?.length || 0}), subscription_plans (${plans.data?.length || 0}), feature_flags (${features.data?.length || 0}), feature_variants (${featureVariants.data?.length || 0}), feature_changelogs (${featureChangelogs.data?.length || 0}), roadmap_items (${roadmap.data?.length || 0}), subscriptions (${subscriptions.data?.length || 0}), profiles (${profiles.data?.length || 0}), user_roles (${userRoles.data?.length || 0}), referrals (${referrals.data?.length || 0}), commissions (${commissions.data?.length || 0}), promo_codes (${promoCodes.data?.length || 0}), recharge_codes (${rechargeCodes.data?.length || 0}), resellers (${resellers.data?.length || 0}), regions (${regions.data?.length || 0})\n`;
 
       const blob = new Blob([sql], { type: "text/plain" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `caisse-plus-full-backup-${new Date().toISOString().split("T")[0]}.sql`;
+      a.download = `kor-full-backup-${new Date().toISOString().split("T")[0]}.sql`;
       a.click();
       URL.revokeObjectURL(url);
 
-      toast.success("Fichier SQL complet exporté");
+      toast.success(`Fichier SQL complet exporté (${totalRows} lignes)`);
     } catch (error) {
       console.error("Error exporting SQL:", error);
       toast.error("Erreur lors de l'export SQL");
@@ -1146,7 +1208,7 @@ export default function AdminSetup() {
             <Alert className="border-orange-500/30 bg-orange-500/5">
               <Shield className="h-4 w-4 text-orange-500" />
               <AlertDescription className="text-sm">
-                <strong>Tables incluses :</strong> countries, plans, features, roadmap, profiles, user_roles, commissions, promo_codes, recharge_codes, regions
+                <strong>Tables incluses (15) :</strong> countries, subscription_plans, feature_flags, feature_variants, feature_changelogs, roadmap_items, subscriptions, profiles, user_roles, referrals, commissions, promo_codes, recharge_codes, resellers, regions
                 <br />
                 <strong className="text-orange-600">⚠️ L'import écrasera les données existantes</strong> si le même identifiant (user_id, code, name) est trouvé.
               </AlertDescription>
