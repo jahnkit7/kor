@@ -49,11 +49,17 @@ const Dashboard = () => {
     trackFeature("dashboard", { action: "page_view" });
   }, [trackFeature]);
 
-  // Auto-show cash drawer dialog at start of day
+  // Auto-show cash drawer dialog at start of day (only once per day)
   useEffect(() => {
     if (!cashDrawerLoading && needsOpening && user) {
-      setShowCashDrawerDialog(true);
-      setCashDrawerMode("open");
+      // Check if already dismissed today
+      const today = new Date().toISOString().split('T')[0];
+      const dismissedDate = localStorage.getItem('kor_cash_drawer_dismissed');
+      
+      if (dismissedDate !== today) {
+        setShowCashDrawerDialog(true);
+        setCashDrawerMode("open");
+      }
     }
   }, [cashDrawerLoading, needsOpening, user]);
 
@@ -101,7 +107,13 @@ const Dashboard = () => {
 
   const handleCashDrawerConfirm = async (amount: number) => {
     if (cashDrawerMode === "open") {
-      return await openDrawer(amount);
+      const result = await openDrawer(amount);
+      if (result) {
+        // Mark as dismissed for today so it won't auto-open again
+        const today = new Date().toISOString().split('T')[0];
+        localStorage.setItem('kor_cash_drawer_dismissed', today);
+      }
+      return result;
     } else {
       // Pass todayCashSales for notification calculation
       return await closeDrawer(amount, todayStats.cash);

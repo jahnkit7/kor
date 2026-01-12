@@ -96,13 +96,13 @@ const ErrorRecoveryUI = ({
   </div>
 );
 
-// Offline banner
+// Offline banner - Modern KÒR gradient
 const OfflineBanner = () => (
-  <div className="mx-4 mb-4 px-4 py-3 bg-muted/80 backdrop-blur-sm rounded-2xl flex items-center gap-3 border border-border">
-    <div className="w-8 h-8 rounded-full bg-muted-foreground/20 flex items-center justify-center">
-      <WifiOff className="w-4 h-4 text-muted-foreground" />
+  <div className="mx-4 mb-4 px-4 py-3 bg-gradient-to-r from-[#4f7df3]/10 via-[#a78bfa]/10 to-[#f97316]/10 backdrop-blur-sm rounded-2xl flex items-center justify-center gap-3 border border-primary/20">
+    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[#4f7df3] via-[#a78bfa] to-[#f97316] flex items-center justify-center shadow-md">
+      <WifiOff className="w-4 h-4 text-white" />
     </div>
-    <p className="text-sm text-muted-foreground font-medium">
+    <p className="text-sm font-semibold bg-gradient-to-r from-[#4f7df3] via-[#a78bfa] to-[#f97316] bg-clip-text text-transparent">
       Mode hors-ligne
     </p>
   </div>

@@ -105,6 +105,7 @@ interface VoiceSaleInputProps {
   }) => Promise<void>;
   onCancel: () => void;
   onCreateClient?: (name: string) => Promise<Client | null>;
+  onCreateStockItem?: (item: { name: string; quantity: number; unit_price: number }) => Promise<{ id: string } | null>;
   onFinish?: () => void;
 }
 
@@ -112,7 +113,7 @@ const isSpeechRecognitionSupported = () => {
   return typeof window !== 'undefined' && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 };
 
-export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCreateClient, onFinish }: VoiceSaleInputProps) {
+export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCreateClient, onCreateStockItem, onFinish }: VoiceSaleInputProps) {
   const { toast } = useToast();
   const { isOnline } = useNetworkStatus();
   const { trackFeature } = useFeatureTracking();
@@ -168,6 +169,16 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
   const [voiceHistory, setVoiceHistory] = useState<Array<{ transcript: string; date: string }>>([]);
   
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+
+  // Auto-calculate editAmount from products when they change
+  useEffect(() => {
+    if (editProducts.length > 0) {
+      const calculatedTotal = editProducts.reduce((sum, p) => sum + p.quantity * p.unit_price, 0);
+      if (calculatedTotal > 0) {
+        setEditAmount(String(calculatedTotal));
+      }
+    }
+  }, [editProducts]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   
   // Voice search functions
@@ -890,6 +901,32 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
             setStep("validate");
             setIsSubmitting(false);
             return;
+          }
+        }
+      }
+      
+      // Auto-create stock items for products without stock_item_id
+      if (onCreateStockItem) {
+        for (let i = 0; i < updatedSales.length; i++) {
+          const sale = updatedSales[i];
+          if (sale.products && sale.products.length > 0) {
+            const updatedProducts = [...sale.products];
+            for (let j = 0; j < updatedProducts.length; j++) {
+              const product = updatedProducts[j];
+              if (!product.stock_item_id && product.unit_price > 0) {
+                console.log("[VoiceSaleInput] Auto-creating stock item:", product.name);
+                const created = await onCreateStockItem({
+                  name: product.name,
+                  quantity: 0, // Initial stock quantity
+                  unit_price: product.unit_price,
+                });
+                if (created) {
+                  updatedProducts[j] = { ...product, stock_item_id: created.id };
+                  console.log("[VoiceSaleInput] Stock item created with ID:", created.id);
+                }
+              }
+            }
+            updatedSales[i] = { ...sale, products: updatedProducts };
           }
         }
       }
