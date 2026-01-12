@@ -17,7 +17,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { ArrowLeft, Plus, Package, Search, Mic, Loader2, History, RefreshCw, WifiOff, Cloud, CloudOff } from "lucide-react";
+import { ArrowLeft, Plus, Package, Search, Mic, Loader2, History, RefreshCw, WifiOff, Cloud, CloudOff, UtensilsCrossed } from "lucide-react";
 import { useStock, type NewStockItem, type StockItem } from "@/hooks/use-stock";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -28,8 +28,10 @@ import { ManualStockInput } from "@/components/stock/ManualStockInput";
 import { VoiceStockInput } from "@/components/stock/VoiceStockInput";
 import { VoiceEntriesHistory } from "@/components/stock/VoiceEntriesHistory";
 import { EditStockDialog } from "@/components/stock/EditStockDialog";
+import { MenuManagement } from "@/components/stock/MenuManagement";
 import { FeatureGate } from "@/components/FeatureGate";
 import { ListSkeleton } from "@/components/ui/loading-skeleton";
+import { useProfile } from "@/hooks/use-profile";
 
 export default function Stock() {
   useRequireAuth();
@@ -38,6 +40,10 @@ export default function Stock() {
   const { items, loading, addItem, addItems, updateItem, deleteItem, getTotalValue, refetch } = useStock();
   const { trackFeature } = useFeatureTracking();
   const { isOnline, isSyncing, pendingCount, performSync } = useOffline();
+  const { profile } = useProfile();
+  
+  // Check if service mode (restaurant/services) - shows Menu tab
+  const isServiceMode = profile?.specialty === "restaurant" || profile?.specialty === "services";
 
   // Track page view
   useEffect(() => {
@@ -245,11 +251,17 @@ export default function Stock() {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
         <div className="px-4 pb-2">
-          <TabsList className="w-full grid grid-cols-2">
+          <TabsList className={`w-full grid ${isServiceMode ? "grid-cols-3" : "grid-cols-2"}`}>
             <TabsTrigger value="stock" className="gap-2">
               <Package className="h-4 w-4" />
               Stock
             </TabsTrigger>
+            {isServiceMode && (
+              <TabsTrigger value="menu" className="gap-2">
+                <UtensilsCrossed className="h-4 w-4" />
+                Menu
+              </TabsTrigger>
+            )}
             <TabsTrigger value="history" className="gap-2">
               <History className="h-4 w-4" />
               Dictées
@@ -318,6 +330,15 @@ export default function Stock() {
             )}
           </main>
         </TabsContent>
+
+        {/* Menu Tab - Only for service mode */}
+        {isServiceMode && (
+          <TabsContent value="menu" className="flex-1 m-0">
+            <main className="p-4">
+              <MenuManagement />
+            </main>
+          </TabsContent>
+        )}
 
         {/* History Tab */}
         <TabsContent value="history" className="flex-1 m-0">

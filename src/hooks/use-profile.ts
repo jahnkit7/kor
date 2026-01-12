@@ -25,6 +25,7 @@ export interface Profile {
   auto_deduct_stock: boolean;
   referred_by: string | null;
   linked_owner_id: string | null;
+  specialty: string | null;
 }
 
 interface ProfileState {
@@ -78,6 +79,7 @@ export function useProfile(): ProfileState {
           auto_deduct_stock: data.auto_deduct_stock ?? true,
           referred_by: data.referred_by ?? null,
           linked_owner_id: data.linked_owner_id ?? null,
+          specialty: data.specialty ?? null,
         };
         setProfile(profileData);
       }
