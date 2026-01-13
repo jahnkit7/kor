@@ -23,7 +23,8 @@ import {
   Store,
   Settings2,
   Trash2,
-  RotateCcw
+  RotateCcw,
+  ImageIcon
 } from "lucide-react";
 import { incrementServerCacheVersion } from "@/hooks/use-cache-version";
 import { cn } from "@/lib/utils";
@@ -71,6 +72,7 @@ const allSupport = [
   { to: "/admin/support", icon: MessageSquare, label: "Support" },
   { to: "/admin/logs", icon: FileText, label: "Logs" },
   { to: "/admin/setup", icon: Database, label: "Config. Initiale" },
+  { to: "/admin/branding", icon: ImageIcon, label: "Branding" },
 ];
 
 function SectionTitle({ children }: { children: React.ReactNode }) {

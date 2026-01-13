@@ -51,6 +51,7 @@ import AdminRoadmap from "@/pages/admin/AdminRoadmap";
 import AdminSetup from "@/pages/admin/AdminSetup";
 import AdminSyncDiagnostic from "@/pages/admin/AdminSyncDiagnostic";
 import AdminResellers from "@/pages/admin/AdminResellers";
+import AdminBranding from "@/pages/admin/AdminBranding";
 
 // Wrapper for public routes with transition
 const PublicPage = ({ children }: { children: React.ReactNode }) => (
@@ -118,6 +119,7 @@ export const AnimatedRoutes = () => {
             <Route path="/admin/logs" element={<AdminLogs />} />
             <Route path="/admin/setup" element={<AdminSetup />} />
             <Route path="/admin/sync-diagnostic" element={<AdminSyncDiagnostic />} />
+            <Route path="/admin/branding" element={<AdminBranding />} />
           </Route>
         </Routes>
       )}
