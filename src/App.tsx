@@ -9,6 +9,7 @@ import { SubscriptionNotificationsProvider } from "./contexts/SubscriptionNotifi
 import { PlanGuardProvider } from "./contexts/PlanGuardContext";
 import { PWAStatus } from "./components/PWAStatus";
 import { AnimatedRoutes } from "./components/layout/AnimatedRoutes";
+import { CacheVersionChecker } from "./components/CacheVersionChecker";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -27,6 +28,7 @@ const App = () => (
     <OfflineProvider>
       <FeatureNotificationsProvider>
         <TooltipProvider>
+          <CacheVersionChecker />
           <Toaster />
           <Sonner />
           <PWAStatus />

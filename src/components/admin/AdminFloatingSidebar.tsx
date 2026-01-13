@@ -25,6 +25,7 @@ import {
   Trash2,
   RotateCcw
 } from "lucide-react";
+import { incrementServerCacheVersion } from "@/hooks/use-cache-version";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -295,18 +296,21 @@ export function AdminFloatingSidebar() {
             <span className="text-[10px] font-medium">Générer</span>
           </button>
           <button 
-            onClick={() => {
-              // Increment global cache version
-              const newVersion = Date.now().toString();
-              localStorage.setItem("kor_cache_version", newVersion);
-              // Clear all local caches
-              const keysToRemove = Object.keys(localStorage).filter(key => 
-                key.startsWith("kor_") && key !== "kor_cache_version"
-              );
-              keysToRemove.forEach(key => localStorage.removeItem(key));
-              // Clear react-query cache
-              window.location.reload();
-              toast.success("Cache vidé ! Tous les utilisateurs verront les MAJ.");
+            onClick={async () => {
+              // Update server cache version - this will force all clients to refresh
+              const success = await incrementServerCacheVersion();
+              if (success) {
+                // Clear local caches
+                const keysToRemove = Object.keys(localStorage).filter(key => 
+                  key.startsWith("kor_") && key !== "kor_server_cache_version"
+                );
+                keysToRemove.forEach(key => localStorage.removeItem(key));
+                toast.success("Cache invalidé sur tous les appareils !");
+                // Reload to apply changes
+                window.location.reload();
+              } else {
+                toast.error("Erreur lors de l'invalidation du cache");
+              }
             }}
             className="flex flex-col items-center justify-center gap-1 p-3 rounded-xl border-2 border-destructive bg-transparent text-destructive hover:bg-destructive hover:text-white transition-all"
           >
