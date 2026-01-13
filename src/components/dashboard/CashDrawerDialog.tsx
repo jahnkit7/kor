@@ -41,13 +41,14 @@ export function CashDrawerDialog({
   const expectedAmount = currentAmount + todayCashSales;
   const difference = numAmount - expectedAmount;
 
-  const handleConfirm = async () => {
-    if (numAmount < 0) return;
-    
+  const handleConfirm = async (overrideAmount?: number) => {
+    const finalAmount = typeof overrideAmount === "number" ? overrideAmount : numAmount;
+    if (finalAmount < 0) return;
+
     setLoading(true);
-    const success = await onConfirm(numAmount);
+    const success = await onConfirm(finalAmount);
     setLoading(false);
-    
+
     if (success) {
       setAmount("");
       onClose();
@@ -288,15 +289,27 @@ export function CashDrawerDialog({
                 className="px-6 pt-2"
                 style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 100px)" }}
               >
+                {mode === "open" && (
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="w-full h-14 rounded-2xl font-semibold text-base mb-3"
+                    onClick={() => handleConfirm(0)}
+                    disabled={loading}
+                  >
+                    Ouvrir sans fond
+                  </Button>
+                )}
+
                 <Button
                   size="lg"
                   className={cn(
                     "w-full h-14 rounded-2xl font-semibold text-base",
-                    mode === "open" 
-                      ? "bg-primary hover:bg-primary/90" 
+                    mode === "open"
+                      ? "bg-primary hover:bg-primary/90"
                       : "bg-success hover:bg-success/90"
                   )}
-                  onClick={handleConfirm}
+                  onClick={() => handleConfirm()}
                   disabled={loading}
                 >
                   {loading ? (

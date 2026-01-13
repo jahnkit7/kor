@@ -43,6 +43,7 @@ const Dashboard = () => {
   const [hideAmounts, setHideAmounts] = useState(false);
   const [showCashDrawerDialog, setShowCashDrawerDialog] = useState(false);
   const [cashDrawerMode, setCashDrawerMode] = useState<"open" | "close">("open");
+  const [cashDrawerAutoTriggered, setCashDrawerAutoTriggered] = useState(false);
 
   // Track dashboard view
   useEffect(() => {
@@ -55,8 +56,9 @@ const Dashboard = () => {
       // Check if already dismissed today
       const today = new Date().toISOString().split('T')[0];
       const dismissedDate = localStorage.getItem('kor_cash_drawer_dismissed');
-      
+
       if (dismissedDate !== today) {
+        setCashDrawerAutoTriggered(true);
         setShowCashDrawerDialog(true);
         setCashDrawerMode("open");
       }
@@ -120,6 +122,17 @@ const Dashboard = () => {
     }
   };
 
+  const handleCashDrawerClose = () => {
+    // If the opening popup was auto-triggered, dismiss it for today even if the user skips it
+    if (cashDrawerMode === "open" && cashDrawerAutoTriggered) {
+      const today = new Date().toISOString().split('T')[0];
+      localStorage.setItem('kor_cash_drawer_dismissed', today);
+    }
+
+    setShowCashDrawerDialog(false);
+    setCashDrawerAutoTriggered(false);
+  };
+
   // Render Modern Dashboard if theme is modern
   if (isModern) {
     return (
@@ -136,17 +149,19 @@ const Dashboard = () => {
           cashDrawerEntry={todayEntry}
           isDrawerOpen={isDrawerOpen}
           onOpenCashDrawer={() => {
+            setCashDrawerAutoTriggered(false);
             setCashDrawerMode("open");
             setShowCashDrawerDialog(true);
           }}
           onCloseCashDrawer={() => {
+            setCashDrawerAutoTriggered(false);
             setCashDrawerMode("close");
             setShowCashDrawerDialog(true);
           }}
         />
         <CashDrawerDialog
           isOpen={showCashDrawerDialog}
-          onClose={() => setShowCashDrawerDialog(false)}
+          onClose={handleCashDrawerClose}
           onConfirm={handleCashDrawerConfirm}
           mode={cashDrawerMode}
           currentAmount={todayEntry?.opening_amount || 0}
@@ -194,10 +209,12 @@ const Dashboard = () => {
           formatMoney={formatMoney}
           isDrawerOpen={isDrawerOpen}
           onOpenCashDrawer={() => {
+            setCashDrawerAutoTriggered(false);
             setCashDrawerMode("open");
             setShowCashDrawerDialog(true);
           }}
           onCloseCashDrawer={() => {
+            setCashDrawerAutoTriggered(false);
             setCashDrawerMode("close");
             setShowCashDrawerDialog(true);
           }}
@@ -305,7 +322,7 @@ const Dashboard = () => {
       {/* Cash Drawer Dialog */}
       <CashDrawerDialog
         isOpen={showCashDrawerDialog}
-        onClose={() => setShowCashDrawerDialog(false)}
+        onClose={handleCashDrawerClose}
         onConfirm={handleCashDrawerConfirm}
         mode={cashDrawerMode}
         currentAmount={todayEntry?.opening_amount || 0}
