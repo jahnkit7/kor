@@ -4,6 +4,7 @@
  * - User binding: cache is tied to specific user ID
  * - Version control: cache invalidated on version change
  * - Grace period: 14 days for offline access (Bug 4 fix)
+ * - Global invalidation: admin can force cache refresh for all users
  */
 
 const CACHE_VERSION = 2; // Bumped for lastVerifiedAt field
@@ -13,6 +14,7 @@ const GRACE_PERIOD_DAYS = 14; // Extended offline grace period
 // Cache keys
 const SUBSCRIPTION_CACHE_KEY = "kor_subscription_cache";
 const PLAN_LIMITS_CACHE_KEY = "kor_plan_limits_cache";
+const CACHE_VERSION_KEY = "kor_cache_version";
 
 export interface CachedSubscription {
   id: string;
@@ -179,6 +181,30 @@ export function getCachedPlanLimits(userId: string): PlanLimitsMap | null {
 export function clearSubscriptionCache(): void {
   localStorage.removeItem(SUBSCRIPTION_CACHE_KEY);
   localStorage.removeItem(PLAN_LIMITS_CACHE_KEY);
+}
+
+/**
+ * Clear ALL app caches (for admin use)
+ */
+export function clearAllAppCaches(): void {
+  const keysToRemove = Object.keys(localStorage).filter(key => 
+    key.startsWith("kor_") && key !== CACHE_VERSION_KEY
+  );
+  keysToRemove.forEach(key => localStorage.removeItem(key));
+}
+
+/**
+ * Get the global cache version (for checking if cache should be invalidated)
+ */
+export function getGlobalCacheVersion(): string | null {
+  return localStorage.getItem(CACHE_VERSION_KEY);
+}
+
+/**
+ * Set the global cache version (triggers cache invalidation for all users)
+ */
+export function setGlobalCacheVersion(version: string): void {
+  localStorage.setItem(CACHE_VERSION_KEY, version);
 }
 
 /**
