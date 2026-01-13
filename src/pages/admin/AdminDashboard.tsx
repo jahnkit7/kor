@@ -334,16 +334,21 @@ export default function AdminDashboard() {
                     <div className="p-2 rounded-lg bg-primary/10 text-primary">
                       {getActivityIcon(log.action_type)}
                     </div>
-                    <div>
+                    <div className="flex items-center gap-2 flex-wrap">
                       <Badge variant="outline" className="text-xs font-medium">
                         {getActivityLabel(log.action_type)}
                       </Badge>
-                      <span className="text-sm text-muted-foreground ml-2">
+                      <span className="text-sm text-muted-foreground">
                         {getActivityDetail(log.action_type, log.action_data)}
                       </span>
+                      {log.user_name && (
+                        <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-0">
+                          {log.user_name}
+                        </Badge>
+                      )}
                     </div>
                   </div>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
                     {formatDistanceToNow(new Date(log.created_at), {
                       addSuffix: true,
                       locale: fr,

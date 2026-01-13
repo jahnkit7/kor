@@ -492,22 +492,23 @@ const Auth = () => {
                   const currentPin = showConfirmPin ? confirmPin : pin;
                   const isFilled = currentPin.length > i;
                   const isActive = currentPin.length === i;
+                  const justFilled = currentPin.length === i + 1 && currentPin.length <= PIN_LENGTH;
                   
                   return (
                     <div
                       key={i}
                       className={`
                         w-12 h-12 rounded-xl flex items-center justify-center text-xl font-bold
-                        transition-all duration-300
+                        transition-all duration-200
                         ${isFilled 
-                          ? "bg-[#e8ecf4] text-[#2d3748]" 
+                          ? "bg-[#e8ecf4] text-[#2d3748] border-2 border-emerald-500 animate-pin-success" 
                           : isActive 
-                            ? "bg-[#f0f4ff] border-2 border-[#4f7df3] animate-pulse-border"
-                            : "bg-[#f5f7fa] text-[#cbd5e0]"
+                            ? "bg-white border-2 border-[#4f7df3] shadow-[0_0_0_3px_rgba(79,125,243,0.2)]"
+                            : "bg-[#f5f7fa] border-2 border-transparent"
                         }
                       `}
                     >
-                      ●
+                      {isFilled ? "●" : ""}
                     </div>
                   );
                 })}
