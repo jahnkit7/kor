@@ -4,6 +4,7 @@ import { ArrowLeft, ChevronDown, Check, Gift } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserSubscription } from "@/hooks/use-feature-access";
+import { useRole } from "@/hooks/use-role";
 import { supabase } from "@/integrations/supabase/client";
 import { recordReferral, useValidateReferralCode } from "@/hooks/use-referral-validation";
 
@@ -60,6 +61,7 @@ const Auth = () => {
   const [searchParams] = useSearchParams();
   const { signIn, signUp, isAuthenticated, loading, configured } = useAuth();
   const { data: subscription, isLoading: subLoading } = useUserSubscription();
+  const { role, loading: roleLoading, isStable: roleStable } = useRole();
   
   const inviteCode = searchParams.get("invite");
   const refCode = searchParams.get("ref");
@@ -155,35 +157,37 @@ const Auth = () => {
 
   // Redirect authenticated users
   useEffect(() => {
-    if (loading || subLoading) return;
+    if (loading || subLoading || roleLoading || !roleStable) return;
     if (!isAuthenticated) return;
-    
+
     if (inviteCode) {
       navigate(`/invite?code=${inviteCode}`, { replace: true });
       return;
     }
-    
+
     const checkProfileAndRedirect = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
-        
+
         const { data: profile } = await supabase
           .from("profiles")
           .select("shop_name, owner_name")
           .eq("user_id", user.id)
           .maybeSingle();
-        
+
         const isProfileComplete = Boolean(
-          profile?.shop_name && 
-          profile.shop_name !== "Ma Boutique" && 
+          profile?.shop_name &&
+          profile.shop_name !== "Ma Boutique" &&
           profile?.owner_name
         );
-        
+
         if (!isProfileComplete) {
           navigate("/profile-setup", { replace: true });
         } else if (!subscription) {
           navigate("/subscriptions", { replace: true });
+        } else if (role === "admin") {
+          navigate("/admin", { replace: true });
         } else {
           navigate("/dashboard", { replace: true });
         }
@@ -192,9 +196,9 @@ const Auth = () => {
         navigate("/profile-setup", { replace: true });
       }
     };
-    
+
     checkProfileAndRedirect();
-  }, [isAuthenticated, loading, subLoading, subscription, navigate, inviteCode]);
+  }, [isAuthenticated, loading, subLoading, roleLoading, roleStable, role, subscription, navigate, inviteCode]);
 
   const formatPhone = (value: string) => {
     const digits = value.replace(/\D/g, "");
