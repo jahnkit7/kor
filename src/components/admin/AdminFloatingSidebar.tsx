@@ -22,6 +22,7 @@ import {
   LogOut,
   Store,
   Settings2,
+  Trash2,
   RotateCcw
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -284,7 +285,7 @@ export function AdminFloatingSidebar() {
         <div className="mb-3">
           <SectionTitle>Actions Rapides</SectionTitle>
         </div>
-        <div className="grid grid-cols-2 gap-2 mb-4">
+        <div className="grid grid-cols-3 gap-2 mb-4">
           <button className="flex flex-col items-center justify-center gap-1 p-3 rounded-xl bg-gradient-to-r from-[#4f7df3] via-[#5b8af5] to-[#3b6ce8] text-white shadow-lg shadow-[#4f7df3]/25 hover:opacity-90 transition-opacity">
             <Zap className="w-4 h-4" />
             <span className="text-[10px] font-medium">Broadcast</span>
@@ -292,6 +293,25 @@ export function AdminFloatingSidebar() {
           <button className="flex flex-col items-center justify-center gap-1 p-3 rounded-xl border-2 border-[#4f7df3] bg-transparent text-[#4f7df3] hover:bg-[#4f7df3] hover:text-white transition-all">
             <QrCode className="w-4 h-4" />
             <span className="text-[10px] font-medium">Générer</span>
+          </button>
+          <button 
+            onClick={() => {
+              // Increment global cache version
+              const newVersion = Date.now().toString();
+              localStorage.setItem("kor_cache_version", newVersion);
+              // Clear all local caches
+              const keysToRemove = Object.keys(localStorage).filter(key => 
+                key.startsWith("kor_") && key !== "kor_cache_version"
+              );
+              keysToRemove.forEach(key => localStorage.removeItem(key));
+              // Clear react-query cache
+              window.location.reload();
+              toast.success("Cache vidé ! Tous les utilisateurs verront les MAJ.");
+            }}
+            className="flex flex-col items-center justify-center gap-1 p-3 rounded-xl border-2 border-destructive bg-transparent text-destructive hover:bg-destructive hover:text-white transition-all"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span className="text-[10px] font-medium">Vider cache</span>
           </button>
         </div>
         
