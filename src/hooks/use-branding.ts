@@ -8,7 +8,17 @@ export interface BrandingSettings {
   favicon?: string;
   logo?: string;
   icon?: string;
+  branding_logo?: string;
+  branding_icon?: string;
+  branding_og_image?: string;
 }
+
+// Default fallback assets
+const DEFAULT_ASSETS = {
+  logo: "/images/logo-kor.svg",
+  icon: "/icons/kor-icon.png",
+  og_image: "/images/og-image.png"
+};
 
 export function useBranding() {
   const queryClient = useQueryClient();
@@ -19,7 +29,11 @@ export function useBranding() {
       const { data, error } = await supabase
         .from('app_settings')
         .select('key, value')
-        .in('key', ['og_title', 'og_description', 'og_image', 'favicon', 'logo', 'icon']);
+        .in('key', [
+          'og_title', 'og_description', 'og_image', 
+          'favicon', 'logo', 'icon',
+          'branding_logo', 'branding_icon', 'branding_og_image'
+        ]);
 
       if (error) throw error;
 
@@ -52,11 +66,31 @@ export function useBranding() {
     }
   });
 
+  // Get logo URL with fallback
+  const getLogoUrl = () => {
+    return branding?.branding_logo || branding?.logo || DEFAULT_ASSETS.logo;
+  };
+
+  // Get icon URL with fallback
+  const getIconUrl = () => {
+    return branding?.branding_icon || branding?.icon || DEFAULT_ASSETS.icon;
+  };
+
+  // Get OG image URL with fallback
+  const getOgImageUrl = () => {
+    return branding?.branding_og_image || branding?.og_image || DEFAULT_ASSETS.og_image;
+  };
+
   return {
     branding: branding || {},
     isLoading,
     error,
     syncBranding: syncMutation.mutateAsync,
-    isSyncing: syncMutation.isPending
+    isSyncing: syncMutation.isPending,
+    // Helper methods for getting asset URLs with fallbacks
+    getLogoUrl,
+    getIconUrl,
+    getOgImageUrl,
+    DEFAULT_ASSETS
   };
 }

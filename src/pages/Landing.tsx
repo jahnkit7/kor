@@ -4,7 +4,7 @@ import { ArrowUpRight, Share, Plus, Check, ArrowUp, X, MoreVertical, Download } 
 import { motion, AnimatePresence } from "framer-motion";
 import { Onboarding } from "@/components/Onboarding";
 import { usePWA } from "@/hooks/use-pwa";
-import KorLogo from "@/assets/logo-kor.svg";
+import { useBranding } from "@/hooks/use-branding";
 
 const ONBOARDING_KEY = "kor_onboarding_completed";
 
@@ -231,6 +231,7 @@ const Landing = () => {
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
   const [showInstallGuide, setShowInstallGuide] = useState(false);
   const { canInstall, promptInstall, isInstalled } = usePWA();
+  const { getLogoUrl } = useBranding();
 
   const browser = useMemo(() => detectBrowser(), []);
   const instructions = useMemo(() => getInstallInstructions(browser), [browser]);
@@ -293,7 +294,7 @@ const Landing = () => {
         className="relative z-10 px-6 pt-4"
       >
         <div className="flex items-center gap-3">
-          <img src={KorLogo} alt="KÒR" className="w-10 h-10 rounded-xl" />
+          <img src={getLogoUrl()} alt="KÒR" className="w-10 h-10 rounded-xl" />
           <span className="text-xl font-bold text-[#2d3748] tracking-tight">KÒR</span>
         </div>
       </motion.div>
