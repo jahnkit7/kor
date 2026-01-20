@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useBranding } from "@/hooks/use-branding";
 import { 
   ImageIcon, 
   Globe, 
@@ -19,7 +20,8 @@ import {
   XCircle, 
   AlertTriangle,
   Loader2,
-  Trash2
+  Trash2,
+  Zap
 } from "lucide-react";
 
 interface OGMetadata {
@@ -82,6 +84,9 @@ const AdminBranding = () => {
   ]);
   const [seoChecks, setSeoChecks] = useState<SEOCheck[]>([]);
   const [isRunningChecks, setIsRunningChecks] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
+
+  const { syncBranding, isSyncing } = useBranding();
 
   const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
 
@@ -214,9 +219,29 @@ const AdminBranding = () => {
           { key: 'og_description', value: ogData.description, updated_at: new Date().toISOString() }
         ], { onConflict: 'key' });
       
-      toast.success("Métadonnées sauvegardées");
+      // Auto-sync meta tags
+      await syncMetaTags();
+      
+      toast.success("Métadonnées sauvegardées et synchronisées");
     } catch (error: any) {
       toast.error(`Erreur: ${error.message}`);
+    }
+  };
+
+  const syncMetaTags = async () => {
+    try {
+      const ogImageUrl = getImageUrl('og-image');
+      await syncBranding({
+        og_title: ogData.title,
+        og_description: ogData.description,
+        og_image: ogImageUrl,
+        logo: assets.find(a => a.key === 'logo')?.currentUrl || undefined,
+        icon: assets.find(a => a.key === 'icon')?.currentUrl || undefined,
+      });
+      setLastSyncTime(new Date().toLocaleTimeString());
+      toast.success("Meta tags synchronisés automatiquement");
+    } catch (error: any) {
+      toast.error(`Erreur de synchronisation: ${error.message}`);
     }
   };
 
@@ -489,9 +514,21 @@ const AdminBranding = () => {
                   className="bg-background resize-none"
                 />
               </div>
-              <Button onClick={saveOgMetadata} size="sm">
-                Sauvegarder les métadonnées
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={saveOgMetadata} size="sm" disabled={isSyncing}>
+                  {isSyncing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                  Sauvegarder & Synchroniser
+                </Button>
+                <Button variant="outline" size="sm" onClick={syncMetaTags} disabled={isSyncing}>
+                  <Zap className="h-4 w-4 mr-1" />
+                  Sync
+                </Button>
+              </div>
+              {lastSyncTime && (
+                <p className="text-xs text-muted-foreground">
+                  Dernière synchronisation: {lastSyncTime}
+                </p>
+              )}
             </div>
 
             {/* Previews */}

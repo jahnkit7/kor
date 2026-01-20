@@ -10,6 +10,7 @@ import { PlanGuardProvider } from "./contexts/PlanGuardContext";
 import { PWAStatus } from "./components/PWAStatus";
 import { AnimatedRoutes } from "./components/layout/AnimatedRoutes";
 import { CacheVersionChecker } from "./components/CacheVersionChecker";
+import { DynamicMetaTags } from "./components/DynamicMetaTags";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,6 +29,7 @@ const App = () => (
     <OfflineProvider>
       <FeatureNotificationsProvider>
         <TooltipProvider>
+          <DynamicMetaTags />
           <CacheVersionChecker />
           <Toaster />
           <Sonner />
