@@ -1,17 +1,5 @@
 import { useMemo, useState } from "react";
-import {
-  Sparkles,
-  Store as StoreIcon,
-  Palette,
-  Package,
-  Bot,
-  CheckCircle2,
-  Truck,
-  Globe,
-  Wand2,
-  Smartphone,
-  ShoppingBag,
-} from "lucide-react";
+import { Sparkles, Store as StoreIcon, Palette, Package, Bot, CheckCircle2, Truck, Globe, Wand2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,10 +10,8 @@ import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 
 type ProductType = "digital" | "physical";
-type TemplateTone = "sunset" | "neon" | "minimal";
 
 type StoreTemplate = {
   id: string;
@@ -33,7 +19,6 @@ type StoreTemplate = {
   description: string;
   bestFor: string;
   supportsDelivery: boolean;
-  tone: TemplateTone;
 };
 
 type ProductDraft = {
@@ -46,34 +31,31 @@ type ProductDraft = {
 
 const templates: StoreTemplate[] = [
   {
-    id: "shop-wave",
-    name: "Shop Wave",
-    description: "Template moderne avec hero immersif, promos en carrousel et CTA rapides.",
-    bestFor: "Mode, beauté, accessoires",
-    supportsDelivery: true,
-    tone: "sunset",
+    id: "creator-fast",
+    name: "Creator Fast Lane",
+    description: "Mise en page orientée conversion rapide avec CTA mis en avant.",
+    bestFor: "Produits digitaux + upsell",
+    supportsDelivery: false,
   },
   {
-    id: "neo-market",
-    name: "Neo Market",
-    description: "Design dark + néon, parfait pour catalogues hybrides digital/physique.",
-    bestFor: "Digital + gadgets + édition limitée",
+    id: "hybrid-market",
+    name: "Hybrid Market",
+    description: "Template polyvalent pour vente digitale et produits physiques.",
+    bestFor: "Catalogues mixtes",
     supportsDelivery: true,
-    tone: "neon",
   },
   {
-    id: "clean-commerce",
-    name: "Clean Commerce",
-    description: "Interface minimaliste orientée conversion mobile et panier express.",
-    bestFor: "Marques premium et produits physiques",
+    id: "premium-brand",
+    name: "Premium Brand",
+    description: "Design éditorial premium pour marques lifestyle et e-commerce.",
+    bestFor: "Produits physiques avec livraison",
     supportsDelivery: true,
-    tone: "minimal",
   },
 ];
 
 const initialProducts: ProductDraft[] = [
-  { id: "1", name: "Guide PDF", type: "digital", price: "29", deliveryEnabled: false },
-  { id: "2", name: "Hoodie Signature", type: "physical", price: "49", deliveryEnabled: true },
+  { id: "1", name: "Template Notion", type: "digital", price: "29", deliveryEnabled: false },
+  { id: "2", name: "T-shirt Signature", type: "physical", price: "45", deliveryEnabled: true },
 ];
 
 const steps = [
@@ -84,21 +66,15 @@ const steps = [
   { id: "review", title: "Validation", icon: CheckCircle2 },
 ] as const;
 
-const toneClasses: Record<TemplateTone, string> = {
-  sunset: "from-orange-500 via-pink-500 to-violet-600",
-  neon: "from-slate-900 via-indigo-900 to-cyan-700",
-  minimal: "from-zinc-100 via-white to-zinc-200",
-};
-
 const Store = () => {
   const [step, setStep] = useState(0);
   const [storeName, setStoreName] = useState("Nova Atelier");
   const [domain, setDomain] = useState("nova.kor.store");
   const [category, setCategory] = useState("Mode");
-  const [selectedTemplate, setSelectedTemplate] = useState<string>(templates[0].id);
+  const [selectedTemplate, setSelectedTemplate] = useState<string>(templates[1].id);
   const [products, setProducts] = useState<ProductDraft[]>(initialProducts);
   const [aiPrompt, setAiPrompt] = useState(
-    "Je veux une boutique mobile-first avec vêtements physiques + mini formation digitale.",
+    "Je vends des accessoires mode et des mini-formations. Je veux un style moderne, mobile-first, et des options de livraison locale.",
   );
 
   const selectedTemplateData = useMemo(
@@ -107,19 +83,17 @@ const Store = () => {
   );
 
   const progressValue = ((step + 1) / steps.length) * 100;
-  const physicalProductsCount = products.filter((product) => product.type === "physical").length;
 
   const runAssistant = () => {
     setStoreName("Nova Atelier Studio");
     setDomain("nova-atelier.kor.store");
     setCategory("Lifestyle & Formation");
-    setSelectedTemplate("neo-market");
+    setSelectedTemplate("hybrid-market");
     setProducts((currentProducts) =>
       currentProducts.map((product) =>
         product.type === "physical" ? { ...product, deliveryEnabled: true } : product,
       ),
     );
-    toast.success("Configuration IA appliquée.");
   };
 
   const updateProduct = (id: string, patch: Partial<ProductDraft>) => {
@@ -128,29 +102,20 @@ const Store = () => {
     );
   };
 
-  const handleNext = () => {
-    if (step === steps.length - 1) {
-      toast.success("Boutique prête à être publiée.");
-      return;
-    }
-
-    setStep((currentStep) => Math.min(currentStep + 1, steps.length - 1));
-  };
-
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 p-4 pb-24 sm:p-6">
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 p-4 pb-24 sm:p-6">
       <div className="space-y-3">
         <Badge variant="secondary" className="w-fit">
           Nouveau module • Store Builder
         </Badge>
         <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Crée ta boutique en quelques étapes</h1>
         <p className="text-muted-foreground">
-          Workflow mobile-first avec templates visuels, produits digitaux + physiques, livraison et assistant IA.
+          Inspiré des workflows modernes de création, ce module propose un parcours mobile-first avec templates, produits digitaux et physiques, livraison et configuration assistée par IA.
         </p>
         <Progress value={progressValue} className="h-2" />
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[220px_minmax(0,1fr)_320px]">
+      <div className="grid gap-4 lg:grid-cols-[240px_1fr]">
         <Card className="h-fit">
           <CardHeader>
             <CardTitle className="text-base">Workflow</CardTitle>
@@ -203,37 +168,23 @@ const Store = () => {
                 </div>
                 <div className="space-y-2">
                   <Label>Catégorie</Label>
-                  <Input value={category} onChange={(event) => setCategory(event.target.value)} placeholder="Mode, beauté, food..." />
+                  <Input value={category} onChange={(event) => setCategory(event.target.value)} placeholder="Mode, coaching, food..." />
                 </div>
               </div>
             )}
 
             {step === 1 && (
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid gap-3">
                 {templates.map((template) => (
                   <button
                     type="button"
                     key={template.id}
                     onClick={() => setSelectedTemplate(template.id)}
                     className={cn(
-                      "rounded-xl border p-3 text-left transition-colors",
+                      "rounded-xl border p-4 text-left transition-colors",
                       selectedTemplate === template.id ? "border-primary bg-primary/10" : "hover:bg-accent",
                     )}
                   >
-                    <div className={cn("mb-3 rounded-lg p-3 text-white", `bg-gradient-to-br ${toneClasses[template.tone]}`)}>
-                      <div className="mb-3 flex items-center justify-between">
-                        <span className={cn("text-xs font-semibold", template.tone === "minimal" && "text-zinc-700")}>{template.name}</span>
-                        <Smartphone className={cn("h-4 w-4", template.tone === "minimal" && "text-zinc-700")} />
-                      </div>
-                      <div className="space-y-2">
-                        <div className={cn("h-6 rounded bg-white/25", template.tone === "minimal" && "bg-zinc-300")} />
-                        <div className={cn("h-14 rounded bg-white/20", template.tone === "minimal" && "bg-zinc-200")} />
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className={cn("h-10 rounded bg-white/20", template.tone === "minimal" && "bg-zinc-200")} />
-                          <div className={cn("h-10 rounded bg-white/20", template.tone === "minimal" && "bg-zinc-200")} />
-                        </div>
-                      </div>
-                    </div>
                     <p className="font-semibold">{template.name}</p>
                     <p className="text-sm text-muted-foreground">{template.description}</p>
                     <div className="mt-3 flex flex-wrap gap-2">
@@ -285,7 +236,7 @@ const Store = () => {
             {step === 3 && (
               <div className="space-y-4">
                 <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 text-sm">
-                  Décris ta boutique et l'IA configure tout automatiquement (template, naming, livraison).
+                  Décris ton univers, ton domaine et tes produits. L'assistant va proposer une configuration complète en un clic.
                 </div>
                 <Textarea
                   value={aiPrompt}
@@ -335,7 +286,7 @@ const Store = () => {
                   ))}
                 </div>
 
-                <Button className="w-full" onClick={() => toast.success("Boutique publiée (démo).")}>Publier la boutique</Button>
+                <Button className="w-full">Publier la boutique</Button>
               </div>
             )}
 
@@ -343,49 +294,9 @@ const Store = () => {
               <Button variant="outline" onClick={() => setStep((currentStep) => Math.max(currentStep - 1, 0))} disabled={step === 0}>
                 Retour
               </Button>
-              <Button onClick={handleNext}>
-                {step === steps.length - 1 ? "Terminer" : "Suivant"}
+              <Button onClick={() => setStep((currentStep) => Math.min(currentStep + 1, steps.length - 1))} disabled={step === steps.length - 1}>
+                Suivant
               </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="h-fit">
-          <CardHeader>
-            <CardTitle className="text-base">Prévisualisation en temps réel</CardTitle>
-            <CardDescription>Chaque modification est reflétée instantanément.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className={cn("rounded-2xl p-3", `bg-gradient-to-br ${toneClasses[selectedTemplateData?.tone ?? "sunset"]}`)}>
-              <div className="rounded-xl bg-background/95 p-3 shadow-sm">
-                <div className="mb-3 flex items-start justify-between">
-                  <div>
-                    <p className="text-sm font-semibold">{storeName}</p>
-                    <p className="text-xs text-muted-foreground">{domain}</p>
-                  </div>
-                  <Badge variant="outline" className="text-[10px]">{category}</Badge>
-                </div>
-
-                <div className="space-y-2">
-                  {products.slice(0, 3).map((product) => (
-                    <div key={product.id} className="rounded-lg border p-2">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-medium">{product.name || "Produit"}</span>
-                        <span>{product.price || "0"}€</span>
-                      </div>
-                      <div className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground">
-                        <ShoppingBag className="h-3 w-3" />
-                        {product.type === "physical" && product.deliveryEnabled ? "Livraison activée" : product.type === "physical" ? "Retrait" : "Téléchargement"}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{physicalProductsCount} produit(s) physique(s)</span>
-                  <span>{selectedTemplateData?.name}</span>
-                </div>
-              </div>
             </div>
           </CardContent>
         </Card>
