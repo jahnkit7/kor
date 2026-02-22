@@ -105,7 +105,7 @@ const steps = [
   { id: "products", title: "Produits", icon: Package },
   { id: "assistant", title: "Assistant", icon: Bot },
   { id: "review", title: "Finaliser", icon: CheckCircle2 },
-] as const; <
+] as const;
 
 const Store = () => {
   const navigate = useNavigate();
@@ -247,93 +247,64 @@ const Store = () => {
                 </div>
               </div>
 
-            {step === 1 && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between rounded-xl border bg-muted/30 p-2">
-                  <p className="px-2 text-sm text-muted-foreground">Aperçu des modèles de présentation</p>
-                  <div className="inline-flex rounded-lg border bg-background p-1">
-                    <button
-                      type="button"
-                      onClick={() => setTemplateViewport("mobile")}
-                      className={cn(
-                        "rounded-md px-3 py-1.5 text-sm transition-colors",
-                        templateViewport === "mobile" ? "bg-primary text-primary-foreground" : "text-muted-foreground",
-                      )}
+              <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2">
+                {templates.map((template) => (
+                  <button
+                    type="button"
+                    key={template.id}
+                    onClick={() => setSelectedTemplate(template.id)}
+                    className={cn(
+                      "group relative snap-start rounded-2xl border bg-card p-3 text-left transition-all",
+                      templateViewport === "mobile" ? "w-[250px] shrink-0" : "w-[420px] shrink-0",
+                      selectedTemplate === template.id
+                        ? "border-primary ring-2 ring-primary/30"
+                        : "border-border hover:border-primary/50",
+                    )}
+                  >
+                    <div
+                      className={cn("rounded-xl border bg-background p-3", templateViewport === "mobile" ? "min-h-[420px]" : "min-h-[260px]")}
                     >
-                      Mobile
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTemplateViewport("desktop")}
-                      className={cn(
-                        "rounded-md px-3 py-1.5 text-sm transition-colors",
-                        templateViewport === "desktop" ? "bg-primary text-primary-foreground" : "text-muted-foreground",
-                      )}
-                    >
-                      Desktop
-                    </button>
-                  </div>
-                </div>
-
-                <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2">
-                  {templates.map((template) => (
-                    <button
-                      type="button"
-                      key={template.id}
-                      onClick={() => setSelectedTemplate(template.id)}
-                      className={cn(
-                        "group relative snap-start rounded-2xl border bg-card p-3 text-left transition-all",
-                        templateViewport === "mobile" ? "w-[250px] shrink-0" : "w-[420px] shrink-0",
-                        selectedTemplate === template.id
-                          ? "border-primary ring-2 ring-primary/30"
-                          : "border-border hover:border-primary/50",
-                      )}
-                    >
-                      <div
-                        className={cn("rounded-xl border bg-background p-3", templateViewport === "mobile" ? "min-h-[420px]" : "min-h-[260px]")}
-                      >
-                        <div className={cn("rounded-lg bg-gradient-to-br p-4", template.highlight)}>
-                          <div className="flex items-center justify-between">
-                            <p className="font-semibold">{template.name}</p>
-                            <Badge variant="outline" className="text-[10px]">{template.chipLabel}</Badge>
-                          </div>
-                          <p className="mt-1 text-xs text-muted-foreground">{template.description}</p>
-
-                          <div className={cn("mt-3 rounded-xl border p-3", template.panelTone)}>
-                            <p className="text-[11px] text-muted-foreground">{template.mockTitle}</p>
-                            <p className="text-lg font-semibold">{template.mockPrice}</p>
-                            <div className="mt-2 flex gap-2">
-                              <div className="h-7 flex-1 rounded-md bg-white/80" />
-                              <div className="h-7 w-20 rounded-md bg-white/70" />
-                            </div>
-                          </div>
-
-                          <Button size="sm" className={cn("mt-3 h-7 px-3 text-xs", template.accent)}>
-                            {template.ctaLabel}
-                          </Button>
+                      <div className={cn("rounded-lg bg-gradient-to-br p-4", template.highlight)}>
+                        <div className="flex items-center justify-between">
+                          <p className="font-semibold">{template.name}</p>
+                          <Badge variant="outline" className="text-[10px]">{template.chipLabel}</Badge>
                         </div>
-                        <div className={cn("mt-3 grid gap-2", templateViewport === "mobile" ? "" : "grid-cols-2")}>
-                          <div className="rounded-md border bg-muted/40 p-2">
-                            <p className="text-[11px] text-muted-foreground">Bloc hero</p>
-                            <p className="text-sm font-medium">Produit vedette</p>
-                          </div>
-                          <div className="rounded-md border bg-muted/40 p-2">
-                            <p className="text-[11px] text-muted-foreground">Bloc secondaire</p>
-                            <p className="text-sm font-medium">Cross-sell / favoris</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{template.description}</p>
+
+                        <div className={cn("mt-3 rounded-xl border p-3", template.panelTone)}>
+                          <p className="text-[11px] text-muted-foreground">{template.mockTitle}</p>
+                          <p className="text-lg font-semibold">{template.mockPrice}</p>
+                          <div className="mt-2 flex gap-2">
+                            <div className="h-7 flex-1 rounded-md bg-white/80" />
+                            <div className="h-7 w-20 rounded-md bg-white/70" />
                           </div>
                         </div>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          <Badge variant="outline">{template.bestFor}</Badge>
-                          {template.supportsDelivery && (
-                            <Badge>
-                              <Truck className="mr-1 h-3 w-3" /> Livraison
-                            </Badge>
-                          )}
+
+                        <Button size="sm" className={cn("mt-3 h-7 px-3 text-xs", template.accent)}>
+                          {template.ctaLabel}
+                        </Button>
+                      </div>
+                      <div className={cn("mt-3 grid gap-2", templateViewport === "mobile" ? "" : "grid-cols-2")}>
+                        <div className="rounded-md border bg-muted/40 p-2">
+                          <p className="text-[11px] text-muted-foreground">Bloc hero</p>
+                          <p className="text-sm font-medium">Produit vedette</p>
+                        </div>
+                        <div className="rounded-md border bg-muted/40 p-2">
+                          <p className="text-[11px] text-muted-foreground">Bloc secondaire</p>
+                          <p className="text-sm font-medium">Cross-sell / favoris</p>
                         </div>
                       </div>
-                    </button>
-                  ))}
-                </div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <Badge variant="outline">{template.bestFor}</Badge>
+                        {template.supportsDelivery && (
+                          <Badge>
+                            <Truck className="mr-1 h-3 w-3" /> Livraison
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                ))}
               </div>
             </div>
           )}
