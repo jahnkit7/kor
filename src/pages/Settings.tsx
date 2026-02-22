@@ -226,6 +226,30 @@ const Settings = () => {
           </motion.div>
 
 
+          {/* Store Builder Card */}
+          <motion.div
+            onClick={() => navigate("/store")}
+            className="relative overflow-hidden rounded-2xl p-4 cursor-pointer col-span-2"
+            style={{
+              background: "linear-gradient(135deg, #2563eb 0%, #4f46e5 50%, #7c3aed 100%)"
+            }}
+            whileTap={{ scale: 0.98 }}
+            whileHover={{ scale: 1.01 }}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                  <Store className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-white font-bold">Store</h3>
+                  <p className="text-white/80 text-xs">Créer ta boutique (digital + physique)</p>
+                </div>
+              </div>
+              <ChevronRight className="w-5 h-5 text-white/70" />
+            </div>
+          </motion.div>
+
           {/* Shop Card - Enhanced with more info */}
           {canChangeSettings && (
             <motion.div
@@ -270,7 +294,31 @@ const Settings = () => {
 
 
 
-
+        {/* Store Module Card */}
+        <motion.div
+          onClick={() => navigate("/store")}
+          className="relative overflow-hidden rounded-2xl p-4 cursor-pointer"
+          style={{
+            background: "linear-gradient(135deg, #2563eb 0%, #4f46e5 50%, #7c3aed 100%)"
+          }}
+          whileTap={{ scale: 0.98 }}
+          whileHover={{ scale: 1.01 }}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                <Store className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-white font-bold">Store Builder</h3>
+                <p className="text-white/80 text-xs">Créer une boutique digitale & physique</p>
+              </div>
+            </div>
+            <ChevronRight className="w-5 h-5 text-white/70" />
+          </div>
+          <div className="absolute -right-6 -top-6 w-20 h-20 rounded-full bg-white/10" />
+          <div className="absolute -right-2 -bottom-8 w-16 h-16 rounded-full bg-white/5" />
+        </motion.div>
 
         {/* Commission Payment (only shows if user has balance) */}
         <FeatureGate featureKey="commission_payment" silentFail>
