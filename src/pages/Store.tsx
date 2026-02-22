@@ -105,7 +105,7 @@ const steps = [
   { id: "products", title: "Produits", icon: Package },
   { id: "assistant", title: "Assistant", icon: Bot },
   { id: "review", title: "Finaliser", icon: CheckCircle2 },
-] as const;
+] as const; <
 
 const Store = () => {
   const navigate = useNavigate();
