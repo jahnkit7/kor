@@ -1,15 +1,28 @@
 import { useMemo, useState } from "react";
-import { Sparkles, Store as StoreIcon, Palette, Package, Bot, CheckCircle2, Truck, Globe, Wand2 } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useNavigate } from "react-router-dom";
+import {
+  Sparkles,
+  Store as StoreIcon,
+  Palette,
+  Package,
+  Bot,
+  CheckCircle2,
+  Truck,
+  Globe,
+  Wand2,
+  ChevronLeft,
+  ArrowRight,
+} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 type ProductType = "digital" | "physical";
 
@@ -38,10 +51,10 @@ type ProductDraft = {
 
 const templates: StoreTemplate[] = [
   {
-    id: "lookbook-minimal",
-    name: "Lookbook Minimal",
-    description: "Ambiance épurée avec cartes produits aérées et navigation simple.",
-    bestFor: "Marques mode & accessoires",
+    id: "creator-fast",
+    name: "Creator Fast Lane",
+    description: "Conversion rapide avec CTA mis en avant.",
+    bestFor: "Produits digitaux + upsell",
     supportsDelivery: false,
     highlight: "from-slate-200 via-slate-100 to-white",
     chipLabel: "Clean",
@@ -52,10 +65,10 @@ const templates: StoreTemplate[] = [
     mockPrice: "89€",
   },
   {
-    id: "showroom-editorial",
-    name: "Showroom Editorial",
-    description: "Header visuel fort, storytelling produit et fiche détaillée immersive.",
-    bestFor: "Collections premium",
+    id: "hybrid-market",
+    name: "Hybrid Market",
+    description: "Vente digitale + produits physiques.",
+    bestFor: "Catalogues mixtes",
     supportsDelivery: true,
     highlight: "from-sky-100 via-indigo-100 to-white",
     chipLabel: "Modern",
@@ -66,9 +79,9 @@ const templates: StoreTemplate[] = [
     mockPrice: "125€",
   },
   {
-    id: "boutique-luxe",
-    name: "Boutique Luxe",
-    description: "Design haut de gamme avec CTA flottants et expérience mobile-first.",
+    id: "premium-brand",
+    name: "Premium Brand",
+    description: "Design éditorial premium lifestyle.",
     bestFor: "Produits physiques avec livraison",
     supportsDelivery: true,
     highlight: "from-zinc-200 via-zinc-100 to-white",
@@ -90,11 +103,13 @@ const steps = [
   { id: "identity", title: "Identité", icon: StoreIcon },
   { id: "template", title: "Template", icon: Palette },
   { id: "products", title: "Produits", icon: Package },
-  { id: "assistant", title: "Assistant IA", icon: Bot },
-  { id: "review", title: "Validation", icon: CheckCircle2 },
+  { id: "assistant", title: "Assistant", icon: Bot },
+  { id: "review", title: "Finaliser", icon: CheckCircle2 },
 ] as const;
 
 const Store = () => {
+  const navigate = useNavigate();
+
   const [step, setStep] = useState(0);
   const [storeName, setStoreName] = useState("Nova Atelier");
   const [domain, setDomain] = useState("nova.kor.store");
@@ -103,15 +118,13 @@ const Store = () => {
   const [templateViewport, setTemplateViewport] = useState<"mobile" | "desktop">("mobile");
   const [products, setProducts] = useState<ProductDraft[]>(initialProducts);
   const [aiPrompt, setAiPrompt] = useState(
-    "Je vends des accessoires mode et des mini-formations. Je veux un style moderne, mobile-first, et des options de livraison locale.",
+    "Boutique mode + mini formations, style premium mobile-first avec livraison locale.",
   );
 
   const selectedTemplateData = useMemo(
     () => templates.find((template) => template.id === selectedTemplate),
     [selectedTemplate],
   );
-
-  const progressValue = ((step + 1) / steps.length) * 100;
 
   const runAssistant = () => {
     setStoreName("Nova Atelier Studio");
@@ -123,6 +136,7 @@ const Store = () => {
         product.type === "physical" ? { ...product, deliveryEnabled: true } : product,
       ),
     );
+    toast.success("Configuration proposée par l'assistant ✨");
   };
 
   const updateProduct = (id: string, patch: Partial<ProductDraft>) => {
@@ -131,76 +145,107 @@ const Store = () => {
     );
   };
 
+  const finishStoreSetup = () => {
+    toast.success("Boutique créée avec succès");
+    navigate("/dashboard");
+  };
+
+  const nextStep = () => {
+    if (step === steps.length - 1) {
+      finishStoreSetup();
+      return;
+    }
+
+    setStep((currentStep) => Math.min(currentStep + 1, steps.length - 1));
+  };
+
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 p-4 pb-24 sm:p-6">
-      <div className="space-y-3">
-        <Badge variant="secondary" className="w-fit">
-          Nouveau module • Store Builder
-        </Badge>
-        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Crée ta boutique en quelques étapes</h1>
-        <p className="text-muted-foreground">
-          Inspiré des workflows modernes de création, ce module propose un parcours mobile-first avec templates, produits digitaux et physiques, livraison et configuration assistée par IA.
-        </p>
-        <Progress value={progressValue} className="h-2" />
-      </div>
+      <Card className="overflow-hidden border-primary/20 bg-gradient-to-br from-primary/10 via-background to-background">
+        <CardContent className="space-y-4 p-5 sm:p-6">
+          <div className="flex items-center justify-between">
+            <Badge variant="secondary" className="w-fit">Store Builder</Badge>
+            <span className="text-xs text-muted-foreground">Étape {step + 1}/{steps.length}</span>
+          </div>
 
-      <div className="grid gap-4 lg:grid-cols-[240px_1fr]">
-        <Card className="h-fit">
-          <CardHeader>
-            <CardTitle className="text-base">Workflow</CardTitle>
-            <CardDescription>{step + 1} / {steps.length} étapes</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {steps.map((item, index) => {
-              const Icon = item.icon;
-              return (
-                <button
-                  type="button"
-                  key={item.id}
-                  onClick={() => setStep(index)}
-                  className={cn(
-                    "flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors",
-                    index === step
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border hover:bg-accent",
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.title}
-                </button>
-              );
-            })}
-          </CardContent>
-        </Card>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Crée ta boutique</h1>
+            <p className="text-sm text-muted-foreground">Rapide, visuel, prêt à publier.</p>
+          </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl">
-              {step === 0 && <><StoreIcon className="h-5 w-5" /> Identité de la boutique</>}
-              {step === 1 && <><Palette className="h-5 w-5" /> Choix du modèle de présentation</>}
-              {step === 2 && <><Package className="h-5 w-5" /> Produits & livraison</>}
-              {step === 3 && <><Sparkles className="h-5 w-5" /> Assistant IA</>}
-              {step === 4 && <><CheckCircle2 className="h-5 w-5" /> Prévisualisation finale</>}
-            </CardTitle>
-          </CardHeader>
+          <div className="flex items-center gap-2">
+            {steps.map((item, index) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setStep(index)}
+                aria-label={`Aller à ${item.title}`}
+                className={cn(
+                  "h-2.5 rounded-full transition-all",
+                  index === step ? "w-10 bg-primary" : "w-2.5 bg-primary/30 hover:bg-primary/50",
+                )}
+              />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
-          <CardContent className="space-y-5">
-            {step === 0 && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Nom de la boutique</Label>
-                  <Input value={storeName} onChange={(event) => setStoreName(event.target.value)} placeholder="Ex: Nova Atelier" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Domaine</Label>
-                  <Input value={domain} onChange={(event) => setDomain(event.target.value)} placeholder="exemple.kor.store" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Catégorie</Label>
-                  <Input value={category} onChange={(event) => setCategory(event.target.value)} placeholder="Mode, coaching, food..." />
+      <Card className="shadow-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            {step === 0 && <><StoreIcon className="h-4 w-4" /> Identité</>}
+            {step === 1 && <><Palette className="h-4 w-4" /> Template</>}
+            {step === 2 && <><Package className="h-4 w-4" /> Produits</>}
+            {step === 3 && <><Sparkles className="h-4 w-4" /> Assistant IA</>}
+            {step === 4 && <><CheckCircle2 className="h-4 w-4" /> Finaliser</>}
+          </CardTitle>
+        </CardHeader>
+
+        <CardContent className="space-y-5">
+          {step === 0 && (
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="space-y-2">
+                <Label>Nom</Label>
+                <Input value={storeName} onChange={(event) => setStoreName(event.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Domaine</Label>
+                <Input value={domain} onChange={(event) => setDomain(event.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Catégorie</Label>
+                <Input value={category} onChange={(event) => setCategory(event.target.value)} />
+              </div>
+            </div>
+          )}
+
+          {step === 1 && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between rounded-xl border bg-muted/30 p-2">
+                <p className="px-2 text-sm text-muted-foreground">Aperçu template</p>
+                <div className="inline-flex rounded-lg border bg-background p-1">
+                  <button
+                    type="button"
+                    onClick={() => setTemplateViewport("mobile")}
+                    className={cn(
+                      "rounded-md px-3 py-1.5 text-sm transition-colors",
+                      templateViewport === "mobile" ? "bg-primary text-primary-foreground" : "text-muted-foreground",
+                    )}
+                  >
+                    Mobile
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTemplateViewport("desktop")}
+                    className={cn(
+                      "rounded-md px-3 py-1.5 text-sm transition-colors",
+                      templateViewport === "desktop" ? "bg-primary text-primary-foreground" : "text-muted-foreground",
+                    )}
+                  >
+                    Desktop
+                  </button>
                 </div>
               </div>
-            )}
 
             {step === 1 && (
               <div className="space-y-4">
@@ -290,113 +335,114 @@ const Store = () => {
                   ))}
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
-            {step === 2 && (
-              <div className="space-y-4">
-                {products.map((product) => (
-                  <div key={product.id} className="space-y-3 rounded-xl border p-4">
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label>Nom du produit</Label>
-                        <Input
-                          value={product.name}
-                          onChange={(event) => updateProduct(product.id, { name: event.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Prix (€)</Label>
-                        <Input
-                          value={product.price}
-                          onChange={(event) => updateProduct(product.id, { price: event.target.value })}
-                        />
-                      </div>
+          {step === 2 && (
+            <div className="space-y-4">
+              {products.map((product) => (
+                <div key={product.id} className="space-y-3 rounded-xl border p-4">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Nom du produit</Label>
+                      <Input
+                        value={product.name}
+                        onChange={(event) => updateProduct(product.id, { name: event.target.value })}
+                      />
                     </div>
-                    <div className="flex items-center gap-4">
-                      <Badge variant="secondary">{product.type === "digital" ? "Digital" : "Physique"}</Badge>
-                      {product.type === "physical" && (
-                        <div className="flex items-center gap-2">
-                          <Switch
-                            checked={product.deliveryEnabled}
-                            onCheckedChange={(checked) => updateProduct(product.id, { deliveryEnabled: checked })}
-                          />
-                          <span className="text-sm text-muted-foreground">Activer la livraison</span>
-                        </div>
+                    <div className="space-y-2">
+                      <Label>Prix (€)</Label>
+                      <Input
+                        value={product.price}
+                        onChange={(event) => updateProduct(product.id, { price: event.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <Badge variant="secondary">{product.type === "digital" ? "Digital" : "Physique"}</Badge>
+                    {product.type === "physical" && (
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={product.deliveryEnabled}
+                          onCheckedChange={(checked) => updateProduct(product.id, { deliveryEnabled: checked })}
+                        />
+                        <span className="text-sm text-muted-foreground">Activer livraison</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="space-y-4">
+              <Textarea
+                value={aiPrompt}
+                onChange={(event) => setAiPrompt(event.target.value)}
+                className="min-h-28"
+              />
+              <Button onClick={runAssistant} className="w-full sm:w-auto">
+                <Wand2 className="mr-2 h-4 w-4" /> Générer la config
+              </Button>
+            </div>
+          )}
+
+          {step === 4 && (
+            <div className="space-y-4">
+              <div className="grid gap-3 rounded-xl border p-4 sm:grid-cols-3">
+                <div>
+                  <p className="text-xs text-muted-foreground">Boutique</p>
+                  <p className="font-medium">{storeName}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Domaine</p>
+                  <p className="font-medium flex items-center gap-1"><Globe className="h-3.5 w-3.5" /> {domain}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Template</p>
+                  <p className="font-medium">{selectedTemplateData?.name}</p>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <p className="font-medium">Produits configurés</p>
+                {products.map((product) => (
+                  <div key={product.id} className="flex items-center justify-between rounded-lg border p-3">
+                    <div>
+                      <p className="font-medium">{product.name}</p>
+                      <p className="text-sm text-muted-foreground">{product.type === "digital" ? "Digital" : "Physique"}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold">{product.price}€</p>
+                      {product.type === "physical" && product.deliveryEnabled && (
+                        <p className="text-xs text-emerald-600">Livraison activée</p>
                       )}
                     </div>
                   </div>
                 ))}
               </div>
-            )}
-
-            {step === 3 && (
-              <div className="space-y-4">
-                <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 text-sm">
-                  Décris ton univers, ton domaine et tes produits. L'assistant va proposer une configuration complète en un clic.
-                </div>
-                <Textarea
-                  value={aiPrompt}
-                  onChange={(event) => setAiPrompt(event.target.value)}
-                  className="min-h-32"
-                />
-                <Button onClick={runAssistant} className="w-full sm:w-auto">
-                  <Wand2 className="mr-2 h-4 w-4" /> Générer ma configuration
-                </Button>
-              </div>
-            )}
-
-            {step === 4 && (
-              <div className="space-y-4">
-                <div className="grid gap-3 rounded-xl border p-4 sm:grid-cols-3">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Boutique</p>
-                    <p className="font-medium">{storeName}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Domaine</p>
-                    <p className="font-medium flex items-center gap-1"><Globe className="h-3.5 w-3.5" /> {domain}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Modèle de présentation</p>
-                    <p className="font-medium">{selectedTemplateData?.name}</p>
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="space-y-2">
-                  <p className="font-medium">Produits configurés</p>
-                  {products.map((product) => (
-                    <div key={product.id} className="flex items-center justify-between rounded-lg border p-3">
-                      <div>
-                        <p className="font-medium">{product.name}</p>
-                        <p className="text-sm text-muted-foreground">{product.type === "digital" ? "Digital" : "Physique"}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold">{product.price}€</p>
-                        {product.type === "physical" && product.deliveryEnabled && (
-                          <p className="text-xs text-emerald-600">Livraison activée</p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <Button className="w-full">Publier la boutique</Button>
-              </div>
-            )}
-
-            <div className="flex items-center justify-between border-t pt-4">
-              <Button variant="outline" onClick={() => setStep((currentStep) => Math.max(currentStep - 1, 0))} disabled={step === 0}>
-                Retour
-              </Button>
-              <Button onClick={() => setStep((currentStep) => Math.min(currentStep + 1, steps.length - 1))} disabled={step === steps.length - 1}>
-                Suivant
-              </Button>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          )}
+
+          <div className="flex items-center justify-between border-t pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setStep((currentStep) => Math.max(currentStep - 1, 0))}
+              disabled={step === 0}
+            >
+              <ChevronLeft className="mr-2 h-4 w-4" /> Retour
+            </Button>
+
+            <Button onClick={nextStep}>
+              {step === steps.length - 1 ? "Créer ma boutique" : "Suivant"}
+              {step !== steps.length - 1 && <ArrowRight className="ml-2 h-4 w-4" />}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
