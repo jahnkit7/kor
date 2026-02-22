@@ -29,6 +29,7 @@ import InvoiceHistory from "@/pages/InvoiceHistory";
 import EmployeeManagement from "@/pages/EmployeeManagement";
 import Network from "@/pages/Network";
 import Referrals from "@/pages/Referrals";
+import Store from "@/pages/Store";
 import NotFound from "@/pages/NotFound";
 
 // Admin pages
@@ -76,7 +77,8 @@ export const AnimatedRoutes = () => {
     location.pathname.startsWith('/invoices') ||
     location.pathname.startsWith('/employees') ||
     location.pathname.startsWith('/network') ||
-    location.pathname.startsWith('/referrals')
+    location.pathname.startsWith('/referrals') ||
+    location.pathname.startsWith('/store')
   );
   const isPublicRoute = !isFullscreenRoute && !isProtectedRoute && !isAdminRoute;
 
@@ -152,6 +154,7 @@ export const AnimatedRoutes = () => {
             <Route path="/employees" element={<EmployeeManagement />} />
             <Route path="/network" element={<Network />} />
             <Route path="/referrals" element={<Referrals />} />
+            <Route path="/store" element={<Store />} />
           </Route>
         </Routes>
       )}
