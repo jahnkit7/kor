@@ -19,6 +19,7 @@ type StoreTemplate = {
   description: string;
   bestFor: string;
   supportsDelivery: boolean;
+  highlight: string;
 };
 
 type ProductDraft = {
@@ -36,6 +37,7 @@ const templates: StoreTemplate[] = [
     description: "Mise en page orientée conversion rapide avec CTA mis en avant.",
     bestFor: "Produits digitaux + upsell",
     supportsDelivery: false,
+    highlight: "from-violet-500/20 via-fuchsia-500/10 to-transparent",
   },
   {
     id: "hybrid-market",
@@ -43,6 +45,7 @@ const templates: StoreTemplate[] = [
     description: "Template polyvalent pour vente digitale et produits physiques.",
     bestFor: "Catalogues mixtes",
     supportsDelivery: true,
+    highlight: "from-sky-500/20 via-indigo-500/10 to-transparent",
   },
   {
     id: "premium-brand",
@@ -50,6 +53,7 @@ const templates: StoreTemplate[] = [
     description: "Design éditorial premium pour marques lifestyle et e-commerce.",
     bestFor: "Produits physiques avec livraison",
     supportsDelivery: true,
+    highlight: "from-amber-500/25 via-orange-500/10 to-transparent",
   },
 ];
 
@@ -72,6 +76,7 @@ const Store = () => {
   const [domain, setDomain] = useState("nova.kor.store");
   const [category, setCategory] = useState("Mode");
   const [selectedTemplate, setSelectedTemplate] = useState<string>(templates[1].id);
+  const [templateViewport, setTemplateViewport] = useState<"mobile" | "desktop">("mobile");
   const [products, setProducts] = useState<ProductDraft[]>(initialProducts);
   const [aiPrompt, setAiPrompt] = useState(
     "Je vends des accessoires mode et des mini-formations. Je veux un style moderne, mobile-first, et des options de livraison locale.",
@@ -174,25 +179,79 @@ const Store = () => {
             )}
 
             {step === 1 && (
-              <div className="grid gap-3">
-                {templates.map((template) => (
-                  <button
-                    type="button"
-                    key={template.id}
-                    onClick={() => setSelectedTemplate(template.id)}
-                    className={cn(
-                      "rounded-xl border p-4 text-left transition-colors",
-                      selectedTemplate === template.id ? "border-primary bg-primary/10" : "hover:bg-accent",
-                    )}
-                  >
-                    <p className="font-semibold">{template.name}</p>
-                    <p className="text-sm text-muted-foreground">{template.description}</p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <Badge variant="outline">{template.bestFor}</Badge>
-                      {template.supportsDelivery && <Badge><Truck className="mr-1 h-3 w-3" /> Livraison</Badge>}
-                    </div>
-                  </button>
-                ))}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between rounded-xl border bg-muted/30 p-2">
+                  <p className="px-2 text-sm text-muted-foreground">Aperçu du template</p>
+                  <div className="inline-flex rounded-lg border bg-background p-1">
+                    <button
+                      type="button"
+                      onClick={() => setTemplateViewport("mobile")}
+                      className={cn(
+                        "rounded-md px-3 py-1.5 text-sm transition-colors",
+                        templateViewport === "mobile" ? "bg-primary text-primary-foreground" : "text-muted-foreground",
+                      )}
+                    >
+                      Mobile
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTemplateViewport("desktop")}
+                      className={cn(
+                        "rounded-md px-3 py-1.5 text-sm transition-colors",
+                        templateViewport === "desktop" ? "bg-primary text-primary-foreground" : "text-muted-foreground",
+                      )}
+                    >
+                      Desktop
+                    </button>
+                  </div>
+                </div>
+
+                <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2">
+                  {templates.map((template) => (
+                    <button
+                      type="button"
+                      key={template.id}
+                      onClick={() => setSelectedTemplate(template.id)}
+                      className={cn(
+                        "group relative snap-start rounded-2xl border bg-card p-3 text-left transition-all",
+                        templateViewport === "mobile" ? "w-[250px] shrink-0" : "w-[420px] shrink-0",
+                        selectedTemplate === template.id
+                          ? "border-primary ring-2 ring-primary/30"
+                          : "border-border hover:border-primary/50",
+                      )}
+                    >
+                      <div
+                        className={cn("rounded-xl border bg-background p-3", templateViewport === "mobile" ? "min-h-[420px]" : "min-h-[260px]")}
+                      >
+                        <div className={cn("rounded-lg bg-gradient-to-br p-4", template.highlight)}>
+                          <p className="font-semibold">{template.name}</p>
+                          <p className="mt-1 text-xs text-muted-foreground">{template.description}</p>
+                          <Button size="sm" className="mt-3 h-7 px-3 text-xs">
+                            Voir l'offre
+                          </Button>
+                        </div>
+                        <div className={cn("mt-3 grid gap-2", templateViewport === "mobile" ? "" : "grid-cols-2")}>
+                          <div className="rounded-md border bg-muted/40 p-2">
+                            <p className="text-[11px] text-muted-foreground">Produit phare</p>
+                            <p className="text-sm font-medium">Pack Starter</p>
+                          </div>
+                          <div className="rounded-md border bg-muted/40 p-2">
+                            <p className="text-[11px] text-muted-foreground">Upsell</p>
+                            <p className="text-sm font-medium">Atelier avancé</p>
+                          </div>
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Badge variant="outline">{template.bestFor}</Badge>
+                          {template.supportsDelivery && (
+                            <Badge>
+                              <Truck className="mr-1 h-3 w-3" /> Livraison
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
