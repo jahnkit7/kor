@@ -167,6 +167,32 @@ const Settings = () => {
           </motion.div>
         </FeatureGate>
 
+        {/* Store Card - Prominent placement */}
+        <motion.div
+          onClick={() => navigate("/store")}
+          className="relative overflow-hidden rounded-2xl p-4 cursor-pointer"
+          style={{
+            background: "linear-gradient(135deg, #2563eb 0%, #4f46e5 50%, #7c3aed 100%)"
+          }}
+          whileTap={{ scale: 0.98 }}
+          whileHover={{ scale: 1.01 }}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                <Store className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-white font-bold">Store Builder</h3>
+                <p className="text-white/80 text-xs">Créer ta boutique (digital + physique)</p>
+              </div>
+            </div>
+            <ChevronRight className="w-5 h-5 text-white/70" />
+          </div>
+          <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-white/10" />
+          <div className="absolute -right-2 -bottom-8 h-16 w-16 rounded-full bg-white/5" />
+        </motion.div>
+
         {/* BentoGrid 2x2 - Quick Access */}
         <div className="grid grid-cols-2 gap-3">
           {/* Role Card */}
