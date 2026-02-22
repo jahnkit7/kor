@@ -10,6 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { ForceLovableAutofix } from "@/components/__force_lovable_autofix__";
 
 type ProductType = "digital" | "physical";
 
@@ -20,6 +21,12 @@ type StoreTemplate = {
   bestFor: string;
   supportsDelivery: boolean;
   highlight: string;
+  chipLabel: string;
+  accent: string;
+  panelTone: string;
+  ctaLabel: string;
+  mockTitle: string;
+  mockPrice: string;
 };
 
 type ProductDraft = {
@@ -32,28 +39,46 @@ type ProductDraft = {
 
 const templates: StoreTemplate[] = [
   {
-    id: "creator-fast",
-    name: "Creator Fast Lane",
-    description: "Mise en page orientée conversion rapide avec CTA mis en avant.",
-    bestFor: "Produits digitaux + upsell",
+    id: "lookbook-minimal",
+    name: "Lookbook Minimal",
+    description: "Ambiance épurée avec cartes produits aérées et navigation simple.",
+    bestFor: "Marques mode & accessoires",
     supportsDelivery: false,
-    highlight: "from-violet-500/20 via-fuchsia-500/10 to-transparent",
+    highlight: "from-slate-200 via-slate-100 to-white",
+    chipLabel: "Clean",
+    accent: "bg-slate-900 text-white",
+    panelTone: "bg-slate-50",
+    ctaLabel: "Découvrir",
+    mockTitle: "Sneaker Capsule",
+    mockPrice: "89€",
   },
   {
-    id: "hybrid-market",
-    name: "Hybrid Market",
-    description: "Template polyvalent pour vente digitale et produits physiques.",
-    bestFor: "Catalogues mixtes",
+    id: "showroom-editorial",
+    name: "Showroom Editorial",
+    description: "Header visuel fort, storytelling produit et fiche détaillée immersive.",
+    bestFor: "Collections premium",
     supportsDelivery: true,
-    highlight: "from-sky-500/20 via-indigo-500/10 to-transparent",
+    highlight: "from-sky-100 via-indigo-100 to-white",
+    chipLabel: "Modern",
+    accent: "bg-indigo-600 text-white",
+    panelTone: "bg-indigo-50/70",
+    ctaLabel: "Voir la fiche",
+    mockTitle: "Kyrie Edition",
+    mockPrice: "125€",
   },
   {
-    id: "premium-brand",
-    name: "Premium Brand",
-    description: "Design éditorial premium pour marques lifestyle et e-commerce.",
+    id: "boutique-luxe",
+    name: "Boutique Luxe",
+    description: "Design haut de gamme avec CTA flottants et expérience mobile-first.",
     bestFor: "Produits physiques avec livraison",
     supportsDelivery: true,
-    highlight: "from-amber-500/25 via-orange-500/10 to-transparent",
+    highlight: "from-zinc-200 via-zinc-100 to-white",
+    chipLabel: "Premium",
+    accent: "bg-zinc-900 text-white",
+    panelTone: "bg-zinc-100",
+    ctaLabel: "Acheter",
+    mockTitle: "JMDA Lift 001",
+    mockPrice: "200€",
   },
 ];
 
@@ -75,7 +100,7 @@ const Store = () => {
   const [storeName, setStoreName] = useState("Nova Atelier");
   const [domain, setDomain] = useState("nova.kor.store");
   const [category, setCategory] = useState("Mode");
-  const [selectedTemplate, setSelectedTemplate] = useState<string>(templates[1].id);
+  const [selectedTemplate, setSelectedTemplate] = useState<string>(templates[0].id);
   const [templateViewport, setTemplateViewport] = useState<"mobile" | "desktop">("mobile");
   const [products, setProducts] = useState<ProductDraft[]>(initialProducts);
   const [aiPrompt, setAiPrompt] = useState(
@@ -93,7 +118,7 @@ const Store = () => {
     setStoreName("Nova Atelier Studio");
     setDomain("nova-atelier.kor.store");
     setCategory("Lifestyle & Formation");
-    setSelectedTemplate("hybrid-market");
+    setSelectedTemplate("showroom-editorial");
     setProducts((currentProducts) =>
       currentProducts.map((product) =>
         product.type === "physical" ? { ...product, deliveryEnabled: true } : product,
@@ -153,7 +178,7 @@ const Store = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-xl">
               {step === 0 && <><StoreIcon className="h-5 w-5" /> Identité de la boutique</>}
-              {step === 1 && <><Palette className="h-5 w-5" /> Choix du template</>}
+              {step === 1 && <><Palette className="h-5 w-5" /> Choix du modèle de présentation</>}
               {step === 2 && <><Package className="h-5 w-5" /> Produits & livraison</>}
               {step === 3 && <><Sparkles className="h-5 w-5" /> Assistant IA</>}
               {step === 4 && <><CheckCircle2 className="h-5 w-5" /> Prévisualisation finale</>}
@@ -181,7 +206,7 @@ const Store = () => {
             {step === 1 && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between rounded-xl border bg-muted/30 p-2">
-                  <p className="px-2 text-sm text-muted-foreground">Aperçu du template</p>
+                  <p className="px-2 text-sm text-muted-foreground">Aperçu des modèles de présentation</p>
                   <div className="inline-flex rounded-lg border bg-background p-1">
                     <button
                       type="button"
@@ -224,20 +249,33 @@ const Store = () => {
                         className={cn("rounded-xl border bg-background p-3", templateViewport === "mobile" ? "min-h-[420px]" : "min-h-[260px]")}
                       >
                         <div className={cn("rounded-lg bg-gradient-to-br p-4", template.highlight)}>
-                          <p className="font-semibold">{template.name}</p>
+                          <div className="flex items-center justify-between">
+                            <p className="font-semibold">{template.name}</p>
+                            <Badge variant="outline" className="text-[10px]">{template.chipLabel}</Badge>
+                          </div>
                           <p className="mt-1 text-xs text-muted-foreground">{template.description}</p>
-                          <Button size="sm" className="mt-3 h-7 px-3 text-xs">
-                            Voir l'offre
+
+                          <div className={cn("mt-3 rounded-xl border p-3", template.panelTone)}>
+                            <p className="text-[11px] text-muted-foreground">{template.mockTitle}</p>
+                            <p className="text-lg font-semibold">{template.mockPrice}</p>
+                            <div className="mt-2 flex gap-2">
+                              <div className="h-7 flex-1 rounded-md bg-white/80" />
+                              <div className="h-7 w-20 rounded-md bg-white/70" />
+                            </div>
+                          </div>
+
+                          <Button size="sm" className={cn("mt-3 h-7 px-3 text-xs", template.accent)}>
+                            {template.ctaLabel}
                           </Button>
                         </div>
                         <div className={cn("mt-3 grid gap-2", templateViewport === "mobile" ? "" : "grid-cols-2")}>
                           <div className="rounded-md border bg-muted/40 p-2">
-                            <p className="text-[11px] text-muted-foreground">Produit phare</p>
-                            <p className="text-sm font-medium">Pack Starter</p>
+                            <p className="text-[11px] text-muted-foreground">Bloc hero</p>
+                            <p className="text-sm font-medium">Produit vedette</p>
                           </div>
                           <div className="rounded-md border bg-muted/40 p-2">
-                            <p className="text-[11px] text-muted-foreground">Upsell</p>
-                            <p className="text-sm font-medium">Atelier avancé</p>
+                            <p className="text-[11px] text-muted-foreground">Bloc secondaire</p>
+                            <p className="text-sm font-medium">Cross-sell / favoris</p>
                           </div>
                         </div>
                         <div className="mt-3 flex flex-wrap gap-2">
@@ -320,7 +358,7 @@ const Store = () => {
                     <p className="font-medium flex items-center gap-1"><Globe className="h-3.5 w-3.5" /> {domain}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Template</p>
+                    <p className="text-xs text-muted-foreground">Modèle de présentation</p>
                     <p className="font-medium">{selectedTemplateData?.name}</p>
                   </div>
                 </div>
