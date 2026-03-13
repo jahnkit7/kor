@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <!--
+      CRITIQUE: viewport-fit=cover permet au contenu de s'étendre sous le notch et le home indicator.
+      Sans ça, le navigateur ajoute des barres blanches/noires en haut et en bas.
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+    
+    <!-- App Info -->
+    <title>Mon App</title>
+    <meta name="description" content="Description de mon app">
+    <meta name="theme-color" content="#000000" />
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!--
+      CRITIQUE pour iOS PWA:
+      - apple-mobile-web-app-capable: active le mode standalone (plein écran)
+      - apple-mobile-web-app-status-bar-style: 
+        * "black-translucent" = la status bar est TRANSPARENTE, le contenu passe DESSOUS
+        * "default" ou "black" = barre opaque qui pousse le contenu → crée la barre parasite
+    -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Mon App" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    
+    <!-- iOS Touch Icons -->
+    <link rel="apple-touch-icon" href="/icons/icon-180x180.png" />
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
