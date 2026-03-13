@@ -25,7 +25,7 @@ export function InvoiceCustomization() {
   
   // Local state for footer text with debounce
   const [localFooterText, setLocalFooterText] = useState("");
-  const footerDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const footerDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isInitialMount = useRef(true);
 
   // Sync local footer text with settings on initial load

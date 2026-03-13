@@ -49,7 +49,7 @@ export function useRole(): RoleState {
   
   // Stabilization: prevents premature redirects during initial load
   const [isStable, setIsStable] = useState(false);
-  const stabilizationTimer = useRef<NodeJS.Timeout | null>(null);
+  const stabilizationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // CRITICAL: Read cache SYNCHRONOUSLY via useMemo when user.id is available
   // This ensures we have the role immediately without waiting for useEffect

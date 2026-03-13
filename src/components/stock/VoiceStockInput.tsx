@@ -90,7 +90,7 @@ export function VoiceStockInput({ onComplete, onCancel }: VoiceStockInputProps) 
   const [previousStep, setPreviousStep] = useState<typeof step>("record");
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const maxRetries = 2;
 
   // Check browser support on mount
