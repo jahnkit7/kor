@@ -196,7 +196,7 @@ export function VoiceSaleInput({ clients, stockItems, onComplete, onCancel, onCr
       }
     }
   }, [editProducts]);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Voice search functions
   const startVoiceSearch = useCallback(async () => {
