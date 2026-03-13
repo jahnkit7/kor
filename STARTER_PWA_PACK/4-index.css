@@ -1,0 +1,86 @@
+/**
+ * CSS GLOBAL - Règles critiques pour PWA mobile sans barres parasites
+ * 
+ * À AJOUTER dans votre index.css existant (ne pas remplacer vos tokens)
+ */
+
+/* ============================================
+   RÈGLE 1: Reset du #root
+   ============================================
+   Vite ajoute souvent des styles par défaut dans App.css:
+     #root { max-width: 1280px; margin: 0 auto; padding: 2rem; }
+   
+   → Ça crée des marges blanches sur mobile !
+   → SUPPRIMER ces styles ou les override ici
+   ============================================ */
+#root {
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  min-height: 100dvh;
+}
+
+/* ============================================
+   RÈGLE 2: Body plein écran
+   ============================================
+   - margin: 0 → pas de marge par défaut du navigateur
+   - min-height: 100dvh → Dynamic Viewport Height
+   - PAS de padding safe-area sur le body
+     (chaque composant gère le sien)
+   ============================================ */
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100dvh;
+  overflow: hidden; /* Le scroll est géré par AppLayout, pas par le body */
+}
+
+/* ============================================
+   RÈGLE 3: Animation gradient border (optionnel)
+   ============================================ */
+@keyframes gradient-border {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient-border {
+  animation: gradient-border 3s ease infinite;
+  background-size: 200% 200%;
+}
+
+/* ============================================
+   RÈGLE 4: Masquer la scrollbar
+   ============================================ */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* ============================================
+   RÈGLE 5: Classes utilitaires safe-area
+   ============================================
+   À utiliser dans vos headers et bottom sheets:
+   
+   Header: <header className="pt-safe-top">
+   Bottom sheet: <div className="pb-safe-bottom">
+   ============================================ */
+.pt-safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.pb-safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Variante avec minimum garanti */
+.pt-safe-top-min {
+  padding-top: max(env(safe-area-inset-top, 0px), 16px);
+}
+
+.pb-safe-bottom-min {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 16px);
+}
